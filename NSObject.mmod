@@ -13,7 +13,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * $Id: NSObject.mmod,v 1.1 2005-09-16 03:02:34 hww3 Exp $
+ * $Id: NSObject.mmod,v 1.2 2005-09-16 04:09:41 hww3 Exp $
  */
 
 /*
@@ -86,8 +86,6 @@ PIKEFUN mixed send(string selector, mixed ... my_arguments)
 
   select = sel_registerName(selector->str);
 
-  [ THIS->object_data->object retain ];
-
   method = class_getInstanceMethod(THIS->object_data->object->isa, select);
   if(method == NULL)
     method = class_getClassMethod(THIS->object_data->object->isa, select);
@@ -134,6 +132,19 @@ PIKEFUN mixed send(string selector, mixed ... my_arguments)
          if(sv->type!=T_FLOAT)
            Pike_error("Type mismatch for method argument.");
          marg_setValue(argumentList,offset,double , (double)sv->u.float_number);
+	 break;
+
+      case 'f':
+         if(sv->type!=T_FLOAT)
+           Pike_error("Type mismatch for method argument.");
+printf("settig a float %f\n", (float)sv->u.float_number);
+         marg_setValue(argumentList,offset,float , (float)sv->u.float_number);
+	 break;
+
+      case 'l':
+         if(sv->type!=T_INT)
+           Pike_error("Type mismatch for method argument.");
+         marg_setValue(argumentList,offset,long , (long)sv->u.integer);
 	 break;
 
       case 'i': 
@@ -189,16 +200,23 @@ PIKEFUN mixed send(string selector, mixed ... my_arguments)
     case 'i':
       push_int((INT_TYPE)objc_msgSendv(THIS->object_data->object,select,method_getSizeOfArguments(method),argumentList));
       break;
+    // TODO: fix the casting
+    case 'l':
+      push_int((INT_TYPE)objc_msgSendv(THIS->object_data->object,select,method_getSizeOfArguments(method),argumentList));
+      break;
     case 'I':
       push_int((INT_TYPE)objc_msgSendv(THIS->object_data->object,select,method_getSizeOfArguments(method),argumentList));
       break;
     case 'd':
-    {
-      double r;
-      r = ((pike_objc_double_msgSendv)objc_msgSendv)(THIS->object_data->object,select,method_getSizeOfArguments(method),argumentList);
-      push_float(r);
+      push_float(((pike_objc_double_msgSendv)objc_msgSendv)(THIS->object_data->object,select,method_getSizeOfArguments(method),argumentList));
       break;
-    }
+    case 'f':
+    {
+      float f;
+f = ((pike_objc_float_msgSendv)objc_msgSendv)(THIS->object_data->object,select,method_getSizeOfArguments(method),argumentList);
+printf("float:%f\n");      push_float(f);
+}
+      break;
     case '*':
       push_text(objc_msgSendv(THIS->object_data->object,select,method_getSizeOfArguments(method),argumentList));
       break;
@@ -211,6 +229,7 @@ PIKEFUN mixed send(string selector, mixed ... my_arguments)
         OBJ2_NSOBJECT(o)->object_data->object = (id)r;
         push_object(o);
       }
+      break;
     case '#':
       {
         struct object * o;
@@ -220,7 +239,7 @@ PIKEFUN mixed send(string selector, mixed ... my_arguments)
         OBJ2_NSCLASS(o)->object_data->class = (id)c;
         push_object(o);
       }
-
+      break;
     case 'b':
       Pike_error("Invalid return type for method.");
     case '?':
@@ -259,8 +278,8 @@ EXIT
 {
   if(THIS->object_data)
   {
-    if(THIS->object_data->object != NULL)
-      [ THIS->object_data->object release];
+//    if(THIS->object_data->object != NULL)
+//      [ THIS->object_data->object release];
     free(THIS->object_data);
   }
 }

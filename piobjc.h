@@ -37,7 +37,7 @@ typedef struct
   id object;
 } NSOBJECT_OBJECT_DATA;
 
-
+#define NEW_NSCLASS() clone_object(NSClass_program, 0)
 #define NEW_NSOBJECT() clone_object(NSObject_program, 0)
 #undef OBJ2_NSCLASS
 #define OBJ2_NSCLASS(o) ((struct NSClass_struct *)get_storage(o, NSClass_program))
@@ -91,9 +91,6 @@ typedef double(*pike_objc_double_msgSendv)(id,SEL,unsigned,marg_list);
 typedef void*(*pike_objc_pointer_msgSendv)(id,SEL,unsigned,marg_list);
 
 
-#define NEW_NSOBJECT() clone_object(NSObject_program, 0)
-
-
 #define pike_objc_type_skip_name(type) { \
         while((*type)&&(*type!='=')) \
                 type++; \
@@ -121,3 +118,4 @@ typedef void*(*pike_objc_pointer_msgSendv)(id,SEL,unsigned,marg_list);
 
 unsigned pike_objc_type_alignment(char** typeptr);
 unsigned pike_objc_type_size(char** typeptr);
+
