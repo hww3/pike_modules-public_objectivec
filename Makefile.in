@@ -1,7 +1,7 @@
-# $Id: Makefile.in,v 1.1.1.1 2005-09-15 20:55:12 hww3 Exp $
+# $Id: Makefile.in,v 1.2 2005-09-16 03:02:34 hww3 Exp $
 @make_variables@
 VPATH=@srcdir@:@srcdir@/../..:../..
-OBJS=objectivec.o
+OBJS=Objc.o NSObject.o NSClass.o
 MODDIR=Public.pmod/
 MODNAME=ObjectiveC
 MODULE_PMOD_IN=module.pmod.in

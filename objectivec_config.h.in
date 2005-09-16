@@ -15,17 +15,8 @@
    */
 #undef HAVE_ALLOCA_H
 
-/* Define to 1 if you have the <ffi_config.h> header file. */
-#undef HAVE_FFI_CONFIG_H
-
-/* Define to 1 if you have the <ffi.h> header file. */
-#undef HAVE_FFI_H
-
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
-
-/* Define to 1 if you have the `ffi' library (-lffi). */
-#undef HAVE_LIBFFI
 
 /* Define to 1 if you have the `objc' library (-lobjc). */
 #undef HAVE_LIBOBJC
@@ -33,11 +24,8 @@
 /* Define to 1 if you have the <memory.h> header file. */
 #undef HAVE_MEMORY_H
 
-/* Define to 1 if you have the <objc/objc-class.h> header file. */
-#undef HAVE_OBJC_OBJC_CLASS_H
-
-/* Define to 1 if you have the <objc/objc.h> header file. */
-#undef HAVE_OBJC_OBJC_H
+/* Define to 1 if you have the <objc/objc-runtime.h> header file. */
+#undef HAVE_OBJC_OBJC_RUNTIME_H
 
 /* Define to 1 if you have the <stdint.h> header file. */
 #undef HAVE_STDINT_H

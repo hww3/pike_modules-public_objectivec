@@ -5,7 +5,7 @@ AC_MODULE_INIT()
 
 AC_C_CONST
 
-AC_CHECK_HEADERS(objc/objc.h objc/objc-class.h)
+AC_CHECK_HEADERS(objc/objc-runtime.h)
 AC_CHECK_LIB(objc, class_createInstance)
 #AC_CHECK_FUNCS(pam_authenticate pam_chauthtok pam_end pam_start)
 

@@ -1,0 +1,288 @@
+/* 
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation; either version 2 of the
+ * License, or (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+ *
+ * $Id: NSObject.mmod,v 1.1 2005-09-16 03:02:34 hww3 Exp $
+ */
+
+/*
+ * File licensing and authorship information block.
+ *
+ * Version: MPL 1.1/LGPL 2.1
+ *
+ * The contents of this file are subject to the Mozilla Public License Version
+ * 1.1 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ * http://www.mozilla.org/MPL/
+ *
+ * Software distributed under the License is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+ * for the specific language governing rights and limitations under the
+ * License.
+ *
+ * The Initial Developer of the Original Code is
+ *
+ * Bill Welliver <hww3@riverweb.com>
+ *
+ * Portions created by the Initial Developer are Copyright (C) Bill Welliver
+ * All Rights Reserved.
+ *
+ * Contributor(s):
+ *
+ * Alternatively, the contents of this file may be used under the terms of
+ * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
+ * in which case the provisions of the LGPL are applicable instead
+ * of those above. If you wish to allow use of your version of this file only
+ * under the terms of the LGPL, and not to allow others to use your version
+ * of this file under the terms of the MPL, indicate your decision by
+ * deleting the provisions above and replace them with the notice
+ * and other provisions required by the LGPL. If you do not delete
+ * the provisions above, a recipient may use your version of this file under
+ * the terms of any one of the MPL or the LGPL.
+ *
+ * Significant Contributors to this file are:
+ *
+ */
+
+/*! @module Public
+ */
+
+/*! @module ObjectiveC
+ */
+
+/*! @class ObjectiveC
+ */
+
+#define _GNU_SOURCE
+#define THIS_IS_NSOBJECT 1
+#include "piobjc.h"
+
+PIKECLASS NSObject
+{
+
+CVAR NSOBJECT_OBJECT_DATA   *object_data;
+
+PIKEFUN mixed send(string selector, mixed ... my_arguments)
+{
+  struct objc_method * method;
+  SEL select;
+  int arguments, x;
+  marg_list argumentList=NULL;
+  int argumentOffset=0;
+    char * type = NULL;
+
+  void * result;
+
+  select = sel_registerName(selector->str);
+
+  [ THIS->object_data->object retain ];
+
+  method = class_getInstanceMethod(THIS->object_data->object->isa, select);
+  if(method == NULL)
+    method = class_getClassMethod(THIS->object_data->object->isa, select);
+
+  if(method == NULL ) Pike_error("method does not exist.\n");
+
+  arguments = method_getNumberOfArguments(method);
+
+  if((args-1) != (arguments-2))
+    Pike_error("incorrect number of arguments to method provided.\n");
+
+
+  marg_malloc(argumentList,method);
+  if(!argumentList)
+    Pike_error("Insufficient memory (Could not allocate method argument buffer).");
+
+  // arguments 0 and 1 are the object to recieve the message and the selector, respectively.
+  for(x = 2; x < arguments; x++)
+  {
+    int offset;
+      struct svalue * sv;
+      sv = my_arguments+(x-2);
+
+    method_getArgumentInfo(method, x, &type, &offset);
+
+    while((*type)&&(*type=='r' || *type =='n' || *type =='N' || type=='o' || type=='O' || type =='V'))
+		type++;
+
+    switch(*type)
+    {
+      case 'c': 
+         if(sv->type!=T_INT)
+           Pike_error("Type mismatch for method argument.");
+         marg_setValue(argumentList,offset,char, (char)sv->u.integer);
+	 break;
+
+      case 'C': 
+         if(sv->type!=T_INT)
+           Pike_error("Type mismatch for method argument.");
+         marg_setValue(argumentList,offset, int, (int)sv->u.integer);
+	 break;
+
+      case 'd':
+         if(sv->type!=T_FLOAT)
+           Pike_error("Type mismatch for method argument.");
+         marg_setValue(argumentList,offset,double , (double)sv->u.float_number);
+	 break;
+
+      case 'i': 
+         if(sv->type!=T_INT)
+           Pike_error("Type mismatch for method argument.");
+         marg_setValue(argumentList,offset,int, sv->u.integer);
+	 break;
+
+      case 'I': 
+         if(sv->type!=T_INT)
+           Pike_error("Type mismatch for method argument.");
+         marg_setValue(argumentList,offset,unsigned int, sv->u.integer);
+	 break;
+
+      case '*': 
+         if(sv->type!=T_STRING)
+           Pike_error("Type mismatch for method argument..");
+         marg_setValue(argumentList,offset,char *, sv->u.string->str);
+	 break;
+
+      case '@': 
+         if(sv->type!=T_OBJECT)
+           Pike_error("Type mismatch for method argument..");
+         {
+           struct object * o = sv->u.object;
+           if(!get_storage(o, NSObject_program))
+             Pike_error("NSObject not passed.\n");
+           marg_setValue(argumentList,offset,id, OBJ2_NSOBJECT(o)->object_data->object);
+         }
+	 break;
+
+      case 'b':
+      case 'v':
+      default:
+         Pike_error("unsupported argument type.\n");
+
+      }
+   }
+
+  type = method->method_types;
+
+  while((*type)&&(*type=='r' || *type =='n' || *type =='N' || type=='o' || type=='O' || type =='V'))
+		type++;
+
+  printf("TYPE: %s\n", type);
+
+  pop_n_elems(args);
+
+  switch(*type){
+    case 'c':
+      push_int((INT_TYPE)objc_msgSendv(THIS->object_data->object,select,method_getSizeOfArguments(method),argumentList));
+      break;
+    case 'i':
+      push_int((INT_TYPE)objc_msgSendv(THIS->object_data->object,select,method_getSizeOfArguments(method),argumentList));
+      break;
+    case 'I':
+      push_int((INT_TYPE)objc_msgSendv(THIS->object_data->object,select,method_getSizeOfArguments(method),argumentList));
+      break;
+    case 'd':
+    {
+      double r;
+      r = ((pike_objc_double_msgSendv)objc_msgSendv)(THIS->object_data->object,select,method_getSizeOfArguments(method),argumentList);
+      push_float(r);
+      break;
+    }
+    case '*':
+      push_text(objc_msgSendv(THIS->object_data->object,select,method_getSizeOfArguments(method),argumentList));
+      break;
+    case '@':
+      {
+        struct object * o;
+        id r;
+        r = objc_msgSendv(THIS->object_data->object,select,method_getSizeOfArguments(method),argumentList);
+        o = NEW_NSOBJECT();
+        OBJ2_NSOBJECT(o)->object_data->object = (id)r;
+        push_object(o);
+      }
+    case '#':
+      {
+        struct object * o;
+        Class c;
+        c = objc_msgSendv(THIS->object_data->object,select,method_getSizeOfArguments(method),argumentList);
+        o = NEW_NSCLASS();
+        OBJ2_NSCLASS(o)->object_data->class = (id)c;
+        push_object(o);
+      }
+
+    case 'b':
+      Pike_error("Invalid return type for method.");
+    case '?':
+      Pike_error("Unknown return type for method.");
+    case '[':
+    case '{':
+    case '(':{
+      char* temp=method->method_types;
+      result=xmalloc(pike_objc_type_size(&temp));
+      objc_msgSendv_stret(result,THIS->object_data->object,select,method_getSizeOfArguments(method),argumentList);
+// TODO: do something with the result!
+      break;
+    }
+
+  }
+
+  if(argumentList) 
+    marg_free(argumentList);
+
+}
+
+
+INIT
+{
+    NSOBJECT_OBJECT_DATA * dta = 
+	(NSOBJECT_OBJECT_DATA*)malloc(sizeof(NSOBJECT_OBJECT_DATA));
+    if (!dta)
+        Pike_error("init_objectivec: Out of memory!\n");
+
+    THIS->object_data = dta;
+
+    THIS->object_data->object = NULL;
+}
+
+EXIT 
+{
+  if(THIS->object_data)
+  {
+    if(THIS->object_data->object != NULL)
+      [ THIS->object_data->object release];
+    free(THIS->object_data);
+  }
+}
+
+}
+
+void pike_init_piobjc_nsobject()
+{
+  INIT
+}
+
+void pike_exit_piobjc_nsobject()
+{
+  EXIT
+}
+
+/*! @endclass
+ */
+
+/*! @endmodule
+ */
+
+/*! @endmodule
+ */
+
