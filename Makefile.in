@@ -1,4 +1,4 @@
-# $Id: Makefile.in,v 1.3 2005-09-16 04:35:01 hww3 Exp $
+# $Id: Makefile.in,v 1.4 2005-09-16 06:09:46 hww3 Exp $
 @make_variables@
 VPATH=@srcdir@:@srcdir@/../..:../..
 OBJS=Objc.o NSObject.o NSClass.o
@@ -7,39 +7,9 @@ MODNAME=ObjectiveC
 MODULE_PMOD_IN=module.pmod.in
 AUTODOC_SRC_IN=objectivec.cmod
 MODULE_LDFLAGS=@LDFLAGS@ @LIBS@
-
+MODULE_CFLAGS=-fobjc-exceptions
 CONFIG_HEADERS=@CONFIG_HEADERS@
 
-.mmod.m: $(BUILD_BASE)/precompile.sh-stamp $(TMP_BINDIR)/precompile.pike
-	$(BUILD_BASE)/precompile.sh --cache precompile.pike >"$@" "$<" || { rm "$@"; exit 1; }
-
-.m.o:
-	@echo "Compiling $<" ;\
-	rm -f $@.fail >/dev/null 2>&1; \
-	if $(CC) $(PREFLAGS) $(CFLAGS) -c $< -o $@ ; then : ; else \
-	  status=$$?; \
-	  if test x"yes" = xyes ; then \
-	    echo "WARNING: Compiler failure! Trying without optimization!" >&2;\
-	    echo "$(CC) $(PREFLAGS) $(CFLAGS) -c $< -o $@" >$@.fail ;\
-	    if NO_ULIMIT=yes $(CC) $(PREFLAGS) $(NOOPTFLAGS) -c $< -o $@ ; then : ; else \
-	      status=$$?; \
-	      echo "Compilation command was:" >&2;\
-	      echo "$(CC) $(PREFLAGS) $(NOOPTFLAGS) -c $< -o $@" >&2 ;\
-	      exit $$status; \
-	    fi; \
-	  else \
-	    echo "Compilation command was:" >&2;\
-	    echo "$(CC) $(PREFLAGS) $(CFLAGS) -c $< -o $@" >&2 ;\
-	    exit $$status; \
-	  fi; \
-	fi
-
-
-.m.protos: $(BUILD_BASE)/precompile.sh-stamp
-	./precompile.sh --cache fake_dynamic_load.pike >"$@" --cpp --protos \
-	  $(CPP) $(PREFLAGS) -DPMOD_EXPORT=PMOD_EXPORT \
-	    -DPMOD_PROTO=PMOD_PROTO -DPIKE_PRECOMPILER=1 "$<" || \
-	  { rm "$@"; exit 1; }
 
 @dynamic_module_makefile@
 @dependencies@

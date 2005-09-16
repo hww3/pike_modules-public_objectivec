@@ -13,7 +13,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * $Id: NSObject.mmod,v 1.2 2005-09-16 04:09:41 hww3 Exp $
+ * $Id: NSObject.mmod,v 1.3 2005-09-16 06:09:46 hww3 Exp $
  */
 
 /*
@@ -137,7 +137,6 @@ PIKEFUN mixed send(string selector, mixed ... my_arguments)
       case 'f':
          if(sv->type!=T_FLOAT)
            Pike_error("Type mismatch for method argument.");
-printf("settig a float %f\n", (float)sv->u.float_number);
          marg_setValue(argumentList,offset,float , (float)sv->u.float_number);
 	 break;
 
@@ -192,6 +191,9 @@ printf("settig a float %f\n", (float)sv->u.float_number);
   printf("TYPE: %s\n", type);
 
   pop_n_elems(args);
+
+  @try
+  {
 
   switch(*type){
     case 'c':
@@ -253,7 +255,14 @@ printf("float:%f\n");      push_float(f);
 // TODO: do something with the result!
       break;
     }
+  }
 
+  }
+  @catch (NSException * e)
+  {
+
+    pop_stack();
+    Pike_error("%s: %s\n", [(NSString *)[e name] UTF8String], [(NSString *)[e reason] UTF8String]);
   }
 
   if(argumentList) 

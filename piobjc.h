@@ -21,6 +21,8 @@
 #include <objc/objc-runtime.h>
 #endif
 
+#include <Foundation/NSException.h>
+
 #include "util.h"
 
 struct program * NSObject_program;
@@ -112,7 +114,7 @@ typedef void*(*pike_objc_pointer_msgSendv)(id,SEL,unsigned,marg_list);
                 type++; \
         if((*type)&&(*type==char)) \
                 type++; \
-        else\                                  
+        else \
                 result=0;\
         }
 
