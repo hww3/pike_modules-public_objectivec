@@ -13,7 +13,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * $Id: NSObject.mmod,v 1.3 2005-09-16 06:09:46 hww3 Exp $
+ * $Id: NSObject.mmod,v 1.4 2005-09-17 16:33:50 hww3 Exp $
  */
 
 /*
@@ -72,6 +72,20 @@ PIKECLASS NSObject
 {
 
 CVAR NSOBJECT_OBJECT_DATA   *object_data;
+
+PIKEFUN string _sprintf(int type, mixed t)
+{
+  char * desc;
+
+  desc = malloc(strlen(THIS->object_data->object->isa->name) + strlen("()"));
+
+  if(desc == NULL)
+    Pike_error("unable to allocate string.\n");
+
+  sprintf(desc, "%s()", THIS->object_data->object->isa->name);
+  push_text(desc);
+  free(desc);
+}
 
 PIKEFUN mixed send(string selector, mixed ... my_arguments)
 {

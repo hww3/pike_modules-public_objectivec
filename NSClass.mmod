@@ -13,7 +13,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * $Id: NSClass.mmod,v 1.1 2005-09-16 03:02:34 hww3 Exp $
+ * $Id: NSClass.mmod,v 1.2 2005-09-17 16:33:50 hww3 Exp $
  */
 
 /*
@@ -73,6 +73,11 @@ PIKECLASS NSClass
 {
 
 CVAR NSCLASS_OBJECT_DATA   *object_data;
+
+PIKEFUN string _sprintf(int type, mixed t)
+{
+  push_text(THIS->object_data->class->isa->name);
+}
 
 
 /*! @decl void create(string appname)
