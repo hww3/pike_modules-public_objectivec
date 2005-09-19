@@ -90,6 +90,9 @@ typedef unsigned long long(*pike_objc_unsigned_long_long_msgSendv)(id,SEL,unsign
 typedef float(*pike_objc_float_msgSendv)(id,SEL,unsigned,marg_list);
 typedef double(*pike_objc_double_msgSendv)(id,SEL,unsigned,marg_list);
 
+typedef short(*pike_objc_short_msgSendv)(id,SEL,unsigned,marg_list);
+typedef unsigned short(*pike_objc_unsigned_short_msgSendv)(id,SEL,unsigned,marg_list);
+
 typedef void*(*pike_objc_pointer_msgSendv)(id,SEL,unsigned,marg_list);
 
 
