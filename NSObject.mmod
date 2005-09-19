@@ -13,7 +13,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * $Id: NSObject.mmod,v 1.4 2005-09-17 16:33:50 hww3 Exp $
+ * $Id: NSObject.mmod,v 1.5 2005-09-19 00:28:41 hww3 Exp $
  */
 
 /*
@@ -154,12 +154,6 @@ PIKEFUN mixed send(string selector, mixed ... my_arguments)
          marg_setValue(argumentList,offset,float , (float)sv->u.float_number);
 	 break;
 
-      case 'l':
-         if(sv->type!=T_INT)
-           Pike_error("Type mismatch for method argument.");
-         marg_setValue(argumentList,offset,long , (long)sv->u.integer);
-	 break;
-
       case 'i': 
          if(sv->type!=T_INT)
            Pike_error("Type mismatch for method argument.");
@@ -170,6 +164,42 @@ PIKEFUN mixed send(string selector, mixed ... my_arguments)
          if(sv->type!=T_INT)
            Pike_error("Type mismatch for method argument.");
          marg_setValue(argumentList,offset,unsigned int, sv->u.integer);
+	 break;
+
+      case 'l':
+         if(sv->type!=T_INT)
+           Pike_error("Type mismatch for method argument.");
+         marg_setValue(argumentList,offset,long , (long)sv->u.integer);
+	 break;
+
+      case 'L':
+         if(sv->type!=T_INT)
+           Pike_error("Type mismatch for method argument.");
+         marg_setValue(argumentList,offset,unsigned long , (unsigned long)sv->u.integer);
+	 break;
+
+      case 'q':
+         if(sv->type!=T_INT)
+           Pike_error("Type mismatch for method argument.");
+         marg_setValue(argumentList,offset,long long , (long long)sv->u.integer);
+	 break;
+
+      case 'Q':
+         if(sv->type!=T_INT)
+           Pike_error("Type mismatch for method argument.");
+         marg_setValue(argumentList,offset,unsigned long long , (unsigned long long)sv->u.integer);
+	 break;
+
+      case 's':
+         if(sv->type!=T_INT)
+           Pike_error("Type mismatch for method argument.");
+         marg_setValue(argumentList,offset,short , (short)sv->u.integer);
+	 break;
+
+      case 'S':
+         if(sv->type!=T_INT)
+           Pike_error("Type mismatch for method argument.");
+         marg_setValue(argumentList,offset,unsigned short , (unsigned short)sv->u.integer);
 	 break;
 
       case '*': 
@@ -189,6 +219,22 @@ PIKEFUN mixed send(string selector, mixed ... my_arguments)
          }
 	 break;
 
+/* TODO: How should we support these?
+      case '#':
+           marg_setValue(argumentList,offset,Class , OBJ2_NSOBJECT(o)->object_data->object);
+         break;
+
+      case ':':
+           marg_setValue(argumentList,offset,SEL , OBJ2_NSOBJECT(o)->object_data->object);
+         break;
+
+      case '^':
+           marg_setValue(argumentList,offset,void , OBJ2_NSOBJECT(o)->object_data->object);
+         break;
+      case '[':
+      case '{':
+      case '(':
+*/
       case 'b':
       case 'v':
       default:
