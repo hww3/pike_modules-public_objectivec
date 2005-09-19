@@ -13,7 +13,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * $Id: NSObject.mmod,v 1.6 2005-09-19 00:43:13 hww3 Exp $
+ * $Id: NSObject.mmod,v 1.7 2005-09-19 01:08:37 hww3 Exp $
  */
 
 /*
@@ -279,19 +279,19 @@ PIKEFUN mixed send(string selector, mixed ... my_arguments)
       push_float(((pike_objc_double_msgSendv)objc_msgSendv)(THIS->object_data->object,select,method_getSizeOfArguments(method),argumentList));
       break;
     case 'f':
-      push_float((FLOAT_TYPE)(pike_objc_float_msgSendv)objc_msgSendv)(THIS->object_data->object,select,method_getSizeOfArguments(method),argumentList));
+      push_float((FLOAT_TYPE)((pike_objc_float_msgSendv)objc_msgSendv)(THIS->object_data->object,select,method_getSizeOfArguments(method),argumentList));
       break;
     case 'q':
-      push_float((FLOAT_TYPE)(((pike_objc_long_long_msgSendv)objc_msgSendv)(THIS->object_data->object,select,method_getSizeOfArguments(method),argumentList));
+      push_float((FLOAT_TYPE)((pike_objc_long_long_msgSendv)objc_msgSendv)(THIS->object_data->object,select,method_getSizeOfArguments(method),argumentList));
       break;
     case 'Q':
-      push_float((FLOAT_TYPE)(((pike_objc_unsigned_long_long_msgSendv)objc_msgSendv)(THIS->object_data->object,select,method_getSizeOfArguments(method),argumentList));
+      push_float((FLOAT_TYPE)((pike_objc_unsigned_long_long_msgSendv)objc_msgSendv)(THIS->object_data->object,select,method_getSizeOfArguments(method),argumentList));
       break;
     case 's':
-      push_int((INT_TYPE)(((pike_objc_short_msgSendv)objc_msgSendv)(THIS->object_data->object,select,method_getSizeOfArguments(method),argumentList));
+      push_int((INT_TYPE)((pike_objc_short_msgSendv)objc_msgSendv)(THIS->object_data->object,select,method_getSizeOfArguments(method),argumentList));
       break;
     case 'S':
-      push_int((INT_TYPE)(((pike_objc_unsigned_short_msgSendv)objc_msgSendv)(THIS->object_data->object,select,method_getSizeOfArguments(method),argumentList));
+      push_int((INT_TYPE)((pike_objc_unsigned_short_msgSendv)objc_msgSendv)(THIS->object_data->object,select,method_getSizeOfArguments(method),argumentList));
       break;
     case 'v':
       objc_msgSendv(THIS->object_data->object,select,method_getSizeOfArguments(method),argumentList);

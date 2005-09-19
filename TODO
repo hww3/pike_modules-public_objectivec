@@ -1,0 +1,2 @@
+- NSNumber: floating point inits don't seem to work... getting float values
+  do work, so what's the deal??
