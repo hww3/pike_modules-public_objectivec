@@ -13,7 +13,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * $Id: NSObject.mmod,v 1.5 2005-09-19 00:28:41 hww3 Exp $
+ * $Id: NSObject.mmod,v 1.6 2005-09-19 00:43:13 hww3 Exp $
  */
 
 /*
@@ -257,14 +257,20 @@ PIKEFUN mixed send(string selector, mixed ... my_arguments)
 
   switch(*type){
     case 'c':
-      push_int((INT_TYPE)objc_msgSendv(THIS->object_data->object,select,method_getSizeOfArguments(method),argumentList));
+      push_int((INT_TYPE)((pike_objc_char_msgSendv)objc_msgSendv)(THIS->object_data->object,select,method_getSizeOfArguments(method),argumentList));
+      break;
+    case 'C':
+      push_int((INT_TYPE)((pike_objc_unsigned_char_msgSendv)objc_msgSendv)(THIS->object_data->object,select,method_getSizeOfArguments(method),argumentList));
       break;
     case 'i':
-      push_int((INT_TYPE)objc_msgSendv(THIS->object_data->object,select,method_getSizeOfArguments(method),argumentList));
+      push_int((INT_TYPE)((pike_objc_int_msgSendv)objc_msgSendv)(THIS->object_data->object,select,method_getSizeOfArguments(method),argumentList));
       break;
-    // TODO: fix the casting
+    // TODO: fix the casting... should we support auto objectize for bignums?
     case 'l':
-      push_int((INT_TYPE)objc_msgSendv(THIS->object_data->object,select,method_getSizeOfArguments(method),argumentList));
+      push_int((INT_TYPE)((pike_objc_long_msgSendv)objc_msgSendv)(THIS->object_data->object,select,method_getSizeOfArguments(method),argumentList));
+      break;
+    case 'L':
+      push_int((INT_TYPE)((pike_objc_unsigned_long_msgSendv)objc_msgSendv)(THIS->object_data->object,select,method_getSizeOfArguments(method),argumentList));
       break;
     case 'I':
       push_int((INT_TYPE)objc_msgSendv(THIS->object_data->object,select,method_getSizeOfArguments(method),argumentList));
@@ -273,12 +279,24 @@ PIKEFUN mixed send(string selector, mixed ... my_arguments)
       push_float(((pike_objc_double_msgSendv)objc_msgSendv)(THIS->object_data->object,select,method_getSizeOfArguments(method),argumentList));
       break;
     case 'f':
-    {
-      float f;
-f = ((pike_objc_float_msgSendv)objc_msgSendv)(THIS->object_data->object,select,method_getSizeOfArguments(method),argumentList);
-printf("float:%f\n");      push_float(f);
-}
+      push_float((FLOAT_TYPE)(pike_objc_float_msgSendv)objc_msgSendv)(THIS->object_data->object,select,method_getSizeOfArguments(method),argumentList));
       break;
+    case 'q':
+      push_float((FLOAT_TYPE)(((pike_objc_long_long_msgSendv)objc_msgSendv)(THIS->object_data->object,select,method_getSizeOfArguments(method),argumentList));
+      break;
+    case 'Q':
+      push_float((FLOAT_TYPE)(((pike_objc_unsigned_long_long_msgSendv)objc_msgSendv)(THIS->object_data->object,select,method_getSizeOfArguments(method),argumentList));
+      break;
+    case 's':
+      push_int((INT_TYPE)(((pike_objc_short_msgSendv)objc_msgSendv)(THIS->object_data->object,select,method_getSizeOfArguments(method),argumentList));
+      break;
+    case 'S':
+      push_int((INT_TYPE)(((pike_objc_unsigned_short_msgSendv)objc_msgSendv)(THIS->object_data->object,select,method_getSizeOfArguments(method),argumentList));
+      break;
+    case 'v':
+      objc_msgSendv(THIS->object_data->object,select,method_getSizeOfArguments(method),argumentList);
+      break;
+
     case '*':
       push_text(objc_msgSendv(THIS->object_data->object,select,method_getSizeOfArguments(method),argumentList));
       break;
