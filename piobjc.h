@@ -27,6 +27,7 @@
 
 struct program * NSObject_program;
 struct program * NSClass_program;
+struct program * MethodWrapper_program;
 
 typedef struct
 {    
@@ -39,8 +40,17 @@ typedef struct
   id object;
 } NSOBJECT_OBJECT_DATA;
 
+typedef struct
+{
+	id object;
+	SEL selector;
+	struct objc_method * method;
+} METHODWRAPPER_OBJECT_DATA;
+
 #define NEW_NSCLASS() clone_object(NSClass_program, 0)
 #define NEW_NSOBJECT() clone_object(NSObject_program, 0)
+#define NEW_METHODWRAPPER() clone_object(MethodWrapper_program, 0);
+
 #undef OBJ2_NSCLASS
 #define OBJ2_NSCLASS(o) ((struct NSClass_struct *)get_storage(o, NSClass_program))
 
@@ -55,6 +65,17 @@ NSOBJECT_OBJECT_DATA   *object_data;
 
 #define THIS_NSOBJECT ((struct NSObject_struct *)(Pike_interpreter.frame_pointer->current_storage))
 
+#endif
+
+#ifndef THIS_IS_METHODWRAPPER
+struct MethodWrapper_struct {
+  METHODWRAPPER_OBJECT_DATA *object_data;	
+};
+
+#undef OBJ2_METHODWRAPPER
+#define OBJ2_METHODWRAPPER(o) ((struct MethodWrapper_struct *)get_storage(o, MethodWrapper_program))
+
+#define THIS_METHODWRAPPER ((struct MethodWrapper_struct *)(Pike_interpreter.frame_pointer->current_storage))
 #endif
 
 #ifndef THIS_IS_NSCLASS

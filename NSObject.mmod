@@ -13,7 +13,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * $Id: NSObject.mmod,v 1.7 2005-09-19 01:08:37 hww3 Exp $
+ * $Id: NSObject.mmod,v 1.8 2006-07-29 18:38:41 hww3 Exp $
  */
 
 /*
@@ -87,267 +87,70 @@ PIKEFUN string _sprintf(int type, mixed t)
   free(desc);
 }
 
-PIKEFUN mixed send(string selector, mixed ... my_arguments)
+PIKEFUN mixed `->(string selector, mixed ... my_arguments)
 {
+  struct object * nmethod;
+  
   struct objc_method * method;
   SEL select;
-  int arguments, x;
-  marg_list argumentList=NULL;
-  int argumentOffset=0;
-    char * type = NULL;
+  char * selectorName = NULL;
+  int ind;
+  
+  // first, we perty up the selector.
+  selectorName = malloc(selector->len + 1);
+  if(selectorName == NULL)
+  {
+    Pike_error("unable to allocate selector storage.\n");
+  }
+  strncpy(selectorName, selector->str, selector->len);
+  
+  for(ind = 0; ind < selector->len; ind++)
+  {
+    if(selectorName[ind] == '_')
+      selectorName[ind] = ':';
+  }  
+  selectorName[ind] = '\0';
 
-  void * result;
-
-  select = sel_registerName(selector->str);
+  select = sel_registerName(selectorName);
 
   method = class_getInstanceMethod(THIS->object_data->object->isa, select);
-  if(method == NULL)
-    method = class_getClassMethod(THIS->object_data->object->isa, select);
 
-  if(method == NULL ) Pike_error("method does not exist.\n");
-
-  arguments = method_getNumberOfArguments(method);
-
-  if((args-1) != (arguments-2))
-    Pike_error("incorrect number of arguments to method provided.\n");
-
-
-  marg_malloc(argumentList,method);
-  if(!argumentList)
-    Pike_error("Insufficient memory (Could not allocate method argument buffer).");
-
-  // arguments 0 and 1 are the object to recieve the message and the selector, respectively.
-  for(x = 2; x < arguments; x++)
+  if(method == nil)
   {
-    int offset;
-      struct svalue * sv;
-      sv = my_arguments+(x-2);
+//     printf("no instance method named %s, trying the class.\n", selectorName);
+     method = class_getClassMethod(THIS->object_data->object->isa, select);
 
-    method_getArgumentInfo(method, x, &type, &offset);
+  }
+  else
+  {
+//    printf("got instance method %s\n", selectorName);
+  }
 
-    while((*type)&&(*type=='r' || *type =='n' || *type =='N' || type=='o' || type=='O' || type =='V'))
-		type++;
+  if(method == nil)
+  {
+//    printf("trying harder.\n");
+    selectorName[ind] = ':';
+    selectorName[ind + 1] = '\0';
 
-    switch(*type)
-    {
-      case 'c': 
-         if(sv->type!=T_INT)
-           Pike_error("Type mismatch for method argument.");
-         marg_setValue(argumentList,offset,char, (char)sv->u.integer);
-	 break;
+    select = sel_registerName(selectorName);
+    method = class_getInstanceMethod(THIS->object_data->object->isa, select);
+  }
 
-      case 'C': 
-         if(sv->type!=T_INT)
-           Pike_error("Type mismatch for method argument.");
-         marg_setValue(argumentList,offset, int, (int)sv->u.integer);
-	 break;
+   //  TODO: we should check for variables.
 
-      case 'd':
-         if(sv->type!=T_FLOAT)
-           Pike_error("Type mismatch for method argument.");
-         marg_setValue(argumentList,offset,double , (double)sv->u.float_number);
-	 break;
+  if(method == nil ) Pike_error("method does not exist.\n");
+//  printf("making new methodwrapper.\n");
+  // [THIS->object_data->object retain];
+  nmethod = NEW_METHODWRAPPER();
+  OBJ2_METHODWRAPPER(nmethod)->object_data->object  = THIS->object_data->object;
+  OBJ2_METHODWRAPPER(nmethod)->object_data->selector  = select;
+  OBJ2_METHODWRAPPER(nmethod)->object_data->method  = method;
 
-      case 'f':
-         if(sv->type!=T_FLOAT)
-           Pike_error("Type mismatch for method argument.");
-         marg_setValue(argumentList,offset,float , (float)sv->u.float_number);
-	 break;
-
-      case 'i': 
-         if(sv->type!=T_INT)
-           Pike_error("Type mismatch for method argument.");
-         marg_setValue(argumentList,offset,int, sv->u.integer);
-	 break;
-
-      case 'I': 
-         if(sv->type!=T_INT)
-           Pike_error("Type mismatch for method argument.");
-         marg_setValue(argumentList,offset,unsigned int, sv->u.integer);
-	 break;
-
-      case 'l':
-         if(sv->type!=T_INT)
-           Pike_error("Type mismatch for method argument.");
-         marg_setValue(argumentList,offset,long , (long)sv->u.integer);
-	 break;
-
-      case 'L':
-         if(sv->type!=T_INT)
-           Pike_error("Type mismatch for method argument.");
-         marg_setValue(argumentList,offset,unsigned long , (unsigned long)sv->u.integer);
-	 break;
-
-      case 'q':
-         if(sv->type!=T_INT)
-           Pike_error("Type mismatch for method argument.");
-         marg_setValue(argumentList,offset,long long , (long long)sv->u.integer);
-	 break;
-
-      case 'Q':
-         if(sv->type!=T_INT)
-           Pike_error("Type mismatch for method argument.");
-         marg_setValue(argumentList,offset,unsigned long long , (unsigned long long)sv->u.integer);
-	 break;
-
-      case 's':
-         if(sv->type!=T_INT)
-           Pike_error("Type mismatch for method argument.");
-         marg_setValue(argumentList,offset,short , (short)sv->u.integer);
-	 break;
-
-      case 'S':
-         if(sv->type!=T_INT)
-           Pike_error("Type mismatch for method argument.");
-         marg_setValue(argumentList,offset,unsigned short , (unsigned short)sv->u.integer);
-	 break;
-
-      case '*': 
-         if(sv->type!=T_STRING)
-           Pike_error("Type mismatch for method argument..");
-         marg_setValue(argumentList,offset,char *, sv->u.string->str);
-	 break;
-
-      case '@': 
-         if(sv->type!=T_OBJECT)
-           Pike_error("Type mismatch for method argument..");
-         {
-           struct object * o = sv->u.object;
-           if(!get_storage(o, NSObject_program))
-             Pike_error("NSObject not passed.\n");
-           marg_setValue(argumentList,offset,id, OBJ2_NSOBJECT(o)->object_data->object);
-         }
-	 break;
-
-/* TODO: How should we support these?
-      case '#':
-           marg_setValue(argumentList,offset,Class , OBJ2_NSOBJECT(o)->object_data->object);
-         break;
-
-      case ':':
-           marg_setValue(argumentList,offset,SEL , OBJ2_NSOBJECT(o)->object_data->object);
-         break;
-
-      case '^':
-           marg_setValue(argumentList,offset,void , OBJ2_NSOBJECT(o)->object_data->object);
-         break;
-      case '[':
-      case '{':
-      case '(':
-*/
-      case 'b':
-      case 'v':
-      default:
-         Pike_error("unsupported argument type.\n");
-
-      }
-   }
-
-  type = method->method_types;
-
-  while((*type)&&(*type=='r' || *type =='n' || *type =='N' || type=='o' || type=='O' || type =='V'))
-		type++;
-
-  printf("TYPE: %s\n", type);
-
+  [THIS->object_data->object retain];
   pop_n_elems(args);
 
-  @try
-  {
-
-  switch(*type){
-    case 'c':
-      push_int((INT_TYPE)((pike_objc_char_msgSendv)objc_msgSendv)(THIS->object_data->object,select,method_getSizeOfArguments(method),argumentList));
-      break;
-    case 'C':
-      push_int((INT_TYPE)((pike_objc_unsigned_char_msgSendv)objc_msgSendv)(THIS->object_data->object,select,method_getSizeOfArguments(method),argumentList));
-      break;
-    case 'i':
-      push_int((INT_TYPE)((pike_objc_int_msgSendv)objc_msgSendv)(THIS->object_data->object,select,method_getSizeOfArguments(method),argumentList));
-      break;
-    // TODO: fix the casting... should we support auto objectize for bignums?
-    case 'l':
-      push_int((INT_TYPE)((pike_objc_long_msgSendv)objc_msgSendv)(THIS->object_data->object,select,method_getSizeOfArguments(method),argumentList));
-      break;
-    case 'L':
-      push_int((INT_TYPE)((pike_objc_unsigned_long_msgSendv)objc_msgSendv)(THIS->object_data->object,select,method_getSizeOfArguments(method),argumentList));
-      break;
-    case 'I':
-      push_int((INT_TYPE)objc_msgSendv(THIS->object_data->object,select,method_getSizeOfArguments(method),argumentList));
-      break;
-    case 'd':
-      push_float(((pike_objc_double_msgSendv)objc_msgSendv)(THIS->object_data->object,select,method_getSizeOfArguments(method),argumentList));
-      break;
-    case 'f':
-      push_float((FLOAT_TYPE)((pike_objc_float_msgSendv)objc_msgSendv)(THIS->object_data->object,select,method_getSizeOfArguments(method),argumentList));
-      break;
-    case 'q':
-      push_float((FLOAT_TYPE)((pike_objc_long_long_msgSendv)objc_msgSendv)(THIS->object_data->object,select,method_getSizeOfArguments(method),argumentList));
-      break;
-    case 'Q':
-      push_float((FLOAT_TYPE)((pike_objc_unsigned_long_long_msgSendv)objc_msgSendv)(THIS->object_data->object,select,method_getSizeOfArguments(method),argumentList));
-      break;
-    case 's':
-      push_int((INT_TYPE)((pike_objc_short_msgSendv)objc_msgSendv)(THIS->object_data->object,select,method_getSizeOfArguments(method),argumentList));
-      break;
-    case 'S':
-      push_int((INT_TYPE)((pike_objc_unsigned_short_msgSendv)objc_msgSendv)(THIS->object_data->object,select,method_getSizeOfArguments(method),argumentList));
-      break;
-    case 'v':
-      objc_msgSendv(THIS->object_data->object,select,method_getSizeOfArguments(method),argumentList);
-      break;
-
-    case '*':
-      push_text(objc_msgSendv(THIS->object_data->object,select,method_getSizeOfArguments(method),argumentList));
-      break;
-    case '@':
-      {
-        struct object * o;
-        id r;
-        r = objc_msgSendv(THIS->object_data->object,select,method_getSizeOfArguments(method),argumentList);
-        o = NEW_NSOBJECT();
-        OBJ2_NSOBJECT(o)->object_data->object = (id)r;
-        push_object(o);
-      }
-      break;
-    case '#':
-      {
-        struct object * o;
-        Class c;
-        c = objc_msgSendv(THIS->object_data->object,select,method_getSizeOfArguments(method),argumentList);
-        o = NEW_NSCLASS();
-        OBJ2_NSCLASS(o)->object_data->class = (id)c;
-        push_object(o);
-      }
-      break;
-    case 'b':
-      Pike_error("Invalid return type for method.");
-    case '?':
-      Pike_error("Unknown return type for method.");
-    case '[':
-    case '{':
-    case '(':{
-      char* temp=method->method_types;
-      result=xmalloc(pike_objc_type_size(&temp));
-      objc_msgSendv_stret(result,THIS->object_data->object,select,method_getSizeOfArguments(method),argumentList);
-// TODO: do something with the result!
-      break;
-    }
-  }
-
-  }
-  @catch (NSException * e)
-  {
-
-    pop_stack();
-    Pike_error("%s: %s\n", [(NSString *)[e name] UTF8String], [(NSString *)[e reason] UTF8String]);
-  }
-
-  if(argumentList) 
-    marg_free(argumentList);
-
+  push_object(nmethod);
 }
-
 
 INIT
 {
@@ -357,7 +160,6 @@ INIT
         Pike_error("init_objectivec: Out of memory!\n");
 
     THIS->object_data = dta;
-
     THIS->object_data->object = NULL;
 }
 
@@ -365,8 +167,8 @@ EXIT
 {
   if(THIS->object_data)
   {
-//    if(THIS->object_data->object != NULL)
-//      [ THIS->object_data->object release];
+    if(THIS->object_data->object != NULL)
+      [ THIS->object_data->object release];
     free(THIS->object_data);
   }
 }

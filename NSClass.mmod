@@ -13,7 +13,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * $Id: NSClass.mmod,v 1.2 2005-09-17 16:33:50 hww3 Exp $
+ * $Id: NSClass.mmod,v 1.3 2006-07-29 18:38:41 hww3 Exp $
  */
 
 /*
@@ -129,10 +129,28 @@ PIKEFUN array _variables()
 PIKEFUN array _method_encoding(string selector)
 {
   struct objc_method * method;
-  SEL * select;
+  SEL select;
   int arguments, x;
+  char * selectorName;
+  int ind;
 
-  select = sel_registerName(selector->str);
+  // first, we perty up the selector.
+  selectorName = malloc(selector->len + 1);
+  if(selectorName == NULL)
+  {
+    Pike_error("unable to allocate selector storage.\n");
+  }
+  strncpy(selectorName, selector->str, selector->len);
+  
+  for(ind = 0; ind < selector->len; ind++)
+  {
+    if(selectorName[ind] == '_')
+      selectorName[ind] = ':';
+  }  
+  selectorName[ind] = '\0';
+
+  select = sel_registerName((const char *)selectorName);
+
 
 //      method = class_getClassMethod(THIS->object_data->class, select);
       method = class_getInstanceMethod(THIS->object_data->class, select);
@@ -147,7 +165,7 @@ PIKEFUN array _method_encoding(string selector)
   {
     char * type = NULL;
     int offset;
-    method_getArgumentInfo(method, x, &type, &offset);
+    method_getArgumentInfo(method, x, (const char **)&type, &offset);
 switch(*type)
 {
   case 'I':
@@ -197,17 +215,17 @@ PIKEFUN object new()
 
   if(THIS->object_data->class == nil) Pike_error("whoa, horsie! no class for this object!\n");
 
-  obj = class_createInstance(THIS->object_data->class, 0);
+//  obj = class_createInstance(THIS->object_data->class, 0);
 
   obj = THIS->object_data->class;
 
   if(obj == NULL)
     Pike_error("unable to allocate object.\n");
+//  else
+    [ obj retain ];
 
   nobject = NEW_NSOBJECT();
   OBJ2_NSOBJECT(nobject)->object_data->object = obj;
-
-  [ obj retain ];
 
   push_object(nobject);
 }
