@@ -1,5 +1,11 @@
 #include "piobjc.h"
 
+/*
+ *  util.c: helper functions
+ *
+ *
+ */
+
 id get_NSObject()
 {
   struct object * o;

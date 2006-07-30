@@ -19,6 +19,8 @@ PIKECLASS NSString
 INHERIT NSObject;
 CVAR int v;
 
+
+
 PIKEFUN string getCharacters()
 {
   unichar * buf;
@@ -54,17 +56,17 @@ PIKEFUN mixed cast(string type)
   }
   if(strncmp(type->str, "string", 6) == 0)
   {
-    pop_stack();
     id o;
     o = get_NSObject();
     if(o == NULL)
       Pike_error("couldn't get NSObject!\n");
+    pop_n_elems(args);
     push_text([o UTF8String]);
     f_utf8_to_string(1);
   }
   else
   {
-    pop_stack();
+    pop_n_elems(args);
     Pike_error("cannot cast NSString to anything but a string.\n");
   }
 }
@@ -73,7 +75,8 @@ PIKEFUN string _sprintf(int type, mixed t)
 {
  // printf("MethodWrapper->_sprintf()");
   struct object * o;
-  struct NSObject_struct * d;
+  id d;
+  char * desc;
 
   if(!is_nsobject_initialized())
   {
@@ -82,26 +85,40 @@ PIKEFUN string _sprintf(int type, mixed t)
      return;
   }
 
-  o = Pike_fp->current_object;
- 
-  d = (struct NSObject_struct *) get_storage(o, NSObject_program);  
-  if(d == NULL)
-    Pike_error("Object is not an NSObject!\n");
+  d = get_NSObject(); 
   pop_n_elems(args);
 
   @try
   {
     char * s;
-    
-    s = [d->object_data->object UTF8String];
+
+    s = [d UTF8String];
     push_text(s);
+    f_utf8_to_string(1);
+
+    desc = malloc(Pike_sp[-1].u.string->len + 2);
+    if(desc == NULL)
+    {
+		pop_stack();
+		Pike_error("error allocating storage.\n");
+	}
+
+    /* TODO: we should do a better job of generating the result, eg the case of binary strings. */	
+	sprintf(desc, "\"%s\"", Pike_sp[-1].u.string->str);
+
+	pop_stack();
+	push_text(desc);
+//	free(s);
+  	free(desc);
   }
   @catch (NSException * e)
   {
+	pop_n_elems(args);
+    [e retain];
     push_text("UNINITIALIZED_WRAPPER()");
+    [e release];
   }
 
-  f_utf8_to_string(1);
   return;
 
 }

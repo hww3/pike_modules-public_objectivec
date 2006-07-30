@@ -13,7 +13,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * $Id: NSClass.mmod,v 1.4 2006-07-30 06:44:39 hww3 Exp $
+ * $Id: NSClass.mmod,v 1.5 2006-07-30 17:28:07 hww3 Exp $
  */
 
 /*
@@ -225,13 +225,13 @@ PIKEFUN object new()
     d = (struct NSObject_struct *) get_storage(nobject, NSObject_program);
     if(d == NULL)
       Pike_error("Object is not an NSObject!\n");
-    d->object_data->object = obj;
+    d->object_data->object = [obj alloc];
   }
   else
   {
 
     nobject = NEW_NSOBJECT();
-    OBJ2_NSOBJECT(nobject)->object_data->object = obj;
+    OBJ2_NSOBJECT(nobject)->object_data->object = [obj alloc];
   }
 
   push_object(nobject);
