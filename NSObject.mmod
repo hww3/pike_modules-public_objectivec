@@ -13,7 +13,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * $Id: NSObject.mmod,v 1.9 2006-07-30 06:44:39 hww3 Exp $
+ * $Id: NSObject.mmod,v 1.10 2006-07-30 07:25:14 hww3 Exp $
  */
 
 /*
@@ -119,7 +119,6 @@ PIKEFUN mixed `->(string selector)
   f_index(2);
   if(Pike_sp[-1].type == PIKE_T_FUNCTION) // jackpot!
   {
-    printf("have the function, pushing it.\n");
     return;
   }
   select = sel_registerName(selectorName);

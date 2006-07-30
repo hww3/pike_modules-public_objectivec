@@ -1,0 +1,165 @@
+/*! @module Public
+ */
+
+/*! @module ObjectiveC
+ */
+
+/*! @class NSString
+ */
+
+#define _GNU_SOURCE
+#define THIS_IS_NSSTRING 1
+#include "piobjc.h"
+#include <Foundation/NSString.h>
+
+
+
+PIKECLASS NSString
+{
+INHERIT NSObject;
+CVAR int v;
+
+  id get_NSObject()
+  {
+    struct object * o;
+    struct NSObject_struct * d;
+   
+    o = Pike_fp->current_object;
+
+    d = (struct NSObject_struct *) get_storage(o, NSObject_program);
+    if(d == NULL)
+    Pike_error("Object is not an NSObject!\n");
+
+    return d->object_data->object;
+
+  }
+  int is_nsobject_initialized()
+  {
+  struct object * o;
+  struct NSObject_struct * d;
+
+  o = Pike_fp->current_object;
+ 
+  d = (struct NSObject_struct *) get_storage(o, NSObject_program);  
+  if(d == NULL)
+    Pike_error("Object is not an NSObject!\n");
+
+    if(d->object_data->object == NULL)
+      return 0;
+    else return 1;
+  }
+
+PIKEFUN string getCharacters()
+{
+  unichar * buf;
+  id obj;
+  int i =0 ;
+  obj = get_NSObject();
+  struct pike_string * str;
+  int len;
+  len = sizeof(unichar *) * [obj length];
+
+  buf = malloc(len);
+
+  if(buf == NULL)
+    Pike_error("getCharacters(): unable to allocate buffer.\n");
+
+  [obj getCharacters: buf];
+
+  for(i; i < sizeof(buf); i++)
+    printf("%d: %d", i, (int)buf[i]);
+
+  if(buf == NULL)
+    Pike_error("getCharacters() failed.\n");
+
+  str = make_shared_binary_string(buf, len);
+
+  push_string(str);
+
+  free(buf);
+
+  return;
+}
+
+PIKEFUN mixed cast(string type)
+{
+  if(!is_nsobject_initialized())
+  {
+    Pike_error("cannot cast uninitialized NSString.\n");
+  }
+  if(strncmp(type->str, "string", 6) == 0)
+  {
+    pop_stack();
+    id o;
+    o = get_NSObject();
+    if(o == NULL)
+      Pike_error("couldn't get NSObject!\n");
+    push_text([o UTF8String]);
+    f_utf8_to_string(1);
+  }
+  else
+  {
+    pop_stack();
+    Pike_error("cannot cast NSString to anything but a string.\n");
+  }
+}
+
+PIKEFUN string _sprintf(int type, mixed t)
+{
+ // printf("MethodWrapper->_sprintf()");
+  struct object * o;
+  struct NSObject_struct * d;
+
+  if(!is_nsobject_initialized())
+  {
+     pop_n_elems(args);
+     push_text("UNINITIALIZED_WRAPPER()");
+     return;
+  }
+
+  o = Pike_fp->current_object;
+ 
+  d = (struct NSObject_struct *) get_storage(o, NSObject_program);  
+  if(d == NULL)
+    Pike_error("Object is not an NSObject!\n");
+  pop_n_elems(args);
+
+  @try
+  {
+    char * s;
+    
+    s = [d->object_data->object UTF8String];
+    push_text(s);
+  }
+  @catch (NSException * e)
+  {
+    push_text("UNINITIALIZED_WRAPPER()");
+  }
+
+  f_utf8_to_string(1);
+  return;
+
+}
+
+
+}
+
+
+void pike_init_piobjc_nsstring()
+{
+  INIT
+}
+
+void pike_exit_piobjc_nsstring()
+{
+  EXIT
+}
+
+/*! @endclass
+ */
+
+/*! @endmodule
+ */
+
+/*! @endmodule
+ */
