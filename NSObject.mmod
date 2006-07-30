@@ -13,7 +13,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * $Id: NSObject.mmod,v 1.8 2006-07-29 18:38:41 hww3 Exp $
+ * $Id: NSObject.mmod,v 1.9 2006-07-30 06:44:39 hww3 Exp $
  */
 
 /*
@@ -67,6 +67,7 @@
 #define _GNU_SOURCE
 #define THIS_IS_NSOBJECT 1
 #include "piobjc.h"
+#include <Foundation/NSAutoreleasePool.h>
 
 PIKECLASS NSObject
 {
@@ -87,7 +88,7 @@ PIKEFUN string _sprintf(int type, mixed t)
   free(desc);
 }
 
-PIKEFUN mixed `->(string selector, mixed ... my_arguments)
+PIKEFUN mixed `->(string selector)
 {
   struct object * nmethod;
   
@@ -111,6 +112,16 @@ PIKEFUN mixed `->(string selector, mixed ... my_arguments)
   }  
   selectorName[ind] = '\0';
 
+  pop_stack();
+  push_object(Pike_fp->current_object);
+  add_ref(Pike_fp->current_object);
+  push_text(selectorName);
+  f_index(2);
+  if(Pike_sp[-1].type == PIKE_T_FUNCTION) // jackpot!
+  {
+    printf("have the function, pushing it.\n");
+    return;
+  }
   select = sel_registerName(selectorName);
 
   method = class_getInstanceMethod(THIS->object_data->object->isa, select);
@@ -120,10 +131,6 @@ PIKEFUN mixed `->(string selector, mixed ... my_arguments)
 //     printf("no instance method named %s, trying the class.\n", selectorName);
      method = class_getClassMethod(THIS->object_data->object->isa, select);
 
-  }
-  else
-  {
-//    printf("got instance method %s\n", selectorName);
   }
 
   if(method == nil)
@@ -138,16 +145,15 @@ PIKEFUN mixed `->(string selector, mixed ... my_arguments)
 
    //  TODO: we should check for variables.
 
-  if(method == nil ) Pike_error("method does not exist.\n");
-//  printf("making new methodwrapper.\n");
-  // [THIS->object_data->object retain];
+  if(method == nil) Pike_error("method does not exist.\n");
+
   nmethod = NEW_METHODWRAPPER();
   OBJ2_METHODWRAPPER(nmethod)->object_data->object  = THIS->object_data->object;
   OBJ2_METHODWRAPPER(nmethod)->object_data->selector  = select;
   OBJ2_METHODWRAPPER(nmethod)->object_data->method  = method;
 
-  [THIS->object_data->object retain];
-  pop_n_elems(args);
+  if(! [THIS->object_data->object isKindOfClass: [NSAutoreleasePool class]])
+    [THIS->object_data->object retain];
 
   push_object(nmethod);
 }
@@ -156,6 +162,7 @@ INIT
 {
     NSOBJECT_OBJECT_DATA * dta = 
 	(NSOBJECT_OBJECT_DATA*)malloc(sizeof(NSOBJECT_OBJECT_DATA));
+
     if (!dta)
         Pike_error("init_objectivec: Out of memory!\n");
 

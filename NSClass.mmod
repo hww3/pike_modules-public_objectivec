@@ -13,7 +13,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * $Id: NSClass.mmod,v 1.3 2006-07-29 18:38:41 hww3 Exp $
+ * $Id: NSClass.mmod,v 1.4 2006-07-30 06:44:39 hww3 Exp $
  */
 
 /*
@@ -68,6 +68,7 @@
 #define THIS_IS_NSCLASS 1
 
 #include "piobjc.h"
+#include <Foundation/NSAutoreleasePool.h>
 
 PIKECLASS NSClass
 {
@@ -80,13 +81,6 @@ PIKEFUN string _sprintf(int type, mixed t)
 }
 
 
-/*! @decl void create(string appname)
- *!   Creates a new PAM object
- *!
- *!  @param appname
- *!    sets the application name that the PAM module will identify itself as.
- *!
- */
 PIKEFUN void create(string classname)
 {
   id class;
@@ -99,7 +93,8 @@ PIKEFUN void create(string classname)
 
   THIS->object_data->class = class;
 
-  [class retain];
+  if(! [class isKindOfClass: [NSAutoreleasePool class]])
+    [class retain];
 
   pop_n_elems(args);
 }
@@ -215,17 +210,29 @@ PIKEFUN object new()
 
   if(THIS->object_data->class == nil) Pike_error("whoa, horsie! no class for this object!\n");
 
-//  obj = class_createInstance(THIS->object_data->class, 0);
-
   obj = THIS->object_data->class;
 
   if(obj == NULL)
     Pike_error("unable to allocate object.\n");
-//  else
-    [ obj retain ];
 
-  nobject = NEW_NSOBJECT();
-  OBJ2_NSOBJECT(nobject)->object_data->object = obj;
+  [ obj retain ];
+
+  if(strcmp("NSString", obj->isa->name) == 0)
+  {
+    struct NSObject_struct * d;
+
+    nobject = NEW_NSSTRING();
+    d = (struct NSObject_struct *) get_storage(nobject, NSObject_program);
+    if(d == NULL)
+      Pike_error("Object is not an NSObject!\n");
+    d->object_data->object = obj;
+  }
+  else
+  {
+
+    nobject = NEW_NSOBJECT();
+    OBJ2_NSOBJECT(nobject)->object_data->object = obj;
+  }
 
   push_object(nobject);
 }

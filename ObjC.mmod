@@ -7,6 +7,7 @@ EXTRA
 
   pike_init_piobjc_nsclass();
   pike_init_piobjc_nsobject();
+  pike_init_piobjc_nsstring();
   pike_init_piobjc_methodwrapper();
 }
 
@@ -17,6 +18,7 @@ INIT
 
 EXIT
 {
+  pike_exit_piobjc_nsstring();
   pike_exit_piobjc_nsclass();
   pike_exit_piobjc_nsobject();
   pike_exit_piobjc_methodwrapper();

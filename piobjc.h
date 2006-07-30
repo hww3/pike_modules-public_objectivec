@@ -25,6 +25,7 @@
 
 #include "util.h"
 
+struct program * NSString_program;
 struct program * NSObject_program;
 struct program * NSClass_program;
 struct program * MethodWrapper_program;
@@ -48,6 +49,7 @@ typedef struct
 } METHODWRAPPER_OBJECT_DATA;
 
 #define NEW_NSCLASS() clone_object(NSClass_program, 0)
+#define NEW_NSSTRING() clone_object(NSString_program, 0)
 #define NEW_NSOBJECT() clone_object(NSObject_program, 0)
 #define NEW_METHODWRAPPER() clone_object(MethodWrapper_program, 0);
 
