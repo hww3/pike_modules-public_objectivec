@@ -57,7 +57,7 @@ PIKEFUN string getCharacters()
   obj = get_NSObject();
   struct pike_string * str;
   int len;
-  len = sizeof(unichar *) * [obj length];
+  len = sizeof(unichar) * [obj length];
 
   buf = malloc(len);
 
@@ -66,16 +66,11 @@ PIKEFUN string getCharacters()
 
   [obj getCharacters: buf];
 
-  for(i; i < sizeof(buf); i++)
-    printf("%d: %d", i, (int)buf[i]);
-
   if(buf == NULL)
     Pike_error("getCharacters() failed.\n");
 
   str = make_shared_binary_string(buf, len);
-
   push_string(str);
-
   free(buf);
 
   return;
