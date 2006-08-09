@@ -1,5 +1,49 @@
 #include "piobjc.h"
 
+/*! @decl int index(int pid, int use_main_thread, string bundlePath, string systemPath, string carbonPath)
+ *!
+ */
+
+
+PIKEFUN int inject(int pid, int use_main_thread, string bundlePath, string systemPath, string carbonPath)
+{
+  int r;
+
+  r = objc_inject(pid, use_main_thread, bundlePath->str, systemPath->str, carbonPath->str);
+
+  pop_n_elems(args);
+  push_int(r);
+  return;
+}
+
+PIKEFUN array list_classes()
+{
+  Class * list = NULL;
+  int buflen = 0;
+  int r = 0;
+
+  buflen = objc_getClassList(NULL, NULL);
+
+  printf("have %d registered classes\n", buflen);
+
+  list = malloc(buflen * sizeof(Class));
+
+  if(list == NULL)
+    Pike_error("unable to allocate memory.\n");
+
+  r = objc_getClassList(list, buflen);
+
+  for(buflen = 0; buflen < r; buflen++)
+  {
+    push_text(list[buflen]->name);
+  }
+
+  free(list);
+
+  f_aggregate(r);
+}
+
+
 EXTRA
 {
   add_string_constant("__version", "0.1", 0);

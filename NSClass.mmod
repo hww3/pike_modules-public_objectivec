@@ -13,7 +13,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * $Id: NSClass.mmod,v 1.5 2006-07-30 17:28:07 hww3 Exp $
+ * $Id: NSClass.mmod,v 1.6 2006-08-09 18:32:02 hww3 Exp $
  */
 
 /*
@@ -77,7 +77,11 @@ CVAR NSCLASS_OBJECT_DATA   *object_data;
 
 PIKEFUN string _sprintf(int type, mixed t)
 {
-  push_text(THIS->object_data->class->isa->name);
+  if(THIS->object_data && THIS->object_data->class &&
+       THIS->object_data->class->isa)
+    push_text(THIS->object_data->class->isa->name);
+  else
+    push_text("UNKNOWN");
 }
 
 
@@ -236,6 +240,74 @@ PIKEFUN object new()
 
   push_object(nobject);
 }
+
+PIKEFUN mixed `->(string selector)
+{
+  struct object * nmethod;
+  
+  struct objc_method * method;
+  SEL select;
+  char * selectorName = NULL;
+  int ind;
+  
+  // first, we perty up the selector.
+  selectorName = malloc(selector->len + 1);
+  if(selectorName == NULL)
+  {
+    Pike_error("unable to allocate selector storage.\n");
+  }
+  strncpy(selectorName, selector->str, selector->len);
+
+    for(ind = 0; ind < selector->len; ind++)
+    {
+      if(selectorName[0] != '_' && selectorName[ind] == '_')
+        selectorName[ind] = ':';
+    }  
+    selectorName[ind] = '\0';
+
+  printf("selectorName: %s\n", selectorName);
+  pop_stack();
+  push_object(Pike_fp->current_object);
+  add_ref(Pike_fp->current_object);
+  push_text(selectorName);
+  f_index(2);
+  if(Pike_sp[-1].type == PIKE_T_FUNCTION) // jackpot!
+  {
+    return;
+  }
+  select = sel_registerName(selectorName);
+
+  method = class_getClassMethod(THIS->object_data->class->isa, select);
+
+  if(method == nil)
+  {
+//     printf("no instance method named %s, trying the class.\n", selectorName);
+//     method = class_getClassMethod(THIS->object_data->class->isa, select);
+
+  }
+
+  if(method == nil)
+  {
+//    printf("trying harder.\n");
+    selectorName[ind] = ':';
+    selectorName[ind + 1] = '\0';
+
+    select = sel_registerName(selectorName);
+    method = class_getClassMethod(THIS->object_data->class->isa, select);
+  }
+
+   //  TODO: we should check for variables.
+
+  if(method == nil) Pike_error("method does not exist.\n");
+
+  nmethod = NEW_METHODWRAPPER();
+  OBJ2_METHODWRAPPER(nmethod)->object_data->object  = THIS->object_data->class;
+  OBJ2_METHODWRAPPER(nmethod)->object_data->selector  = select;
+  OBJ2_METHODWRAPPER(nmethod)->object_data->method  = method;
+
+  push_object(nmethod);
+}
+
 
 INIT
 {

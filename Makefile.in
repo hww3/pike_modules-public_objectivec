@@ -1,13 +1,13 @@
-# $Id: Makefile.in,v 1.6 2006-07-30 06:44:39 hww3 Exp $
+# $Id: Makefile.in,v 1.7 2006-08-09 18:32:02 hww3 Exp $
 @make_variables@
 VPATH=@srcdir@:@srcdir@/../..:../..
-OBJS=ObjC.o NSObject.o NSClass.o MethodWrapper.o NSString.o
+OBJS=ObjC.o NSObject.o NSClass.o MethodWrapper.o NSString.o objc_inject.o mach_inject.o
 MODDIR=Public.pmod/
 MODNAME=ObjectiveC
 MODULE_PMOD_IN=module.pmod.in
 AUTODOC_SRC_IN=objectivec.cmod
 MODULE_LDFLAGS=@LDFLAGS@ @LIBS@
-MODULE_CFLAGS=-fobjc-exceptions
+MODULE_CFLAGS=-fobjc-exceptions -framework AppKit
 CONFIG_HEADERS=@CONFIG_HEADERS@
 
 
