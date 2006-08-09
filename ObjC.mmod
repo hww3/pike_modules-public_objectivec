@@ -53,6 +53,7 @@ EXTRA
   pike_init_piobjc_nsobject();
   pike_init_piobjc_nsstring();
   pike_init_piobjc_methodwrapper();
+  pike_init_piobjc_piobjcobject();
 }
 
 INIT
@@ -66,6 +67,7 @@ EXIT
   pike_exit_piobjc_nsclass();
   pike_exit_piobjc_nsobject();
   pike_exit_piobjc_methodwrapper();
+  pike_exit_piobjc_piobjcobject();
 }
 
 unsigned pike_objc_type_alignment(char** typeptr){

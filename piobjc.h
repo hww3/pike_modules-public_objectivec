@@ -37,6 +37,12 @@ typedef struct
 } NSCLASS_OBJECT_DATA;
 
 typedef struct
+{    
+  id object;
+} PIOBJCOBJECT_OBJECT_DATA;
+
+
+typedef struct
 {
   id object;
 } NSOBJECT_OBJECT_DATA;
