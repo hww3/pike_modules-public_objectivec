@@ -149,4 +149,6 @@ typedef void*(*pike_objc_pointer_msgSendv)(id,SEL,unsigned,marg_list);
 
 unsigned pike_objc_type_alignment(char** typeptr);
 unsigned pike_objc_type_size(char** typeptr);
+BOOL CreateClassDefinition( const char * name, 
+        const char * superclassName );
 

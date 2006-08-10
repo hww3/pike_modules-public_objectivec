@@ -20,6 +20,21 @@ id get_NSObject()
   return d->object_data->object;
 
 }
+
+
+id get_NSObject_from_Object(struct object *o)
+{
+  struct NSObject_struct * d;
+ 
+  d = (struct NSObject_struct *) get_storage(o, NSObject_program);
+  if(d == NULL)
+   return NULL;
+
+  return d->object_data->object;
+
+}
+
+
 int is_nsobject_initialized()
 {
 struct object * o;

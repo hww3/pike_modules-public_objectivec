@@ -1,4 +1,6 @@
 #include "piobjc.h"
+#import <Foundation/NSBundle.h>
+#import <Foundation/NSString.h>
 
 /*! @decl int index(int pid, int use_main_thread, string bundlePath, string systemPath, string carbonPath)
  *!
@@ -68,6 +70,132 @@ EXIT
   pike_exit_piobjc_nsobject();
   pike_exit_piobjc_methodwrapper();
   pike_exit_piobjc_piobjcobject();
+}
+
+PIKEFUN void new_class(string name)
+{
+   add_piobjcclass(name->str);
+   pop_stack();
+}
+
+void add_piobjcclass(char * name)
+{
+  int res;
+  res = CreateClassDefinition(name, "NSProxy");  
+
+  if(res == YES)
+    printf("Success!\n");
+  else
+    printf("Failure!\n");
+}
+
+PIKEFUN int load_bundle(string bundle_path)
+{
+ NSBundle* bundle = nil;
+ id bundle_identifier = nil;
+ id bundlePath = nil;
+ 
+ bundlePath = [NSString stringWithCString: bundle_path->str length: bundle_path->len];
+
+ bundle = [NSBundle bundleWithPath:bundlePath];
+
+  if(![bundle load])
+  {
+	Pike_error("Bundle could not be loaded.\n");
+  }
+
+  pop_stack();
+  push_int(0);
+  
+}
+
+// this method comes to us from the Apple C Runtime Reference manual.
+// we should eventually rewrite it with our own brains.
+BOOL CreateClassDefinition( const char * name, 
+        const char * superclassName )
+{
+    struct objc_class * meta_class;
+    struct objc_class * super_class;
+    struct objc_class * new_class;
+    struct objc_class * root_class;
+
+    // Ensure that the superclass exists and that someone
+    // hasn't already implemented a class with the same name
+    //
+
+    super_class = (struct objc_class *)objc_lookUpClass (superclassName);
+
+    if (super_class == nil)
+    {
+        return NO;
+    }
+
+    if (objc_lookUpClass (name) != nil) 
+    {
+        return NO;
+    }
+
+    // Find the root class
+    //
+
+    root_class = super_class;
+
+    while( root_class->super_class != nil )
+    {
+        root_class = root_class->super_class;
+    }
+
+    // Allocate space for the class and its metaclass
+    //
+
+    new_class = calloc( 2, sizeof(struct objc_class) );
+    meta_class = &new_class[1];
+
+    // setup class
+    new_class->isa      = meta_class;
+    new_class->info     = CLS_CLASS;
+    meta_class->info    = CLS_META;
+
+    // Create a copy of the class name.
+    // For efficiency, we have the metaclass and the class itself 
+    // to share this copy of the name, but this is not a requirement
+    // imposed by the runtime.
+    //
+    new_class->name = malloc (strlen (name) + 1);
+    strcpy ((char*)new_class->name, name);
+    meta_class->name = new_class->name;
+
+    // Allocate empty method lists.
+    // We can add methods later.
+    //
+
+    new_class->methodLists = calloc( 1, sizeof(struct objc_method_list  *) );
+    *new_class->methodLists = -1;
+    meta_class->methodLists = calloc( 1, sizeof(struct objc_method_list  *) );
+    *meta_class->methodLists = -1;
+
+    // Connect the class definition to the class hierarchy:
+    // Connect the class to the superclass.
+    // Connect the metaclass to the metaclass of the superclass.
+    // Connect the metaclass of the metaclass to the metaclass of  the root class.
+    //
+
+    new_class->super_class  = super_class;
+    meta_class->super_class = super_class->isa;
+    meta_class->isa         = (void *)root_class->isa;
+
+    // Set the sizes of the class and the metaclass.
+    //
+
+    new_class->instance_size = super_class->instance_size;
+    meta_class->instance_size = meta_class->super_class->instance_size;
+
+    // Finally, register the class with the runtime.
+    //
+
+    objc_addClass( new_class ); 
+    return YES;
+
 }
 
 unsigned pike_objc_type_alignment(char** typeptr){

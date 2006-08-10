@@ -13,7 +13,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * $Id: PiObjCObject.mmod,v 1.1 2006-08-09 18:40:22 hww3 Exp $
+ * $Id: PiObjCObject.mmod,v 1.2 2006-08-10 03:16:30 hww3 Exp $
  */
 
 /*
@@ -68,6 +68,25 @@
 #define THIS_IS_PIOBJCOBJECT 1
 
 #include "piobjc.h"
+#include "PiObjCObject.h"
+
+#import  <Foundation/NSObject.h>
+#import  <Foundation/NSMethodSignature.h>
+#import  <Foundation/NSInvocation.h>
+
+@implementation PiObjCObject
+
++ newWithObject:(struct object *) obj
+{                       
+        id instance;
+		instance = get_NSObject_from_Object(obj);
+        if(instance != NULL) 
+        {
+          instance = [[self alloc] initWithObject:obj];
+          [instance autorelease];
+        }        
+        return instance;
+}
 
 PIKECLASS PiObjCObject
 {
