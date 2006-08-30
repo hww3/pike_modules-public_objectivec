@@ -32,6 +32,11 @@ struct program * MethodWrapper_program;
 
 typedef struct
 {    
+  id pool;
+} OBJC_OBJECT_DATA;
+
+typedef struct
+{    
   struct pike_string *classname;
   id class;
 } NSCLASS_OBJECT_DATA;

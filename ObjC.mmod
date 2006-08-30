@@ -1,11 +1,16 @@
 #include "piobjc.h"
 #import <Foundation/NSBundle.h>
 #import <Foundation/NSString.h>
+#import <Foundation/NSAutoreleasePool.h>
 
 /*! @decl int index(int pid, int use_main_thread, string bundlePath, string systemPath, string carbonPath)
  *!
  */
 
+
+PIKEFUN void create()
+{
+}
 
 PIKEFUN int inject(int pid, int use_main_thread, string bundlePath, string systemPath, string carbonPath)
 {
@@ -89,7 +94,7 @@ void add_piobjcclass(char * name)
     printf("Failure!\n");
 }
 
-PIKEFUN int load_bundle(string bundle_path)
+PIKEFUN int low_load_bundle(string bundle_path)
 {
  NSBundle* bundle = nil;
  id bundle_identifier = nil;
@@ -108,7 +113,6 @@ PIKEFUN int load_bundle(string bundle_path)
   push_int(0);
   
 }
-
 // this method comes to us from the Apple C Runtime Reference manual.
 // we should eventually rewrite it with our own brains.
 BOOL CreateClassDefinition( const char * name, 

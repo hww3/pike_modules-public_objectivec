@@ -13,7 +13,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * $Id: NSClass.mmod,v 1.6 2006-08-09 18:32:02 hww3 Exp $
+ * $Id: NSClass.mmod,v 1.7 2006-08-30 02:28:07 hww3 Exp $
  */
 
 /*
@@ -265,7 +265,7 @@ PIKEFUN mixed `->(string selector)
     }  
     selectorName[ind] = '\0';
 
-  printf("selectorName: %s\n", selectorName);
+ // printf("selectorName: %s\n", selectorName);
   pop_stack();
   push_object(Pike_fp->current_object);
   add_ref(Pike_fp->current_object);

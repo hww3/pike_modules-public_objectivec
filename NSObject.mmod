@@ -13,7 +13,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * $Id: NSObject.mmod,v 1.11 2006-08-09 18:32:02 hww3 Exp $
+ * $Id: NSObject.mmod,v 1.12 2006-08-30 02:28:07 hww3 Exp $
  */
 
 /*
@@ -96,7 +96,14 @@ PIKEFUN mixed `->(string selector)
   SEL select;
   char * selectorName = NULL;
   int ind;
-  
+
+  if(selector->len == 0) 
+  {
+    pop_stack();
+    push_int(0);
+    return;
+  }  
+
   // first, we perty up the selector.
   selectorName = malloc(selector->len + 1);
   if(selectorName == NULL)
@@ -121,6 +128,10 @@ PIKEFUN mixed `->(string selector)
   {
     return;
   }
+  else
+  {
+    pop_stack();
+  }
   select = sel_registerName(selectorName);
 
   method = class_getInstanceMethod(THIS->object_data->object->isa, select);
@@ -144,7 +155,12 @@ PIKEFUN mixed `->(string selector)
 
    //  TODO: we should check for variables.
 
-  if(method == nil) Pike_error("method does not exist.\n");
+  if(method == nil)
+  {
+    push_int(0);
+    return;
+  // Pike_error("method does not exist.\n");
+  } 
 
   nmethod = NEW_METHODWRAPPER();
   OBJ2_METHODWRAPPER(nmethod)->object_data->object  = THIS->object_data->object;

@@ -13,7 +13,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * $Id: PiObjCObject.mmod,v 1.2 2006-08-10 03:16:30 hww3 Exp $
+ * $Id: PiObjCObject.m,v 1.1 2006-08-30 02:28:07 hww3 Exp $
  */
 
 /*
@@ -73,46 +73,144 @@
 #import  <Foundation/NSObject.h>
 #import  <Foundation/NSMethodSignature.h>
 #import  <Foundation/NSInvocation.h>
+#import "PiObjCObject.h"
 
 @implementation PiObjCObject
 
-+ newWithObject:(struct object *) obj
++ newWithPikeObject:(struct object *) obj
 {                       
         id instance;
 		instance = get_NSObject_from_Object(obj);
         if(instance != NULL) 
         {
-          instance = [[self alloc] initWithObject:obj];
+          instance = [[self alloc] initWithPikeObject:obj];
           [instance autorelease];
         }        
         return instance;
 }
 
-PIKECLASS PiObjCObject
+- initWithPikeObject:(struct object *)obj
 {
+  pobject = obj;
+  add_ref(obj);
+}
 
-CVAR PIOBJCOBJECT_OBJECT_DATA   *object_data;
-
-EXIT 
+- (void)dealloc()
 {
-  if(THIS->object_data)
+  free_object(obj);
+  [super dealloc];
+}
+
+- (void)forwardInvocation:(NSInvocation *)anInvocation
+{
+  char * argt;
+  char * funname;
+  int funlen;
+  int arg;
+  id sig;
+
+  // first, we perty up the selector.
+  funlen = strlen((char *)[anInvocation selector]);
+
+  funname = malloc(funlen);
+
+  if(funname == NULL)
   {
-    free(THIS->object_data);
+    Pike_error("unable to allocate selector storage.\n");
   }
+
+  strncpy(funname, (char *)[anInvocation selector], funlen);
+
+  for(ind = 0; ind < funlen; ind++)
+  {
+    if(funame[ind] == ':')
+      funname[ind] = '_';
+  }  
+  funname[ind] = '\0';
+
+  push_object(pobject);
+
+  // do we need to do this?
+  add_ref(pobject);
+  push_text(funname);
+
+  f_index(2);
+
+  if(Pike_sp[-1].type == PIKE_T_FUNCTION) // jackpot!
+  {
+    sig = [anInvocation methodSignature];
+
+    for(arg = 0; arg < [anInvocation numberOfArguments];arg++)
+    {
+	  // now, we push the argth argument onto the stack.
+	  argt = [sig getArgumentTypeAtIndex: arg];
+	  
+	}
+  }  
+  else
+  {
+    [NSException raise:NSInvalidArgumentException format:@"no such selector: %s", funname];	
+  }
+  	
 }
 
-}
-
-
-void pike_init_piobjc_piobjcobject()
+// we use a really, really lame method for calculating the number of arguments
+// to a method: we count the number of colons. it's ugly, and it would be 
+// far better to parse the type information for the argument count. that, 
+// however, would be a lot of work, and i'm not up for that right now.
+– (NSMethodSignature *)methodSignatureForSelector:(SEL)aSelector
 {
-  INIT
+  char * funname;
+  int funlen;
+  char * encoding;
+  int argcount;
+
+  // first, we perty up the selector.
+  funlen = strlen((char *)aSelector);
+
+  funname = malloc(funlen);
+
+  if(funname == NULL)
+  {
+    Pike_error("unable to allocate selector storage.\n");
+  }
+
+  strncpy(funname, aSelector, funlen);
+  
+  for(ind = 0; ind < funlen; ind++)
+  {
+    if(funame[ind] == ':')
+      funname[ind] = '_';
+      argcount++;
+  }  
+  funname[ind] = '\0';
+
+  push_object(pobject);
+
+  // do we need to do this?
+  add_ref(pobject);
+  push_text(funname);
+
+  f_index(2);
+
+  if(Pike_sp[-1].type == PIKE_T_FUNCTION) // jackpot!
+  {
+    	 
+    encoding = alloca(argcount+4);
+    memset(encoding, '@', argcount+3);
+    encoding[argcount+3] = '\0';
+    encoding[2] = ':';
+
+    return [NSMethodSignature signatureWithObjCTypes:encoding];
+  }  
+  else
+  {
+    [NSException raise:NSInvalidArgumentException format:@"no such selector: %s", funname];	
+  }
+
 }
 
-void pike_exit_piobjc_piobjcobject()
-{
-  EXIT
-}
+@end 
 
 /*! @endclass
  */
