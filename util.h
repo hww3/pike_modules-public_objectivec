@@ -31,3 +31,6 @@
 #define ARG(_n_) Pike_sp[-((args - _n_) + 1)]
 #endif
 
+struct object * new_nsobject_object(id obj);
+struct callable * get_func_by_selector(struct object * pobject, SEL aSelector);
+

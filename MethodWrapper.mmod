@@ -10,8 +10,9 @@
 #define _GNU_SOURCE
 #define THIS_IS_METHODWRAPPER 1
 #include "piobjc.h"
-#include <Foundation/NSString.h>
-#include <Foundation/NSAutoreleasePool.h>
+#import <Foundation/NSString.h>
+#import <Foundation/NSAutoreleasePool.h>
+#import "PiObjCObject.h"
 
 PIKECLASS MethodWrapper
 {
@@ -54,6 +55,7 @@ PIKEFUN mixed `()(mixed ... my_arguments)
   struct objc_method * method;
   SEL select;
   int arguments, x;
+  id wrapper;
   void * result;
   marg_list argumentList = NULL;
   int argumentOffset=0;
@@ -169,8 +171,15 @@ PIKEFUN mixed `()(mixed ... my_arguments)
          {
            struct object * o = sv->u.object;
            if(!get_storage(o, NSObject_program))
-             Pike_error("NSObject not passed.\n");
-           marg_setValue(argumentList,offset,id, OBJ2_NSOBJECT(o)->object_data->object);
+           {
+			printf("Whee! We're wrappin' an object!\n");
+			 // if we don't have a wrapped object, we should make a pike object wrapper.
+			 wrapper = [PiObjCObject newWithPikeObject: o];
+			 [wrapper retain];
+             marg_setValue(argumentList, offset, id, wrapper);
+		   }
+		   else
+             marg_setValue(argumentList,offset,id, OBJ2_NSOBJECT(o)->object_data->object);
          }
 	 break;
 

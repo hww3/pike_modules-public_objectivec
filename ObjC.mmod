@@ -12,6 +12,7 @@ PIKEFUN void create()
 {
 }
 
+#if defined(MAC_OS_X_VERSION_10_3) && defined(__ppc__)
 PIKEFUN int inject(int pid, int use_main_thread, string bundlePath, string systemPath, string carbonPath)
 {
   int r;
@@ -22,6 +23,7 @@ PIKEFUN int inject(int pid, int use_main_thread, string bundlePath, string syste
   push_int(r);
   return;
 }
+#endif
 
 PIKEFUN array list_classes()
 {
@@ -60,7 +62,7 @@ EXTRA
   pike_init_piobjc_nsobject();
   pike_init_piobjc_nsstring();
   pike_init_piobjc_methodwrapper();
-  pike_init_piobjc_piobjcobject();
+ // pike_init_piobjc_piobjcobject();
 }
 
 INIT
@@ -74,7 +76,7 @@ EXIT
   pike_exit_piobjc_nsclass();
   pike_exit_piobjc_nsobject();
   pike_exit_piobjc_methodwrapper();
-  pike_exit_piobjc_piobjcobject();
+  //pike_exit_piobjc_piobjcobject();
 }
 
 PIKEFUN void new_class(string name)
