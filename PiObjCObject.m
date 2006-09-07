@@ -13,7 +13,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * $Id: PiObjCObject.m,v 1.2 2006-09-05 23:37:56 hww3 Exp $
+ * $Id: PiObjCObject.m,v 1.3 2006-09-07 00:48:00 hww3 Exp $
  */
 
 /*
@@ -68,7 +68,7 @@
 #define THIS_IS_PIOBJCOBJECT 1
 
 #include "piobjc.h"
-
+#import <pthread.h>
 #import  <Foundation/NSObject.h>
 #import  <Foundation/NSMethodSignature.h>
 #import  <Foundation/NSInvocation.h>
@@ -79,6 +79,9 @@
 +(id) newWithPikeObject:(struct object *) obj
 {                       
         id instance;
+pthread_t tid;
+		    tid = pthread_self();
+		printf("pushed types, thread=%d\n", (int)tid);
 		instance = (id)get_NSObject_from_Object(obj);
         if(instance == NULL) 
         {
@@ -97,8 +100,16 @@
   return self;
 }
 
+- (id)retain
+{
+	printf("PiObjCObject.retain()\n");
+	add_ref(pobject);
+	return [super retain];
+}
+
 - (void)dealloc
 {
+	printf("PiObjCObject.dealloc()\n");
   free_object(pobject);
   [super dealloc];
 }
@@ -117,23 +128,28 @@
   int retsize;
   id sig;
   int args;
-  struct callable * func;
+  struct svalue * func;
   SEL sel;
+  struct svalue sv;
 
+  THREADS_ALLOW();
+  [anInvocation retain];
   sel = [anInvocation selector];
 
-  printf("PiObjCObject.forwardInvocation: %s", (char *)sel );
+  printf("PiObjCObject.forwardInvocation: %s\n", (char *)sel );
 
   if(sel == @selector(description))
   {
 	  id res = [self description];   
 	  [anInvocation setReturnValue:&res];
+      return;
   }
 
   if(sel == @selector(_copyDescription))
   {
 	  id res = [self _copyDescription];   
 	  [anInvocation setReturnValue:&res];
+      return;
   }
 
   if(sel == @selector(respondsToSelector:))
@@ -144,26 +160,33 @@
       [anInvocation getArgument:&sel2 atIndex:2];
    	  b = [self respondsToSelector: sel2];
 	  [anInvocation setReturnValue:&args];
+	  return;
   }
 
-
+  THREADS_DISALLOW();
   func = get_func_by_selector(pobject, sel);
-
+printf("have func.\n");
   if(func) // jackpot!
   {
 	void * buf = NULL;
-    buf = malloc(sizeof(int));
-    (*(int *)buf) = 2;
+    pthread_t tid;
+
     sig = [anInvocation methodSignature];
     args = push_objc_types(sig, anInvocation);
-    apply_svalue(&Pike_sp[0-(args+1)], args);
-//    [anInvocation setReturnValue:&buf];
+    tid = pthread_self();
+printf("pushed types, thread=%d\n", (int)tid);
+    apply_svalue(func, args);
+
+    // now, we should deal with the return value.
+printf("dealing with the return value!\n");
+    piobjc_set_return_value(sig, anInvocation, &Pike_sp[-1]);
+  //  [anInvocation release];
   }  
   else
   {
     [NSException raise:NSInvalidArgumentException format:@"no such selector: %s", (char *)[anInvocation selector]];	
+  //  [anInvocation release];
   }
-  	
 }
 
 /* Undocumented method used by NSLog, this seems to work. */
@@ -189,6 +212,8 @@
 
   printf("PiObjCObject.methodSignatureForSelector: %s\n", (char *)aSelector);
   // first, we perty up the selector.
+  THREADS_ALLOW();
+  THREADS_DISALLOW();
   func = get_func_by_selector(pobject, aSelector);
   argcount = get_argcount_by_selector(pobject, aSelector);
   if(func)
@@ -198,7 +223,6 @@
     encoding[argcount+3] = '\0';
     encoding[2] = ':';
 printf("encoding: %s\n", encoding);
-
     return [NSMethodSignature signatureWithObjCTypes:encoding];
   }  
   else
@@ -213,6 +237,8 @@ printf("encoding: %s\n", encoding);
   struct callable * func;
   printf("respondsToSelector: %s\n", (char*) aSelector);
 
+  THREADS_ALLOW();
+  THREADS_DISALLOW();
   has_objc_method(self, aSelector);
 
   func = get_func_by_selector(pobject, aSelector);

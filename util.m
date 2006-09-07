@@ -13,7 +13,8 @@ id get_NSObject()
 {
   struct object * o;
   struct NSObject_struct * d;
- 
+  THREADS_ALLOW();	
+    THREADS_DISALLOW();
   o = Pike_fp->current_object;
 
   d = (struct NSObject_struct *) get_storage(o, NSObject_program);
@@ -32,8 +33,12 @@ int push_objc_types(NSMethodSignature* sig, NSInvocation* invocation)
 	id cobj = NULL;
 	struct object * pobj = NULL;
 	int args_pushed = 0;
-	
-	for(arg = 0; arg < [sig numberOfArguments];arg++)
+ 	// args 0 and 1 are the object and the method, respectively.
+	THREADS_ALLOW();
+printf("push_objc_types\n");
+	THREADS_DISALLOW();
+
+	for(arg = 2; arg < [sig numberOfArguments];arg++)
     {
 	  // now, we push the argth argument onto the stack.
 	  type = (char*)[sig getArgumentTypeAtIndex: arg];
@@ -188,13 +193,16 @@ int push_objc_types(NSMethodSignature* sig, NSInvocation* invocation)
              Pike_error("unable to allocate memory.\n");
            [invocation getArgument: &buf atIndex: arg];
            cobj = (id)buf;
-           if([cobj isMemberOfClass: [PiObjCObject class]])
+           if(cobj->isa == [PiObjCObject class])
+           {
+	         printf("got a pike object as argument!\n");
              pobj = [cobj getPikeObject];
+           }
            else
-             pobj = new_nsobject_object((id)buf);
+             pobj = new_nsobject_object(cobj);
 		   args_pushed++;
            push_object(pobj);
-           free(buf);
+//           free(buf);
 	       break;
 	     case '#':
 	       // int
@@ -205,7 +213,7 @@ int push_objc_types(NSMethodSignature* sig, NSInvocation* invocation)
            pobj = new_nsobject_object((Class)buf);
 		   args_pushed++;
            push_object(pobj);
-           free(buf);
+//           free(buf);
 	       break;
 	
          default:
@@ -235,13 +243,62 @@ int get_argcount_by_selector(struct object * pobject, SEL aSelector)
   return argcount;	
 }
 
-struct callable * get_func_by_selector(struct object * pobject, SEL aSelector)
+void piobjc_set_return_value(id sig, id invocation, struct svalue * svalue)
+{
+	char * type;
+    struct object * o;
+    id wrapper;
+
+ 	  // now, we push the argth argument onto the stack.
+	type = [sig methodReturnType];
+    while((*type)&&(*type=='r' || *type =='n' || *type =='N' || *type=='o' || *type=='O' || *type =='V'))
+	  type++;
+    printf("return value is %s\n", type);
+
+  THREADS_ALLOW();	
+    THREADS_DISALLOW();
+    switch(*type)
+    {
+	  // id
+	  case '@':
+	    if(svalue->type!=T_OBJECT)
+          Pike_error("expected object return value.\n");
+        else
+        {
+          o = svalue->u.object;
+          if(!get_storage(o, NSObject_program))
+          {
+		    printf("Whee! We're wrappin' an object for a return value!\n");
+		    // if we don't have a wrapped object, we should make a pike object wrapper.
+		    wrapper = [PiObjCObject newWithPikeObject: o];
+		    wrapper = [wrapper retain];
+			[invocation setReturnValue: wrapper];		    
+          }
+          else 
+          {
+	         [invocation setReturnValue: get_NSObject_from_Object(svalue->u.object)];
+          }
+        }
+  	    break;
+      // class
+      case '#':
+        break;
+      // selector 
+      case ':':
+        break;
+ 	}
+}
+
+struct svalue * get_func_by_selector(struct object * pobject, SEL aSelector)
 {
   char * funname;
   int funlen;
   int ind;
   int argcount;
+  struct svalue * sv;
 
+  
+  THREADS_ALLOW();	
   funlen = strlen((char *)aSelector);
 
   funname = malloc(funlen);
@@ -261,6 +318,7 @@ struct callable * get_func_by_selector(struct object * pobject, SEL aSelector)
   }   
   funname[ind] = '\0';
 
+  THREADS_DISALLOW();
   push_object(pobject);
 
   // do we need to do this?
@@ -269,9 +327,11 @@ struct callable * get_func_by_selector(struct object * pobject, SEL aSelector)
 
   f_index(2);
 
-  if(Pike_sp[-1].type == PIKE_T_FUNCTION) // jackpot!
-    return Pike_sp[-1].u.efun;
-  else return 0;
+  if(Pike_sp[-1].type != PIKE_T_FUNCTION) // jackpot!
+   return 0;
+  sv = (struct svalue *) malloc(sizeof(struct svalue));
+  assign_svalue(sv, &Pike_sp[-1]);
+  return sv;
 }
 
 BOOL has_objc_method(id obj, SEL aSelector)
