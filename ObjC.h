@@ -1,0 +1,1 @@
+unsigned pike_objc_type_size(char** typeptr);

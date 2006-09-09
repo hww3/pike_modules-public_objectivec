@@ -324,11 +324,11 @@ Pike_error("unable to support type ^\n");
       break;
 
     case 'v':
-//	  THREADS_ALLOW();
+	  THREADS_ALLOW();
 printf("void!!!\n");
       objc_msgSendv(obj,select,method_getSizeOfArguments(method),argumentList);
 push_int(0);
-//      THREADS_DISALLOW();
+      THREADS_DISALLOW();
       break;
 
     case '*':

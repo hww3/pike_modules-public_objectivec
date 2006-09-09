@@ -1,13 +1,38 @@
-#include "piobjc.h"
+#import "piobjc.h"
 #import <Foundation/NSInvocation.h>
 #import <Foundation/NSMethodSignature.h>
+#import <Foundation/NSAutoreleasePool.h>
 #import "PiObjCObject.h"
-
+#import "ObjC.h"
 /*
- *  util.c: helper functions
+ *  util.c: helper functions and objects.
  *
  *
  */
+
+/* this code is from pyobjc-1.4. */
+static NSAutoreleasePool* global_release_pool = nil;
+
+@implementation OC_NSAutoreleasePoolCollector
++(void)newAutoreleasePool
+{
+        self = [[self alloc] init];
+        global_release_pool = [[NSAutoreleasePool alloc] init];
+        (void)[self autorelease];
+}
+
+-(void)dealloc
+{
+        global_release_pool = nil;
+        [super dealloc];
+}
+
++(void)targetForBecomingMultiThreaded:(id)sender
+{
+    [sender self];
+}
+
+@end
 
 id get_NSObject()
 {
@@ -248,7 +273,7 @@ void piobjc_set_return_value(id sig, id invocation, struct svalue * svalue)
 	char * type;
     struct object * o;
     id wrapper;
-
+printf("piobjc_set_return_value()\n");
  	  // now, we push the argth argument onto the stack.
 	type = [sig methodReturnType];
     while((*type)&&(*type=='r' || *type =='n' || *type =='N' || *type=='o' || *type=='O' || *type =='V'))
@@ -276,7 +301,9 @@ void piobjc_set_return_value(id sig, id invocation, struct svalue * svalue)
           }
           else 
           {
-	         [invocation setReturnValue: get_NSObject_from_Object(svalue->u.object)];
+	         id res;
+	         res = get_NSObject_from_Object(svalue->u.object);
+	         [invocation setReturnValue: &res];
           }
         }
   	    break;

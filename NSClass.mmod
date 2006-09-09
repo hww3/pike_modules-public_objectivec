@@ -13,7 +13,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * $Id: NSClass.mmod,v 1.7 2006-08-30 02:28:07 hww3 Exp $
+ * $Id: NSClass.mmod,v 1.8 2006-09-09 00:06:38 hww3 Exp $
  */
 
 /*
@@ -97,7 +97,7 @@ PIKEFUN void create(string classname)
 
   THIS->object_data->class = class;
 
-  if(! [class isKindOfClass: [NSAutoreleasePool class]])
+//  if(! [class isKindOfClass: [NSAutoreleasePool class]])
     [class retain];
 
   pop_n_elems(args);
@@ -240,6 +240,7 @@ PIKEFUN object new()
 
   push_object(nobject);
 }
+
 
 PIKEFUN mixed `->(string selector)
 {

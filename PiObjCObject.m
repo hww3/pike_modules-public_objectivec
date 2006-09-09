@@ -13,7 +13,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * $Id: PiObjCObject.m,v 1.3 2006-09-07 00:48:00 hww3 Exp $
+ * $Id: PiObjCObject.m,v 1.4 2006-09-09 00:06:38 hww3 Exp $
  */
 
 /*
@@ -82,6 +82,7 @@
 pthread_t tid;
 		    tid = pthread_self();
 		printf("pushed types, thread=%d\n", (int)tid);
+		add_ref(obj);
 		instance = (id)get_NSObject_from_Object(obj);
         if(instance == NULL) 
         {
