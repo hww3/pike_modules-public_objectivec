@@ -8,7 +8,7 @@
 /*! @decl int index(int pid, int use_main_thread, string bundlePath, string systemPath, string carbonPath)
  *!
  */
-CVAR id pool;
+CVAR NSAutoreleasePool * pool;
 
 PIKEFUN void create()
 {
@@ -57,7 +57,16 @@ PIKEFUN array list_classes()
 
 EXTRA
 {
-  id init_pool = [[NSAutoreleasePool alloc] init];
+  id init_pool;
+
+      if (![NSThread isMultiThreaded]) {
+	printf("going Multi-threaded for cocoa.\n");
+              [NSThread detachNewThreadSelector:@selector(targetForBecomingMultiThreaded:)
+               toTarget:[OC_NSAutoreleasePoolCollector class] withObject:nil];
+      }
+
+
+  init_pool = [[NSAutoreleasePool alloc] init];
 
   add_string_constant("__version", "0.1", 0);
   add_string_constant("__author", "Bill Welliver <bill@welliver.org>", 0);
@@ -68,17 +77,13 @@ EXTRA
   pike_init_piobjc_methodwrapper();
  // pike_init_piobjc_piobjcobject();
   [init_pool release];
-        if (![NSThread isMultiThreaded]) {
-	printf("going Multi-threaded for cocoa.\n");
-                [NSThread detachNewThreadSelector:@selector(targetForBecomingMultiThreaded:)
-                 toTarget:[OC_NSAutoreleasePoolCollector class] withObject:nil];
-        }
-	  [OC_NSAutoreleasePoolCollector newAutoreleasePool];
+  [OC_NSAutoreleasePoolCollector newAutoreleasePool];
 
 }
 
 INIT
 {
+	THIS->pool = [[NSAutoreleasePool alloc] init];
 }
 
 EXIT

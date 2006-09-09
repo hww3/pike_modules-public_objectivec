@@ -1,5 +1,13 @@
 This module was written by Bill Welliver <hww3@riverweb.com> and is 
-Copyright (c) 2005 by Bill Welliver. 
+Copyright (c) 2005-2006 by Bill Welliver. 
 
 Bugs, problems and feature requests should be forwarded to the author at the email
 address listed above.
+
+Ideas, concepts and some code were taken from the following:
+
+LuaObjCBridge, in the Public Domain.
+http://www.pixelballistics.com/Software/LuaObjCBridge/
+
+PyObjC, licensed under the MIT license.
+http://sourceforge.net/projects/pyobjc/
