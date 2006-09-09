@@ -2,6 +2,7 @@
 #import <Foundation/NSInvocation.h>
 #import <Foundation/NSMethodSignature.h>
 #import <Foundation/NSAutoreleasePool.h>
+#import <Foundation/NSThread.h>
 #import "PiObjCObject.h"
 #import "ObjC.h"
 /*
@@ -29,7 +30,9 @@ static NSAutoreleasePool* global_release_pool = nil;
 
 +(void)targetForBecomingMultiThreaded:(id)sender
 {
-    [sender self];
+//    [sender self];
+printf("hello from another thread.\n");
+  [NSThread exit];
 }
 
 @end

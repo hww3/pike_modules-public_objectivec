@@ -13,7 +13,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * $Id: NSObject.mmod,v 1.13 2006-09-05 23:37:56 hww3 Exp $
+ * $Id: NSObject.mmod,v 1.14 2006-09-09 04:46:20 hww3 Exp $
  */
 
 /*
@@ -78,12 +78,12 @@ PIKEFUN string _sprintf(int type, mixed t)
 {
   char * desc;
 
-  desc = malloc(strlen(THIS->object_data->object->isa->name) + strlen("()"));
+  desc = malloc(strlen(THIS->object_data->object->isa->name) + strlen("()") + 15);
 
   if(desc == NULL)
     Pike_error("unable to allocate string.\n");
 
-  sprintf(desc, "%s()", THIS->object_data->object->isa->name);
+  sprintf(desc, "%s(%u)", THIS->object_data->object->isa->name, [THIS->object_data->object hash]);
   push_text(desc);
   free(desc);
 }

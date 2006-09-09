@@ -78,7 +78,7 @@ PIKEFUN mixed `()(mixed ... my_arguments)
   if(!argumentList)
     Pike_error("Insufficient memory (Could not allocate method argument buffer).");
 
-  // arguments 0 and 1 are the object to recieve the message and the selector, respectively.
+  // arguments 0 and 1 are the object to receive the message and the selector, respectively.
   for(x = 2; x < arguments; x++)
   {
     int offset;
@@ -175,8 +175,7 @@ printf("argument %d %s\n", x, type);
 	         break;
 
       case '@': 
-         if(sv->type!=T_OBJECT)
-           Pike_error("Type mismatch for method argument..");
+         if(sv->type==T_OBJECT)
          {
            struct object * o = sv->u.object;
            if(!get_storage(o, NSObject_program))
@@ -190,6 +189,22 @@ printf("argument %d %s\n", x, type);
 		   else
              marg_setValue(argumentList,offset,id, OBJ2_NSOBJECT(o)->object_data->object);
          }
+         else if(sv->type == T_STRING)
+         {
+            // let's wrap the string as an NSString object.
+            id str;
+            NSStringEncoding enc;
+            enc =  NSUTF8StringEncoding;
+            push_svalue(sv);
+            f_string_to_utf8(1);
+            sv = &Pike_sp[-1];
+            str = [[NSString alloc] initWithBytes: sv->u.string->str length: sv->u.string->len encoding: enc];
+            pop_stack();
+            marg_setValue(argumentList,offset,id, str);
+         }
+		 else
+		    Pike_error("Type mismatch for method argument..");
+            
 	 break;
 
 /* TODO: How should we support these? */
