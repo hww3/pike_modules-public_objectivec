@@ -33,7 +33,6 @@ object registrationDictionaryForGrowl(mixed ... args) {
 
 void notify()
 {
-	werror("THREADS: %O\n", pool);
 	object n = Cocoa.NSMutableDictionary->dictionaryWithCapacity(6); 
 	n->setObject_forKey_("PGrowl", "ApplicationName");
 	n->setObject_forKey_("New Announcement", "NotificationName");

@@ -14,6 +14,8 @@
 #import <Foundation/NSAutoreleasePool.h>
 #import "PiObjCObject.h"
 
+extern id global_autorelease_pool;
+
 PIKECLASS MethodWrapper
 {
 
@@ -64,7 +66,8 @@ PIKEFUN mixed `()(mixed ... my_arguments)
   id obj;
   id pool;
 
-  pool = [[NSAutoreleasePool alloc] init];
+//  pool = [NSAutoreleasePool new];
+  pool = [global_autorelease_pool getAutoreleasePool];
   method = THIS->object_data->method;
   select = THIS->object_data->selector;
 
@@ -181,10 +184,10 @@ printf("argument %d %s\n", x, type);
            struct object * o = sv->u.object;
            if(!get_storage(o, NSObject_program))
            {
-			printf("Whee! We're wrappin' an object!\n");
+//			printf("Whee! We're wrappin' an object!\n");
 			 // if we don't have a wrapped object, we should make a pike object wrapper.
 			 wrapper = [PiObjCObject newWithPikeObject: o];
-			 wrapper = [wrapper retain];
+		//	 wrapper = [wrapper retain];
              marg_setValue(argumentList, offset, id, wrapper);
 		   }
 		   else

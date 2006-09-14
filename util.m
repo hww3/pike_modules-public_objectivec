@@ -3,6 +3,7 @@
 #import <Foundation/NSMethodSignature.h>
 #import <Foundation/NSAutoreleasePool.h>
 #import <Foundation/NSThread.h>
+#import <Foundation/NSString.h>
 #import "PiObjCObject.h"
 #import "ObjC.h"
 /*
@@ -16,13 +17,21 @@
 @implementation OC_NSAutoreleasePoolCollector
 -(void)newAutoreleasePool
 {
-  
         release_pool = [[NSAutoreleasePool alloc] init];
+}
+
+-(id)init
+{
+  main_thread = [NSThread currentThread];
+  return [super init];
 }
 
 -(id)getAutoreleasePool
 {
-  return release_pool;  
+  if([[NSThread currentThread] isEqual: main_thread])
+    return nil;
+  else
+    return release_pool;  
 }
 
 -(void)dealloc
@@ -34,7 +43,7 @@
 -(void)targetForBecomingMultiThreaded:(id)sender
 {
     [sender self];
-printf("hello from another thread.\n");
+//printf("hello from another thread.\n");
   
 }
 
@@ -53,7 +62,6 @@ struct object * object_dispatch_method(id obj, SEL select, struct objc_method * 
   id r;
   
   THREADS_ALLOW();
-  printf("threads are allowed.\n");
   r = objc_msgSendv(obj,select,method_getSizeOfArguments(method),argumentList);
   THREADS_DISALLOW();
   
@@ -326,18 +334,40 @@ void piobjc_set_return_value(id sig, id invocation, struct svalue * svalue)
     {
 	  // id
 	  case '@':
-	    if(svalue->type!=T_OBJECT)
-          Pike_error("expected object return value.\n");
-        else
+	      if(svalue->type == T_INT)
+	      {
+
+            id num;
+            
+            num = [NSNumber newWithLong: svalue->u.integer];
+            [invocation setReturnValue: &num];
+	        
+	      }
+	      if(svalue->type == T_STRING) // we need to wrap the value as a string.
+	      {
+            // let's wrap the string as an NSString object.
+            id str;
+            NSStringEncoding enc;
+            enc =  NSUTF8StringEncoding;
+            push_svalue(svalue);
+            f_string_to_utf8(1);
+            svalue = &Pike_sp[-1];
+            str = [[NSString alloc] initWithBytes: svalue->u.string->str length: svalue->u.string->len encoding: enc];
+            [str autorelease];
+            pop_stack();
+            [invocation setReturnValue: &str];
+	        
+	      }
+	      else if(svalue->type == T_OBJECT)
         {
           o = svalue->u.object;
           if(!get_storage(o, NSObject_program))
           {
 //		    printf("Whee! We're wrappin' an object for a return value!\n");
 		    // if we don't have a wrapped object, we should make a pike object wrapper.
-		    wrapper = [PiObjCObject newWithPikeObject: o];
-		    wrapper = [wrapper retain];
-			[invocation setReturnValue: wrapper];		    
+		        wrapper = [PiObjCObject newWithPikeObject: o];
+		        wrapper = [wrapper retain];
+		  	    [invocation setReturnValue: wrapper];		    
           }
           else 
           {
@@ -346,6 +376,8 @@ void piobjc_set_return_value(id sig, id invocation, struct svalue * svalue)
 	         [invocation setReturnValue: &res];
           }
         }
+        else
+          Pike_error("expected object return value.\n");
   	    break;
       // class
       case '#':
@@ -393,7 +425,6 @@ struct svalue * get_func_by_selector(struct object * pobject, SEL aSelector)
 
   f_index(2);
 
-  printf("type for object's index %s: %d; wanted %d %d\n", funname, Pike_sp[-1].type, PIKE_T_FUNCTION, (Pike_sp[-1].type == PIKE_T_FUNCTION));
   free(funname);
 
   if(Pike_sp[-1].type != PIKE_T_FUNCTION) // jackpot!

@@ -38,7 +38,7 @@ void piobjc_set_return_value(id sig, id invocation, struct svalue * svalue);
 id get_NSObject_from_Object(struct object *o);
 
 @interface OC_NSAutoreleasePoolCollector: NSObject
-{ id release_pool;}
+{ id release_pool; id main_thread;}
 -(void)newAutoreleasePool;
 -(id)getAutoreleasePool;
 -(void)targetForBecomingMultiThreaded:(id)sender;

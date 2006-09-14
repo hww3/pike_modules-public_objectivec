@@ -13,7 +13,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * $Id: PiObjCObject.m,v 1.6 2006-09-14 18:29:48 hww3 Exp $
+ * $Id: PiObjCObject.m,v 1.7 2006-09-14 23:10:47 hww3 Exp $
  */
 
 /*
@@ -141,30 +141,28 @@
   {
 	  id res = [self description];   
 	  [anInvocation setReturnValue:&res];
-      return;
+    return;
   }
 
   if(sel == @selector(_copyDescription))
   {
 	  id res = [self _copyDescription];   
 	  [anInvocation setReturnValue:&res];
-      return;
+    return;
   }
 
   if(sel == @selector(respondsToSelector:))
   {
-      SEL     sel2;
-      BOOL    b;
+    SEL sel2;
+    BOOL b;
 
-      [anInvocation getArgument:&sel2 atIndex:2];
-   	  b = [self respondsToSelector: sel2];
+    [anInvocation getArgument:&sel2 atIndex:2];
+   	b = [self respondsToSelector: sel2];
 	  [anInvocation setReturnValue:&args];
 	  return;
   }
 
 
-
- 	printf ("!!! object dispatch.\n");
   if((state = thread_state_for_id(th_self()))!=NULL) 
   {
     /* This is a pike thread.  Do we have the interpreter lock? */
@@ -188,9 +186,9 @@
     {
       /* Not a pike thread.  Create a temporary thread_id... */
       struct object *thread_obj;
-      printf("creating a temporary thread.\n");
+//      printf("creating a temporary thread.\n");
       mt_lock_interpreter();
-printf("got the lock.\n");
+// printf("got the lock.\n");
       init_interpreter();
       Pike_interpreter.stack_top=((char *)&state)+ (thread_stack_size-16384) * STACK_DIRECTION;
       Pike_interpreter.recoveries = NULL;
@@ -268,21 +266,21 @@ void dispatch_pike_method(struct object * pobject, SEL sel, NSInvocation * anInv
   struct callable * func;
   int argcount = 0;
   struct thread_state *state;
-  printf("PiObjCObject.methodSignatureForSelector: %s\n", (char *)aSelector);
+//  printf("PiObjCObject.methodSignatureForSelector: %s\n", (char *)aSelector);
 
   if((state = thread_state_for_id(th_self()))!=NULL)
   {
     /* This is a pike thread.  Do we have the interpreter lock? */
     if(!state->swapped)
     {
-printf("methodSignatureForSelector: in pike thread, with the lock.\n");
+//printf("methodSignatureForSelector: in pike thread, with the lock.\n");
       /* Yes.  Go for it... */
       func = get_func_by_selector(pobject, aSelector);
       argcount = get_argcount_by_selector(pobject, aSelector);
     }
     else
     {
-printf("methodSignatureForSelector: in pike thread, getting the lock.\n");
+//printf("methodSignatureForSelector: in pike thread, getting the lock.\n");
       /* Nope, let's get it... */
       mt_lock_interpreter();
       SWAP_IN_THREAD(state);
@@ -296,12 +294,12 @@ printf("methodSignatureForSelector: in pike thread, getting the lock.\n");
    }
    else
    {
-printf("methodSignatureForSelector: not in pike thread.\n");
+//printf("methodSignatureForSelector: not in pike thread.\n");
       /* Not a pike thread.  Create a temporary thread_id... */
       struct object *thread_obj;
-      printf("creating a temporary thread.\n");
+//      printf("creating a temporary thread.\n");
       mt_lock_interpreter();
-printf("got the lock.\n");
+//printf("got the lock.\n");
       init_interpreter();
       Pike_interpreter.stack_top=((char *)&state)+ (thread_stack_size-16384) * STACK_DIRECTION;
       Pike_interpreter.recoveries = NULL;
