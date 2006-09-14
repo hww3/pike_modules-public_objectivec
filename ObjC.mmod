@@ -31,6 +31,12 @@ PIKEFUN int inject(int pid, int use_main_thread, string bundlePath, string syste
 }
 #endif
 
+PIKEFUN void purge_autorelease_pool()
+{
+	[global_autorelease_pool purgeAndNew];
+	return;
+}
+
 PIKEFUN array list_classes()
 {
   Class * list = NULL;

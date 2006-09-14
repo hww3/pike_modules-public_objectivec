@@ -1,5 +1,5 @@
 import Public.ObjectiveC;
-
+int i;
 object pool;
 
 void create()
@@ -44,8 +44,9 @@ void notify()
 	n->setObject_forKey_(NSClass("NSWorkspace")->sharedWorkspace()->iconForFileType_("jpg")->TIFFRepresentation(), "NotificationAppIcon");
 
 	NSClass("GrowlApplicationBridge")->notifyWithDictionary_(n);
-	call_out(notify, 5);
+	call_out(notify, 1);
 //	pool->release();
 //	pool = Cocoa.NSAutoreleasePool->new()->init();
-
+  if(i%10 ==0) {purge_autorelease_pool();werror("!!!!!!! purge!\n");}
+  i ++;
 }

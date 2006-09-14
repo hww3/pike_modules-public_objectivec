@@ -34,6 +34,12 @@
     return release_pool;  
 }
 
+-(void)purgeAndNew
+{
+  [release_pool release];
+  [self newAutoreleasePool];
+}
+
 -(void)dealloc
 {
         release_pool = nil;
