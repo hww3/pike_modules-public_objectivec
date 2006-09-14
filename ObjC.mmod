@@ -61,8 +61,9 @@ EXTRA
 
       if (![NSThread isMultiThreaded]) {
 	    printf("going Multi-threaded for cocoa.\n");
-        [NSThread detachNewThreadSelector:@selector(targetForBecomingMultiThreaded:)
-            toTarget:[OC_NSAutoreleasePoolCollector class] withObject:nil];
+/*        [NSThread detachNewThreadSelector:@selector(targetForBecomingMultiThreaded:)
+            toTarget:[[OC_NSAutoreleasePoolCollector alloc] init] withObject:nil];
+*/
       }
 
 
@@ -82,8 +83,8 @@ EXTRA
 
 INIT
 {
- if(THIS->pool == NULL)   THIS->pool = [[NSAutoreleasePool alloc] init];
-
+ THIS->pool = [[OC_NSAutoreleasePoolCollector alloc] init];
+ [THIS->pool newAutoreleasePool];
 }
 
 EXIT

@@ -12,37 +12,78 @@
  */
 
 /* this code is from pyobjc-1.4. */
-static NSAutoreleasePool* global_release_pool = nil;
 
 @implementation OC_NSAutoreleasePoolCollector
-+(void)newAutoreleasePool
+-(void)newAutoreleasePool
 {
-        self = [[self alloc] init];
-        global_release_pool = [[NSAutoreleasePool alloc] init];
-        (void)[self autorelease];
+  
+        release_pool = [[NSAutoreleasePool alloc] init];
+}
+
+-(id)getAutoreleasePool
+{
+  return release_pool;  
 }
 
 -(void)dealloc
 {
-        global_release_pool = nil;
+        release_pool = nil;
         [super dealloc];
 }
 
-+(void)targetForBecomingMultiThreaded:(id)sender
+-(void)targetForBecomingMultiThreaded:(id)sender
 {
-//    [sender self];
+    [sender self];
 printf("hello from another thread.\n");
-  [NSThread exit];
+  
 }
 
 @end
+
+void void_dispatch_method(id obj, SEL select, struct objc_method * method, marg_list argumentList)
+{
+  THREADS_ALLOW();
+  objc_msgSendv(obj,select,method_getSizeOfArguments(method),argumentList);
+  THREADS_DISALLOW();
+}
+
+struct object * object_dispatch_method(id obj, SEL select, struct objc_method * method, marg_list argumentList)
+{
+  struct object * o;
+  id r;
+  
+  THREADS_ALLOW();
+  printf("threads are allowed.\n");
+  r = objc_msgSendv(obj,select,method_getSizeOfArguments(method),argumentList);
+  THREADS_DISALLOW();
+  
+    if([r isKindOfClass: [NSString class]] == YES)
+
+	{
+	  struct NSObject_struct * d;
+  		o = NEW_NSSTRING();
+  		d = (struct NSObject_struct *) get_storage(o, NSObject_program);
+  		if(d == NULL)
+     		Pike_error("Object is not an NSObject!\n");
+  		d->object_data->object = (id)r;
+  		r = [(id)r retain];
+	}
+	else
+	{
+  		o = NEW_NSOBJECT();
+  		OBJ2_NSOBJECT(o)->object_data->object = (id)r;
+	}
+	if(! [(id)r isKindOfClass: [NSAutoreleasePool class]])
+  	r = [(id)r retain];
+
+  return o;
+}
 
 id get_NSObject()
 {
   struct object * o;
   struct NSObject_struct * d;
-  THREADS_ALLOW();	
-    THREADS_DISALLOW();
+
   o = Pike_fp->current_object;
 
   d = (struct NSObject_struct *) get_storage(o, NSObject_program);
@@ -62,9 +103,7 @@ int push_objc_types(NSMethodSignature* sig, NSInvocation* invocation)
 	struct object * pobj = NULL;
 	int args_pushed = 0;
  	// args 0 and 1 are the object and the method, respectively.
-	THREADS_ALLOW();
 printf("push_objc_types\n");
-	THREADS_DISALLOW();
 
 	for(arg = 2; arg < [sig numberOfArguments];arg++)
     {
@@ -276,15 +315,13 @@ void piobjc_set_return_value(id sig, id invocation, struct svalue * svalue)
 	char * type;
     struct object * o;
     id wrapper;
-printf("piobjc_set_return_value()\n");
+//printf("piobjc_set_return_value()\n");
  	  // now, we push the argth argument onto the stack.
 	type = [sig methodReturnType];
     while((*type)&&(*type=='r' || *type =='n' || *type =='N' || *type=='o' || *type=='O' || *type =='V'))
 	  type++;
-    printf("return value is %s\n", type);
-
-  THREADS_ALLOW();	
-    THREADS_DISALLOW();
+  //  printf("return value type is %s\n", type);
+  //  printf("returned value type is %d\n", svalue->type);
     switch(*type)
     {
 	  // id
@@ -296,7 +333,7 @@ printf("piobjc_set_return_value()\n");
           o = svalue->u.object;
           if(!get_storage(o, NSObject_program))
           {
-		    printf("Whee! We're wrappin' an object for a return value!\n");
+//		    printf("Whee! We're wrappin' an object for a return value!\n");
 		    // if we don't have a wrapped object, we should make a pike object wrapper.
 		    wrapper = [PiObjCObject newWithPikeObject: o];
 		    wrapper = [wrapper retain];
@@ -328,7 +365,6 @@ struct svalue * get_func_by_selector(struct object * pobject, SEL aSelector)
   struct svalue * sv;
 
   
-  THREADS_ALLOW();	
   funlen = strlen((char *)aSelector);
 
   funname = malloc(funlen);
@@ -348,7 +384,7 @@ struct svalue * get_func_by_selector(struct object * pobject, SEL aSelector)
   }   
   funname[ind] = '\0';
 
-  THREADS_DISALLOW();
+
   push_object(pobject);
 
   // do we need to do this?
@@ -356,6 +392,9 @@ struct svalue * get_func_by_selector(struct object * pobject, SEL aSelector)
   push_text(funname);
 
   f_index(2);
+
+  printf("type for object's index %s: %d; wanted %d %d\n", funname, Pike_sp[-1].type, PIKE_T_FUNCTION, (Pike_sp[-1].type == PIKE_T_FUNCTION));
+  free(funname);
 
   if(Pike_sp[-1].type != PIKE_T_FUNCTION) // jackpot!
    return 0;

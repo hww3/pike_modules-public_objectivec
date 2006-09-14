@@ -13,7 +13,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * $Id: PiObjCObject.m,v 1.4 2006-09-09 00:06:38 hww3 Exp $
+ * $Id: PiObjCObject.m,v 1.5 2006-09-14 05:32:01 hww3 Exp $
  */
 
 /*
@@ -129,11 +129,12 @@ pthread_t tid;
   int retsize;
   id sig;
   int args;
-  struct svalue * func;
   SEL sel;
   struct svalue sv;
+ 	struct thread_state *state;
 
-  THREADS_ALLOW();
+
+
   [anInvocation retain];
   sel = [anInvocation selector];
 
@@ -164,25 +165,86 @@ pthread_t tid;
 	  return;
   }
 
-  THREADS_DISALLOW();
+
+
+ 	printf ("!!! object dispatch.\n");
+  	if((state = thread_state_for_id(th_self()))!=NULL) {
+    	/* This is a pike thread.  Do we have the interpreter lock? */
+    	if(!state->swapped) {
+      	/* Yes.  Go for it... */
+
+          dispatch_pike_method(pobject, sel, anInvocation);
+	      		
+      }
+      else
+      {
+	      	/* Nope, let's get it... */
+	      	mt_lock_interpreter();
+	      	SWAP_IN_THREAD(state);
+          dispatch_pike_method(pobject, sel, anInvocation);
+    	    /* Restore */
+    	    SWAP_OUT_THREAD(state);
+    	    mt_unlock_interpreter();
+      }
+    }
+    else
+    {
+        	    	/* Not a pike thread.  Create a temporary thread_id... */
+        	    	struct object *thread_obj;
+        printf("creating a temporary thread.\n");
+        	    	mt_lock_interpreter();
+printf("got the lock.\n");
+        	    	init_interpreter();
+        	    	Pike_interpreter.stack_top=((char *)&state)+ (thread_stack_size-16384) * STACK_DIRECTION;
+        	    	Pike_interpreter.recoveries = NULL;
+        	    	thread_obj = fast_clone_object(thread_id_prog);
+        	    	INIT_THREAD_STATE((struct thread_state *)(thread_obj->storage +
+        						      thread_storage_offset));
+        	    					num_threads++;
+        	    	thread_table_insert(Pike_interpreter.thread_state);
+
+                dispatch_pike_method(pobject, sel, anInvocation);
+
+        	    	cleanup_interpret();	/* Must be done before EXIT_THREAD_STATE */
+        	    	Pike_interpreter.thread_state->status=THREAD_EXITED;
+        	    	co_signal(&Pike_interpreter.thread_state->status_change);
+        	    	thread_table_delete(Pike_interpreter.thread_state);
+        	    	EXIT_THREAD_STATE(Pike_interpreter.thread_state);
+        	    	Pike_interpreter.thread_state=NULL;
+        	    	free_object(thread_obj);
+        	    	thread_obj = NULL;
+        	    	num_threads--;
+        	    	mt_unlock_interpreter();
+
+      
+    }
+  //  [anInvocation release];
+
+}
+
+void dispatch_pike_method(struct object * pobject, SEL sel, NSInvocation * anInvocation)
+{
+  int args;
+  struct svalue * func;
+  id sig;
+  
   func = get_func_by_selector(pobject, sel);
-printf("have func.\n");
+  printf("have func.\n");
   if(func) // jackpot!
   {
-	void * buf = NULL;
+    void * buf = NULL;
     pthread_t tid;
 
     sig = [anInvocation methodSignature];
     args = push_objc_types(sig, anInvocation);
     tid = pthread_self();
-printf("pushed types, thread=%d\n", (int)tid);
+    printf("pushed types, thread=%d\n", (int)tid);
     apply_svalue(func, args);
 
-    // now, we should deal with the return value.
-printf("dealing with the return value!\n");
+// now, we should deal with the return value.
+    printf("dealing with the return value for call to %s\n", (char *) sel);
     piobjc_set_return_value(sig, anInvocation, &Pike_sp[-1]);
-  //  [anInvocation release];
-  }  
+  }
   else
   {
     [NSException raise:NSInvalidArgumentException format:@"no such selector: %s", (char *)[anInvocation selector]];	
@@ -210,11 +272,8 @@ printf("dealing with the return value!\n");
   char * encoding;
   struct callable * func;
   int argcount = 0;
-
   printf("PiObjCObject.methodSignatureForSelector: %s\n", (char *)aSelector);
   // first, we perty up the selector.
-  THREADS_ALLOW();
-  THREADS_DISALLOW();
   func = get_func_by_selector(pobject, aSelector);
   argcount = get_argcount_by_selector(pobject, aSelector);
   if(func)
@@ -238,8 +297,6 @@ printf("encoding: %s\n", encoding);
   struct callable * func;
   printf("respondsToSelector: %s\n", (char*) aSelector);
 
-  THREADS_ALLOW();
-  THREADS_DISALLOW();
   has_objc_method(self, aSelector);
 
   func = get_func_by_selector(pobject, aSelector);
