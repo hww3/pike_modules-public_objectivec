@@ -156,4 +156,3 @@ unsigned pike_objc_type_alignment(char** typeptr);
 unsigned pike_objc_type_size(char** typeptr);
 BOOL CreateClassDefinition( const char * name, 
         const char * superclassName );
-

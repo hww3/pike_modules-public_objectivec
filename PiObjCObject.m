@@ -13,7 +13,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * $Id: PiObjCObject.m,v 1.5 2006-09-14 05:32:01 hww3 Exp $
+ * $Id: PiObjCObject.m,v 1.6 2006-09-14 18:29:48 hww3 Exp $
  */
 
 /*
@@ -78,23 +78,20 @@
 
 +(id) newWithPikeObject:(struct object *) obj
 {                       
-        id instance;
-pthread_t tid;
-		    tid = pthread_self();
-		printf("pushed types, thread=%d\n", (int)tid);
-		add_ref(obj);
-		instance = (id)get_NSObject_from_Object(obj);
-        if(instance == NULL) 
-        {
-          instance = [[self alloc] initWithPikeObject:obj];
-          [instance autorelease];
-        }        
-        return instance;
+  id instance;
+  add_ref(obj);
+  instance = (id)get_NSObject_from_Object(obj);
+  if(instance == NULL) 
+  {
+    instance = [[self alloc] initWithPikeObject:obj];
+    [instance autorelease];
+  }        
+  return instance;
 }
 
 - (id)initWithPikeObject:(struct object *)obj
 {
-	printf("PiObjCObject.initWithPikeObject\n");
+  printf("PiObjCObject.initWithPikeObject\n");
   pobject = obj;
   add_ref(obj);
 //  [self retain];
@@ -103,14 +100,14 @@ pthread_t tid;
 
 - (id)retain
 {
-	printf("PiObjCObject.retain()\n");
-	add_ref(pobject);
-	return [super retain];
+  printf("PiObjCObject.retain()\n");
+  add_ref(pobject);
+  return [super retain];
 }
 
 - (void)dealloc
 {
-	printf("PiObjCObject.dealloc()\n");
+  printf("PiObjCObject.dealloc()\n");
   free_object(pobject);
   [super dealloc];
 }
@@ -131,7 +128,7 @@ pthread_t tid;
   int args;
   SEL sel;
   struct svalue sv;
- 	struct thread_state *state;
+  struct thread_state *state;
 
 
 
@@ -168,55 +165,53 @@ pthread_t tid;
 
 
  	printf ("!!! object dispatch.\n");
-  	if((state = thread_state_for_id(th_self()))!=NULL) {
-    	/* This is a pike thread.  Do we have the interpreter lock? */
-    	if(!state->swapped) {
-      	/* Yes.  Go for it... */
-
-          dispatch_pike_method(pobject, sel, anInvocation);
-	      		
-      }
-      else
-      {
-	      	/* Nope, let's get it... */
-	      	mt_lock_interpreter();
-	      	SWAP_IN_THREAD(state);
-          dispatch_pike_method(pobject, sel, anInvocation);
-    	    /* Restore */
-    	    SWAP_OUT_THREAD(state);
-    	    mt_unlock_interpreter();
-      }
+  if((state = thread_state_for_id(th_self()))!=NULL) 
+  {
+    /* This is a pike thread.  Do we have the interpreter lock? */
+    if(!state->swapped) 
+    {
+      /* Yes.  Go for it... */
+        dispatch_pike_method(pobject, sel, anInvocation);      		
     }
     else
     {
-        	    	/* Not a pike thread.  Create a temporary thread_id... */
-        	    	struct object *thread_obj;
-        printf("creating a temporary thread.\n");
-        	    	mt_lock_interpreter();
+      /* Nope, let's get it... */ 
+      mt_lock_interpreter();
+      SWAP_IN_THREAD(state);
+      dispatch_pike_method(pobject, sel, anInvocation);
+      /* Restore */
+      SWAP_OUT_THREAD(state);
+      mt_unlock_interpreter();
+     }
+   }
+    else
+    {
+      /* Not a pike thread.  Create a temporary thread_id... */
+      struct object *thread_obj;
+      printf("creating a temporary thread.\n");
+      mt_lock_interpreter();
 printf("got the lock.\n");
-        	    	init_interpreter();
-        	    	Pike_interpreter.stack_top=((char *)&state)+ (thread_stack_size-16384) * STACK_DIRECTION;
-        	    	Pike_interpreter.recoveries = NULL;
-        	    	thread_obj = fast_clone_object(thread_id_prog);
-        	    	INIT_THREAD_STATE((struct thread_state *)(thread_obj->storage +
-        						      thread_storage_offset));
-        	    					num_threads++;
-        	    	thread_table_insert(Pike_interpreter.thread_state);
+      init_interpreter();
+      Pike_interpreter.stack_top=((char *)&state)+ (thread_stack_size-16384) * STACK_DIRECTION;
+      Pike_interpreter.recoveries = NULL;
+      thread_obj = fast_clone_object(thread_id_prog);
+      INIT_THREAD_STATE((struct thread_state *)(thread_obj->storage +
+        				          thread_storage_offset));
+      num_threads++;
+      thread_table_insert(Pike_interpreter.thread_state);
 
-                dispatch_pike_method(pobject, sel, anInvocation);
+      dispatch_pike_method(pobject, sel, anInvocation);
 
-        	    	cleanup_interpret();	/* Must be done before EXIT_THREAD_STATE */
-        	    	Pike_interpreter.thread_state->status=THREAD_EXITED;
-        	    	co_signal(&Pike_interpreter.thread_state->status_change);
-        	    	thread_table_delete(Pike_interpreter.thread_state);
-        	    	EXIT_THREAD_STATE(Pike_interpreter.thread_state);
-        	    	Pike_interpreter.thread_state=NULL;
-        	    	free_object(thread_obj);
-        	    	thread_obj = NULL;
-        	    	num_threads--;
-        	    	mt_unlock_interpreter();
-
-      
+      cleanup_interpret();	/* Must be done before EXIT_THREAD_STATE */
+      Pike_interpreter.thread_state->status=THREAD_EXITED;
+      co_signal(&Pike_interpreter.thread_state->status_change);
+      thread_table_delete(Pike_interpreter.thread_state);
+      EXIT_THREAD_STATE(Pike_interpreter.thread_state);
+      Pike_interpreter.thread_state=NULL;
+      free_object(thread_obj);
+      thread_obj = NULL;
+      num_threads--;
+      mt_unlock_interpreter();      
     }
   //  [anInvocation release];
 
@@ -272,10 +267,67 @@ void dispatch_pike_method(struct object * pobject, SEL sel, NSInvocation * anInv
   char * encoding;
   struct callable * func;
   int argcount = 0;
+  struct thread_state *state;
   printf("PiObjCObject.methodSignatureForSelector: %s\n", (char *)aSelector);
-  // first, we perty up the selector.
-  func = get_func_by_selector(pobject, aSelector);
-  argcount = get_argcount_by_selector(pobject, aSelector);
+
+  if((state = thread_state_for_id(th_self()))!=NULL)
+  {
+    /* This is a pike thread.  Do we have the interpreter lock? */
+    if(!state->swapped)
+    {
+printf("methodSignatureForSelector: in pike thread, with the lock.\n");
+      /* Yes.  Go for it... */
+      func = get_func_by_selector(pobject, aSelector);
+      argcount = get_argcount_by_selector(pobject, aSelector);
+    }
+    else
+    {
+printf("methodSignatureForSelector: in pike thread, getting the lock.\n");
+      /* Nope, let's get it... */
+      mt_lock_interpreter();
+      SWAP_IN_THREAD(state);
+      // first, we perty up the selector.
+      func = get_func_by_selector(pobject, aSelector);
+      argcount = get_argcount_by_selector(pobject, aSelector);
+      /* Restore */
+      SWAP_OUT_THREAD(state);
+      mt_unlock_interpreter();
+     }
+   }
+   else
+   {
+printf("methodSignatureForSelector: not in pike thread.\n");
+      /* Not a pike thread.  Create a temporary thread_id... */
+      struct object *thread_obj;
+      printf("creating a temporary thread.\n");
+      mt_lock_interpreter();
+printf("got the lock.\n");
+      init_interpreter();
+      Pike_interpreter.stack_top=((char *)&state)+ (thread_stack_size-16384) * STACK_DIRECTION;
+      Pike_interpreter.recoveries = NULL;
+      thread_obj = fast_clone_object(thread_id_prog);
+      INIT_THREAD_STATE((struct thread_state *)(thread_obj->storage +
+                                                  thread_storage_offset));
+      num_threads++;
+      thread_table_insert(Pike_interpreter.thread_state);
+
+      func = get_func_by_selector(pobject, aSelector);
+      argcount = get_argcount_by_selector(pobject, aSelector);
+
+      cleanup_interpret();      /* Must be done before EXIT_THREAD_STATE */
+      Pike_interpreter.thread_state->status=THREAD_EXITED;
+      co_signal(&Pike_interpreter.thread_state->status_change);
+      thread_table_delete(Pike_interpreter.thread_state);
+      EXIT_THREAD_STATE(Pike_interpreter.thread_state);
+      Pike_interpreter.thread_state=NULL;
+      free_object(thread_obj);
+      thread_obj = NULL;
+      num_threads--;
+      mt_unlock_interpreter();     
+   }
+
+
+
   if(func)
   {
     encoding = alloca(argcount+4);
