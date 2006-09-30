@@ -13,7 +13,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * $Id: PiObjCObject.m,v 1.7 2006-09-14 23:10:47 hww3 Exp $
+ * $Id: PiObjCObject.m,v 1.8 2006-09-30 15:11:24 hww3 Exp $
  */
 
 /*
@@ -80,7 +80,7 @@
 {                       
   id instance;
   add_ref(obj);
-  instance = (id)get_NSObject_from_Object(obj);
+  instance = (id)unwrap_objc_object(obj);
   if(instance == NULL) 
   {
     instance = [[self alloc] initWithPikeObject:obj];

@@ -1,17 +1,18 @@
+
+#define THIS_IS_OBJC_OBJECT_HOLDER 1
+
 #include "piobjc.h"
 #import "ObjC.h"
 #import <Foundation/NSBundle.h>
 #import <Foundation/NSString.h>
 #import <Foundation/NSAutoreleasePool.h>
 #import <Foundation/NSThread.h>
-
-
-
 /*! @decl int index(int pid, int use_main_thread, string bundlePath, string systemPath, string carbonPath)
  *!
  */
 
 id global_autorelease_pool;
+struct mapping * global_class_cache;
 CVAR NSAutoreleasePool * pool;
 
 PIKEFUN void create()
@@ -35,6 +36,20 @@ PIKEFUN void purge_autorelease_pool()
 {
 	[global_autorelease_pool purgeAndNew];
 	return;
+}
+
+PIKEFUN program get_dynamic_class(string classname)
+{
+   struct program * prog;
+   
+   prog = pike_create_objc_dynamic_class(classname);
+   
+   pop_stack();
+   
+   if(prog)
+      ref_push_program(prog);
+   else
+      push_int(0);
 }
 
 PIKEFUN array list_classes()
@@ -82,10 +97,10 @@ EXTRA
   add_string_constant("__version", "0.1", 0);
   add_string_constant("__author", "Bill Welliver <bill@welliver.org>", 0);
 
-  pike_init_piobjc_nsclass();
-  pike_init_piobjc_nsobject();
-  pike_init_piobjc_nsstring();
-  pike_init_piobjc_methodwrapper();
+  //pike_init_piobjc_nsclass();
+  //pike_init_piobjc_nsobject();
+  //pike_init_piobjc_nsstring();
+ // pike_init_piobjc_methodwrapper();
  // pike_init_piobjc_piobjcobject();
   [init_pool release];
   global_autorelease_pool = [[OC_NSAutoreleasePoolCollector alloc] init];
@@ -95,15 +110,19 @@ INIT
 {
  THIS->pool = [[OC_NSAutoreleasePoolCollector alloc] init];
  [THIS->pool newAutoreleasePool];
+ global_class_cache = allocate_mapping(10);
+ add_ref(global_class_cache);
 }
 
 EXIT
 {
-  pike_exit_piobjc_nsstring();
-  pike_exit_piobjc_nsclass();
-  pike_exit_piobjc_nsobject();
-  pike_exit_piobjc_methodwrapper();
+ // pike_exit_piobjc_nsstring();
+ // pike_exit_piobjc_nsclass();
+ // pike_exit_piobjc_nsobject();
+ // pike_exit_piobjc_methodwrapper();
   //pike_exit_piobjc_piobjcobject();
+
+  free_mapping(global_class_cache);
 }
 
 PIKEFUN void new_class(string name)
@@ -505,3 +524,20 @@ unsigned pike_objc_type_size(char** typeptr){
 	*typeptr=(result?type:nil);
 	return result;
 	}
+
+PIKECLASS objc_object_holder
+{
+   CVAR id class;
+}
+
+PIKECLASS objc_class_method
+{
+  CVAR id class;
+  CVAR SEL selector;
+  
+  PIKEFUN mixed `()(mixed ... method_args)
+  {
+    f_call_objc_method(args, 0, THIS->selector, THIS->class);    
+  }
+
+}

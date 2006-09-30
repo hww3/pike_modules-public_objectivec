@@ -1,56 +1,4 @@
-/*! @module Public
- */
-
-/*! @module ObjectiveC
- */
-
-/*! @class MethodWrapper
- */
-
-#define _GNU_SOURCE
-#define THIS_IS_METHODWRAPPER 1
-#include "piobjc.h"
-#import <Foundation/NSString.h>
-#import <Foundation/NSAutoreleasePool.h>
-#import "PiObjCObject.h"
-
 extern id global_autorelease_pool;
-
-PIKECLASS MethodWrapper
-{
-
-  CVAR METHODWRAPPER_OBJECT_DATA   *object_data;
-
-  int is_wrapper_initialized()
-  {
-    if(THIS->object_data->object == NULL || THIS->object_data->method == NULL)
-      return 0;
-    else return 1;
-  }
-
-  PIKEFUN string _sprintf(int type, mixed t)
-  {
-    char * desc;
-
-    if(!is_wrapper_initialized())
-    {
-      pop_n_elems(args);
-      push_text("UNINITIALIZED_WRAPPER()");
-      return;
-    }
-
-    desc = malloc(strlen(THIS->object_data->object->isa->name) + strlen((char *)THIS->object_data->selector) + 2);
-
-    if(desc == NULL)
-      Pike_error("unable to allocate string.\n");
-
-    sprintf(desc, "%s->%s", THIS->object_data->object->isa->name, (char *)THIS->object_data->selector);
-
-    pop_n_elems(args);
-    push_text(desc);
-    free(desc);
-    return; 
-  }
 
 PIKEFUN mixed `()(mixed ... my_arguments)
 {
@@ -66,13 +14,12 @@ PIKEFUN mixed `()(mixed ... my_arguments)
   id obj;
   id pool;
 
-//  pool = [NSAutoreleasePool new];
   pool = [global_autorelease_pool getAutoreleasePool];
   method = THIS->object_data->method;
   select = THIS->object_data->selector;
 
 
-printf("%s`()\n", (char * ) select);
+  printf("%s`()\n", (char * ) select);
   arguments = method_getNumberOfArguments(method);
 
   if((args) != (arguments-2))
@@ -412,48 +359,3 @@ THREADS_DISALLOW();
 }
 
 
-INIT
-{
-    METHODWRAPPER_OBJECT_DATA * dta = 
-	(METHODWRAPPER_OBJECT_DATA*)malloc(sizeof(METHODWRAPPER_OBJECT_DATA));
-    if (!dta)
-        Pike_error("init_objectivec: Out of memory!\n");
-
-    THIS->object_data = dta;
-
-    THIS->object_data->object = NULL;
-    THIS->object_data->selector = NULL;
-    THIS->object_data->method = NULL;
-}
-
-EXIT 
-{
-  if(THIS->object_data)
-  {
-    if(THIS->object_data->object != NULL)
-      [ THIS->object_data->object release];
-    free(THIS->object_data);
-  }
-}
-
-}
-
-
-void pike_init_piobjc_methodwrapper()
-{
-  INIT
-}
-
-void pike_exit_piobjc_methodwrapper()
-{
-  EXIT
-}
-
-/*! @endclass
- */
-
-/*! @endmodule
- */
-
-/*! @endmodule
- */

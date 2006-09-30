@@ -29,82 +29,42 @@ struct program * NSString_program;
 struct program * NSObject_program;
 struct program * NSClass_program;
 struct program * MethodWrapper_program;
+struct program * objc_object_holder_program;
+struct program * objc_class_method_program;
 
-typedef struct
-{    
-  id pool;
-} OBJC_OBJECT_DATA;
-
-typedef struct
-{    
-  struct pike_string *classname;
-  id class;
-} NSCLASS_OBJECT_DATA;
-
-typedef struct
-{    
-  id object;
-} PIOBJCOBJECT_OBJECT_DATA;
-
-
-typedef struct
+struct objc_dynamic_class
 {
-  id object;
-} NSOBJECT_OBJECT_DATA;
+  id obj;
+  int is_instance;
+};
 
-typedef struct
-{
-	id object;
-	SEL selector;
-	struct objc_method * method;
-} METHODWRAPPER_OBJECT_DATA;
-
+#define NEW_OBJC_OBJECT_HOLDER() clone_object(objc_object_holder_program, 0)
 #define NEW_NSCLASS() clone_object(NSClass_program, 0)
 #define NEW_NSSTRING() clone_object(NSString_program, 0)
 #define NEW_NSOBJECT() clone_object(NSObject_program, 0)
 #define NEW_METHODWRAPPER() clone_object(MethodWrapper_program, 0);
 
-#undef OBJ2_NSCLASS
-#define OBJ2_NSCLASS(o) ((struct NSClass_struct *)get_storage(o, NSClass_program))
+#define OBJ2_DYNAMIC_OBJECT(o) ((struct objc_dynamic_class *)get_storage(o, o->prog))
 
-#ifndef THIS_IS_NSOBJECT
 
-struct NSObject_struct {
-NSOBJECT_OBJECT_DATA   *object_data;
+#ifndef THIS_IS_OBJC_OBJECT_HOLDER
+static ptrdiff_t objc_class_method_storage_offset;
+#define OBJ2_OBJC_CLASS_METHOD(o) ((struct objc_class_method_struct *)(o->storage+objc_class_method_storage_offset))
+struct objc_object_holder_struct {
+  id class;
 };
 
-#undef OBJ2_NSOBJECT
-#define OBJ2_NSOBJECT(o) ((struct NSObject_struct *)get_storage(o, NSObject_program))
-
-#define THIS_NSOBJECT ((struct NSObject_struct *)(Pike_interpreter.frame_pointer->current_storage))
-
-#endif
-
-#ifndef THIS_IS_METHODWRAPPER
-struct MethodWrapper_struct {
-  METHODWRAPPER_OBJECT_DATA *object_data;	
+struct objc_class_method_struct
+{
+  id class;
+  SEL selector;
 };
 
-#undef OBJ2_METHODWRAPPER
-#define OBJ2_METHODWRAPPER(o) ((struct MethodWrapper_struct *)get_storage(o, MethodWrapper_program))
-
-#define THIS_METHODWRAPPER ((struct MethodWrapper_struct *)(Pike_interpreter.frame_pointer->current_storage))
-#endif
-
-#ifndef THIS_IS_NSCLASS
-
-struct NSClass_struct {
-NSCLASS_OBJECT_DATA   *object_data;
+struct _struct {
+  NSAutoreleasePool * pool;
+  struct mapping * class_cache;
 };
-
-
-#undef OBJ2_NSCLASS
-#define OBJ2_NSCLASS(o) ((struct NSClass_struct *)get_storage(o, NSClass_program))
-
-#define THIS_NSCLASS ((struct NSClass_struct *)(Pike_interpreter.frame_pointer->current_storage))
-
 #endif
-
 
 typedef char(*pike_objc_char_msgSendv)(id,SEL,unsigned,marg_list);
 typedef unsigned char(*pike_objc_unsigned_char_msgSendv)(id,SEL,unsigned,marg_list);
@@ -151,7 +111,14 @@ typedef void*(*pike_objc_pointer_msgSendv)(id,SEL,unsigned,marg_list);
         else \
                 result=0;\
         }
-
+        
+void f_objc_dynamic_class_method(INT32 args);
+void f_objc_dynamic_instance_method(INT32 args);
+void objc_dynamic_class_exit();
+void objc_dynamic_class_init();
+void f_objc_dynamic_create(INT32 args);
+struct object * wrap_objc_object(id r);
+struct program * pike_low_create_objc_dynamic_class(char * classname);
 unsigned pike_objc_type_alignment(char** typeptr);
 unsigned pike_objc_type_size(char** typeptr);
 BOOL CreateClassDefinition( const char * name, 

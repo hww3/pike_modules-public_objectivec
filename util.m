@@ -71,21 +71,13 @@ struct object * object_dispatch_method(id obj, SEL select, struct objc_method * 
   r = objc_msgSendv(obj,select,method_getSizeOfArguments(method),argumentList);
   THREADS_DISALLOW();
   
-    if([r isKindOfClass: [NSString class]] == YES)
-
+  if([r isKindOfClass: [PiObjCObject class]] == YES)
 	{
-	  struct NSObject_struct * d;
-  		o = NEW_NSSTRING();
-  		d = (struct NSObject_struct *) get_storage(o, NSObject_program);
-  		if(d == NULL)
-     		Pike_error("Object is not an NSObject!\n");
-  		d->object_data->object = (id)r;
-  		r = [(id)r retain];
+	  o = [r getPikeObject];
 	}
 	else
 	{
-  		o = NEW_NSOBJECT();
-  		OBJ2_NSOBJECT(o)->object_data->object = (id)r;
+    o = wrap_objc_object(r);
 	}
 	if(! [(id)r isKindOfClass: [NSAutoreleasePool class]])
   	r = [(id)r retain];
@@ -93,19 +85,55 @@ struct object * object_dispatch_method(id obj, SEL select, struct objc_method * 
   return o;
 }
 
-id get_NSObject()
+id unwrap_objc_object(struct object * o)
+{
+  struct objc_dynamic_class * s = get_storage(o, o->prog);
+
+  /* TODO: we need to be a little more careful here. what if the pike object doesn't have an objc object? */
+  if(!s) return nil;
+  
+  else return s->obj;
+}
+
+SEL selector_from_pikename(struct pike_string * name)
+{
+  SEL select;
+  char * selectorName;
+  int ind;
+    
+    // first, we perty up the selector.
+    selectorName = malloc(name->len + 1);
+    if(selectorName == NULL)
+    {
+      Pike_error("unable to allocate selector storage.\n");
+    }
+    strncpy(selectorName, name->str, name->len);
+
+    for(ind = 0; ind < name->len; ind++)
+    {
+      if(selectorName[ind] == '_')
+        selectorName[ind] = ':';
+    }  
+    selectorName[ind] = '\0';
+    select = sel_registerName(selectorName);
+  
+  return select;
+}
+
+struct object * wrap_objc_object(id r)
 {
   struct object * o;
-  struct NSObject_struct * d;
+  struct program * prog;
+  struct objc_dynamic_class * pc; 
+  struct pike_string * ps;
+  ps = make_shared_string(r->isa->name);
+  prog = pike_create_objc_dynamic_class(ps);
+	o = clone_object(prog, 0);
+	pc = OBJ2_DYNAMIC_OBJECT(o);
+	pc->obj = (id)r;
+	pc->is_instance = 1;
 
-  o = Pike_fp->current_object;
-
-  d = (struct NSObject_struct *) get_storage(o, NSObject_program);
-  if(d == NULL)
-  Pike_error("Object is not an NSObject!\n");
-
-  return d->object_data->object;
-
+  return o;
 }
 
 int push_objc_types(NSMethodSignature* sig, NSInvocation* invocation)
@@ -280,7 +308,7 @@ printf("push_objc_types\n");
              pobj = [cobj getPikeObject];
            }
            else
-             pobj = new_nsobject_object(cobj);
+             pobj = wrap_objc_object(cobj);
 		   args_pushed++;
            push_object(pobj);
 //           free(buf);
@@ -291,7 +319,7 @@ printf("push_objc_types\n");
            if(buf == NULL)
              Pike_error("unable to allocate memory.\n");
            [invocation getArgument: &buf atIndex: arg];
-           pobj = new_nsobject_object((Class)buf);
+           pobj = wrap_objc_object((Class)buf);
 		   args_pushed++;
            push_object(pobj);
 //           free(buf);
@@ -378,7 +406,7 @@ void piobjc_set_return_value(id sig, id invocation, struct svalue * svalue)
           else 
           {
 	         id res;
-	         res = get_NSObject_from_Object(svalue->u.object);
+	         res = unwrap_objc_object(svalue->u.object);
 	         [invocation setReturnValue: &res];
           }
         }
@@ -440,6 +468,30 @@ struct svalue * get_func_by_selector(struct object * pobject, SEL aSelector)
   return sv;
 }
 
+char * make_pike_name_from_selector(SEL s)
+{
+  char * pikename;
+  int len, ind;
+
+  pikename = strdup((char *)s);
+  
+  if(pikename == NULL)
+  {
+    Pike_error("unable to allocate pikename storage.\n");
+  }
+
+  len = strlen(pikename);
+  
+  for(ind = 0; ind < len; ind++)
+  {
+    if(pikename[ind] == ':')
+      pikename[ind] = '_';
+  }  
+  pikename[ind] = '\0';
+
+  return pikename;
+}
+
 BOOL has_objc_method(id obj, SEL aSelector)
 {
 	void *iterator = 0;
@@ -459,55 +511,3 @@ BOOL has_objc_method(id obj, SEL aSelector)
   return NO;
 }
 
-id get_NSObject_from_Object(struct object *o)
-{
-  struct NSObject_struct * d;
- 
-  d = (struct NSObject_struct *) get_storage(o, NSObject_program);
-  if(d == NULL)
-   return NULL;
-
-  return d->object_data->object;
-
-}
-
-struct object * new_nsobject_object(id obj)
-{
-  struct object * nobject;
-
-  [ obj retain ];
-  printf("OBJECT: %s\n", obj->isa->name);
-  if(strcmp("NSString", obj->isa->name) == 0)
-  {
-    struct NSObject_struct * d;
-
-    nobject = NEW_NSSTRING();
-    d = (struct NSObject_struct *) get_storage(nobject, NSObject_program);
-    if(d == NULL)
-      Pike_error("Object is not an NSObject!\n");
-    d->object_data->object = obj;
-  }
-  else
-  {
-    nobject = NEW_NSOBJECT();
-    OBJ2_NSOBJECT(nobject)->object_data->object = obj;
-  }
-
-  return nobject;
-}
-
-int is_nsobject_initialized()
-{
-struct object * o;
-struct NSObject_struct * d;
-
-o = Pike_fp->current_object;
-
-d = (struct NSObject_struct *) get_storage(o, NSObject_program);  
-if(d == NULL)
-  Pike_error("Object is not an NSObject!\n");
-
-  if(d->object_data->object == NULL)
-    return 0;
-  else return 1;
-}

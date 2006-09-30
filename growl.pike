@@ -4,9 +4,8 @@ object pool;
 
 void create()
 {
- // pool = Cocoa.NSAutoreleasePool->new()->init();	
   Public.ObjectiveC.low_load_bundle("/System/Library/Frameworks/Growl.framework");
-  object g = NSClass("GrowlApplicationBridge")->setGrowlDelegate_(this);
+  NSClass("GrowlApplicationBridge")->setGrowlDelegate_(this);
 }
 
 int main()
@@ -44,9 +43,5 @@ void notify()
 	n->setObject_forKey_(NSClass("NSWorkspace")->sharedWorkspace()->iconForFileType_("jpg")->TIFFRepresentation(), "NotificationAppIcon");
 
 	NSClass("GrowlApplicationBridge")->notifyWithDictionary_(n);
-	call_out(notify, 1);
-//	pool->release();
-//	pool = Cocoa.NSAutoreleasePool->new()->init();
-  if(i%10 ==0) {purge_autorelease_pool();werror("!!!!!!! purge!\n");}
-  i ++;
+	call_out(notify, 5);
 }

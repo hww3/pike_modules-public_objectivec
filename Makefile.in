@@ -1,7 +1,7 @@
-# $Id: Makefile.in,v 1.9 2006-09-05 23:37:56 hww3 Exp $
+# $Id: Makefile.in,v 1.10 2006-09-30 15:11:24 hww3 Exp $
 @make_variables@
 VPATH=@srcdir@:@srcdir@/../..:../..
-OBJS=ObjC.o util.o NSObject.o NSClass.o MethodWrapper.o NSString.o PiObjCObject.o objc_inject.o mach_inject.o
+OBJS=ObjC.o dynamic_class.o util.o NSObject.o NSClass.o MethodWrapper.o NSString.o PiObjCObject.o objc_inject.o mach_inject.o
 MODDIR=Public.pmod/
 MODNAME=ObjectiveC
 MODULE_PMOD_IN=module.pmod.in
