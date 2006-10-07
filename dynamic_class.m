@@ -48,11 +48,6 @@ void f_objc_dynamic_instance_method(INT32 args)
   prog = Pike_fp->current_object->prog;
   obj = THIS->obj;        
 
-  sval = prog->constants[0].sval;
-  pobj = OBJ2_OBJC_OBJECT_HOLDER(sval.u.object);
-
-  obj = pobj->class;
-
   select = selector_from_pikename(name);
 
   f_call_objc_method(args, 1, select, obj);
@@ -73,11 +68,16 @@ f_call_objc_method(INT32 args, int is_instance, SEL select, id obj)
 
     pool = [global_autorelease_pool getAutoreleasePool];
     
+    printf("select: %s, is_instance: %d\n", (char *) select, is_instance);
     if(is_instance)
       method = class_getInstanceMethod(obj->isa, select);
     else
       method = class_getClassMethod(obj, select);
     
+    if(!method) 
+    {
+      Pike_error("unable to find the method.\n");
+    }
     printf("%s`()\n", (char * ) select);
     arguments = method_getNumberOfArguments(method);
 
@@ -97,7 +97,7 @@ f_call_objc_method(INT32 args, int is_instance, SEL select, id obj)
       sv = Pike_sp-args+(x-2);
 
       method_getArgumentInfo(method, x, (const char **)(&type), &offset);
-  printf("argument %d %s\n", x, type);
+//  printf("argument %d %s\n", x, type);
       while((*type)&&(*type=='r' || *type =='n' || *type =='N' || *type=='o' || *type=='O' || *type =='V'))
   		type++;
 
@@ -419,15 +419,24 @@ f_call_objc_method(INT32 args, int is_instance, SEL select, id obj)
 void f_objc_dynamic_class_sprintf(INT32 args)
 {
     char * desc;
-
+    int hash;
     desc = malloc(strlen(THIS->obj->isa->name) + strlen("()") + 15);
 
     if(desc == NULL)
       Pike_error("unable to allocate string.\n");
 
     pop_n_elems(args);
+   
+@try{
+// hash = [THIS->obj hash];
+  }
+  @catch (NSException * e)
+  {
+  }
+  
+    sprintf(desc, "%s(%u)", THIS->obj->isa->name, hash);
 
-    sprintf(desc, "%s(%u)", THIS->obj->isa->name, [THIS->obj hash]);
+
     push_text(desc);
     free(desc);
 
@@ -473,6 +482,7 @@ struct program * pike_low_create_objc_dynamic_class(char * classname)
   int num = -1;
   id class;
   struct object * p;
+  struct pike_string * psq;
 
   void *iterator = 0;
   struct objc_method_list *methodList;
@@ -539,12 +549,22 @@ struct program * pike_low_create_objc_dynamic_class(char * classname)
     for (index = 0; index < methodList->method_count; index++) 
     {
       char * pikename;
+      char * psig;
+      int q;
+      int siglen;
       selector = methodList->method_list[index].method_name;
+printf("SEL: %s\n", (char *) selector);
       pikename = make_pike_name_from_selector(selector);
-      quick_add_function((char *)pikename, strlen((char *)pikename), f_objc_dynamic_instance_method, tFunc(tNone,tInt),
-                           CONSTANT_STRLEN(tFunc(tNone,tInt)), 0, 
+      psig = pike_signature_from_objc_signature(&methodList->method_list[index], &siglen);
+      psq = make_shared_binary_string(psig, siglen);
+push_text("%O");
+push_string(psq);
+f_werror(2);
+      quick_add_function((char *)pikename, strlen((char *)pikename), f_objc_dynamic_instance_method, psig,
+                           strlen(psig), 0, 
                            OPT_SIDE_EFFECT|OPT_EXTERNAL_DEPEND);
       free(pikename);
+      free(psig);
     }
   }
 

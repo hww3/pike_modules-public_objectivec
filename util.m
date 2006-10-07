@@ -145,7 +145,6 @@ int push_objc_types(NSMethodSignature* sig, NSInvocation* invocation)
 	struct object * pobj = NULL;
 	int args_pushed = 0;
  	// args 0 and 1 are the object and the method, respectively.
-printf("push_objc_types\n");
 
 	for(arg = 2; arg < [sig numberOfArguments];arg++)
     {
@@ -511,3 +510,387 @@ BOOL has_objc_method(id obj, SEL aSelector)
   return NO;
 }
 
+char * pike_signature_from_objc_signature(struct objc_method * nssig, int * lenptr)
+{
+  char * rettype;
+  char * argtype;
+  char * psig;
+  int spsig;
+  int argcount;
+  int offset;
+  char * type;
+  int sret;
+  int x;
+  int sargs;
+  int cpos;
+  int now;
+  char * psigo;
+  
+  argcount = method_getNumberOfArguments(nssig);
+
+  // ok, let's do return type first.
+
+//  printf("TYPE: %s\n", nssig->method_types);
+
+  type = nssig->method_types;
+
+  while((*type)&&(*type=='r' || *type =='n' || *type =='N' || *type=='o' || *type=='O' || *type =='V'))
+                type++;
+
+    switch(*type)
+    {
+      case 'c': // char
+        rettype = tInt;
+        sret = CONSTANT_STRLEN(tInt);
+      printf("c\n");
+        break;
+
+      case 'i': // int
+        rettype = tInt;
+      sret = CONSTANT_STRLEN(tInt);
+      printf("i\n");
+        break;
+
+      case 's': // short
+        rettype = tInt;
+      sret = CONSTANT_STRLEN(tInt);
+      printf("s\n");
+        break;
+
+      case 'l': // long
+        rettype = tInt;
+      sret = CONSTANT_STRLEN(tInt);
+      printf("l\n");
+        break;
+
+      case 'q': // long long
+        rettype = tInt;
+        sret = CONSTANT_STRLEN(tInt);
+        printf("q\n");
+        break;
+
+      case 'C': // unsigned char
+        rettype = tInt;
+        sret = CONSTANT_STRLEN(tInt);
+        printf("I\n");
+        break;
+
+      case 'I': // unsigned int
+        rettype = tInt;
+      sret = CONSTANT_STRLEN(tInt);
+      printf("I\n");
+        break;
+
+      case 'S': // unsigned short
+        rettype = tInt;
+      sret = CONSTANT_STRLEN(tInt);
+      printf("S\n");
+        break;
+
+      case 'L': // unsigned long
+        rettype = tInt;
+      sret = CONSTANT_STRLEN(tInt);
+      printf("L\n");
+        break;
+
+      case 'Q': // unsigned long long
+        rettype = tInt;
+      sret = CONSTANT_STRLEN(tInt);
+      printf("Q\n");
+        break;
+
+      case 'f': // float
+        rettype = tFloat;
+      sret = CONSTANT_STRLEN(tFloat);
+      printf("f\n");
+        break;
+
+      case 'd': // double
+        rettype = tFloat;
+      sret = CONSTANT_STRLEN(tFloat);
+      printf("d\n");
+        break;
+
+      case 'B': // bool
+        rettype = tInt;
+      sret = CONSTANT_STRLEN(tInt);
+      printf("B\n");
+        break;
+
+      case 'v': // void
+        rettype = tVoid;
+      sret = CONSTANT_STRLEN(tVoid);
+      printf("v\n");
+        break;
+
+      case '*': // char *
+        rettype = tStr;
+      sret = CONSTANT_STRLEN(tStr);
+      printf("*\n");
+        break;
+
+      case '@': // object
+        rettype = tObj;
+      sret = CONSTANT_STRLEN(tObj);
+      printf("@\n");
+        break;
+
+      case '#': // class
+        rettype = tPrg(tObj);
+      sret = CONSTANT_STRLEN(tPrg(tObj));
+      printf("#\n");
+        break;
+
+      case ':': // SEL
+        rettype = tString;
+      sret = CONSTANT_STRLEN(tString);
+      printf(":\n");
+        break;
+
+      case '[': // array
+        rettype = tArr(tMix);
+      sret = CONSTANT_STRLEN(tArr(tMix));
+      printf("[\n");
+        break;
+
+      case '{': // struct
+        rettype = tObj;
+      sret = CONSTANT_STRLEN(tObj);
+      printf("{\n");
+        break;
+
+      case '(': // union
+        rettype = tObj;
+      sret = CONSTANT_STRLEN(tObj);
+      printf("(\n");
+        break;
+
+      case 'b':  // bit field
+        rettype = tInt;
+      sret = CONSTANT_STRLEN(tObj);
+      printf("b\n");
+        break;
+
+      case '^':  // pointer
+        rettype = tObj;
+      sret = CONSTANT_STRLEN(tObj);
+      printf("^\n");
+        break;
+
+      case '?':  // unknown (function ptr)
+        rettype = tObj;
+      sret = CONSTANT_STRLEN(tObj);
+      printf("?\n");
+        break;
+      default:
+        printf("SIGNATURE: %s\n", type);
+    }
+
+  for (x = 2; x < argcount; x++)
+  {
+    method_getArgumentInfo(nssig, x, &type, &offset);
+
+    while((*type)&&(*type=='r' || *type =='n' || *type =='N' || *type=='o' || *type=='O' || *type =='V'))
+                type++;
+
+    switch(*type)
+    {
+      case 'c': // char
+      printf("c\n");
+        break;
+
+      case 'i': // int
+        printf("i\n");
+        break;
+
+      case 's': // short
+        printf("s\n");
+        break;
+
+      case 'l': // long
+        printf("l\n");
+        break;
+
+      case 'q': // long long
+        printf("q\n");
+        break;
+
+        case 'C': // unsigned char
+           printf("C\n");
+           break;
+           
+        case 'I': // unsigned int
+         printf("I\n");
+         break;
+
+ 
+       case 'S': // unsigned short
+        printf("S\n");
+        break;
+
+      case 'L': // unsigned long
+        printf("L\n");
+        break;
+
+      case 'Q': // unsigned long long
+        printf("Q\n");
+        break;
+
+      case 'f': // float
+        printf("f\n");
+        break;
+
+      case 'd': // double
+        printf("d\n");
+        break;
+
+      case 'B': // bool
+        printf("B\n");
+        break;
+
+      case 'v': // void
+        printf("v\n");
+        break;
+
+      case '*': // char *
+        printf("*\n");
+        break;
+
+      case '@': // object
+        printf("@\n");
+        break;
+
+      case '#': // class
+        printf("#\n");
+        break;
+
+      case ':': // SEL
+        printf(":\n");
+        break;
+
+      case '[': // array
+        printf("[\n");
+        break;
+
+      case '{': // struct
+        printf("{\n");
+        break;
+
+      case '(': // union
+        printf("(\n");
+        break;
+
+      case 'b':  // bit field
+        printf("b\n");
+        break;
+
+      case '^':  // pointer
+        printf("^\n");
+        break;
+
+      case '?':  // unknown (function ptr)
+        printf("c?\n");
+        break;
+    }
+
+
+  }
+
+  spsig = CONSTANT_STRLEN("\004\021\020" tMix) + sret;
+printf("allocated %d bytes for signature.\n", spsig);
+  psig = malloc(spsig);
+  psigo = psig;
+  now = 0;
+  psig[now++] = '\004';
+  psig[now++] = '\373';
+  psig[now++] = '\021';
+  psig[now++] = '\020';
+  
+  for(cpos = 0; cpos < sret; cpos++)
+  {
+    psig[now++] = rettype[cpos];
+  }
+
+  *lenptr = spsig;
+  return psigo;
+}
+
+
+void foo(char * type)
+{
+    switch(*type)
+    {
+      case 'c': // char
+        break;
+
+      case 'i': // int
+        break;
+
+      case 's': // short
+        break;
+
+      case 'l': // long
+        break;
+
+      case 'q': // long long
+        break;
+
+      case 'C': // unsigned char
+        break;
+
+      case 'I': // unsigned int
+        break;
+
+      case 'S': // unsigned short
+        break;
+
+      case 'L': // unsigned long
+        break;
+
+      case 'Q': // unsigned long long
+        break;
+
+      case 'f': // float
+        break;
+
+      case 'd': // double
+        break;
+
+      case 'B': // bool
+        break;
+
+      case 'v': // void
+        break;
+
+      case '*': // char *
+        break;
+
+      case '@': // object
+        break;
+
+      case '#': // class
+        break;
+
+      case ':': // SEL
+        break;
+
+      case '[': // array
+        break;
+
+      case '{': // struct
+        break;
+
+      case '(': // union
+        break;
+
+      case 'b':  // bit field
+        break;
+
+      case '^':  // pointer
+        break;
+
+      case '?':  // unknown (function ptr)
+        break;
+    }
+
+}
