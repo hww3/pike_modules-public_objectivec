@@ -14,6 +14,9 @@
 
 /* this code is from pyobjc-1.4. */
 
+ static struct pike_type *a_markers[10], *b_markers[10];
+
+
 @implementation OC_NSAutoreleasePoolCollector
 -(void)newAutoreleasePool
 {
@@ -77,7 +80,12 @@ struct object * object_dispatch_method(id obj, SEL select, struct objc_method * 
 	}
 	else
 	{
+    if([r isKindOfClass: [NSString class]])
+    {
+      printf("String Value: %s", [r UTF8String]);
+    }
     o = wrap_objc_object(r);
+    if(!o) { printf("AAAH! no object to push...\n");}
 	}
 	if(! [(id)r isKindOfClass: [NSAutoreleasePool class]])
   	r = [(id)r retain];
@@ -126,11 +134,18 @@ struct object * wrap_objc_object(id r)
   struct program * prog;
   struct objc_dynamic_class * pc; 
   struct pike_string * ps;
+  if(!r) {printf("wrap_objc_object: no object!\n"); return NULL; }
+  if(!r->isa) printf("wrap_objc_object: no class!\n");
   ps = make_shared_string(r->isa->name);
   prog = pike_create_objc_dynamic_class(ps);
 	o = clone_object(prog, 0);
 	pc = OBJ2_DYNAMIC_OBJECT(o);
 	pc->obj = (id)r;
+
+  // we need to retain the object, because the dynamic_class object 
+  // will free it when the object is destroyed.
+	[r retain];
+
 	pc->is_instance = 1;
 
   return o;
@@ -307,9 +322,10 @@ int push_objc_types(NSMethodSignature* sig, NSInvocation* invocation)
              pobj = [cobj getPikeObject];
            }
            else
-             pobj = wrap_objc_object(cobj);
-		   args_pushed++;
-           push_object(pobj);
+            pobj = wrap_objc_object(cobj);
+            if(!pobj) { printf("AAAAAH! no object to push!\n");}
+		        args_pushed++;
+            push_object(pobj);
 //           free(buf);
 	       break;
 	     case '#':
@@ -319,6 +335,7 @@ int push_objc_types(NSMethodSignature* sig, NSInvocation* invocation)
              Pike_error("unable to allocate memory.\n");
            [invocation getArgument: &buf atIndex: arg];
            pobj = wrap_objc_object((Class)buf);
+if(!pobj){printf("AAAAAH! No object to push.\n");}
 		   args_pushed++;
            push_object(pobj);
 //           free(buf);
@@ -334,7 +351,7 @@ int push_objc_types(NSMethodSignature* sig, NSInvocation* invocation)
 	return args_pushed;
 }
 
-int get_argcount_by_selector(struct object * pobject, SEL aSelector)
+int get_argcount_by_selector(SEL aSelector)
 {
   char * funname;
   int funlen;
@@ -356,27 +373,38 @@ void piobjc_set_return_value(id sig, id invocation, struct svalue * svalue)
 	char * type;
     struct object * o;
     id wrapper;
-//printf("piobjc_set_return_value()\n");
+printf("piobjc_set_return_value()\n");
  	  // now, we push the argth argument onto the stack.
 	type = [sig methodReturnType];
     while((*type)&&(*type=='r' || *type =='n' || *type =='N' || *type=='o' || *type=='O' || *type =='V'))
 	  type++;
-  //  printf("return value type is %s\n", type);
+   printf("return value type is %s -> %d\n", type, svalue->subtype);
+   printf("arg 0 type is %s\n", [sig getArgumentTypeAtIndex: 2]);
+
   //  printf("returned value type is %d\n", svalue->type);
     switch(*type)
     {
 	  // id
+    case 'i':
+      if(svalue->type == T_INT)
+      {
+        [invocation setReturnValue: &svalue->u.integer];    
+      }
+      else
+      {
+        printf("AAAARG! not an integer returned from function!\n");
+      }
+      break;
 	  case '@':
 	      if(svalue->type == T_INT)
 	      {
-
-            id num;
-            
-            num = [NSNumber newWithLong: svalue->u.integer];
-            [invocation setReturnValue: &num];
-	        
+          id num;
+           printf("Sending an integer.\n");           
+//          num = [NSNumber numberWithLong: svalue->u.integer];
+//          [invocation setReturnValue: num]; 
+           [invocation setReturnValue: &svalue->u.integer];
 	      }
-	      if(svalue->type == T_STRING) // we need to wrap the value as a string.
+	      else if(svalue->type == T_STRING) // we need to wrap the value as a string.
 	      {
             // let's wrap the string as an NSString object.
             id str;
@@ -388,38 +416,76 @@ void piobjc_set_return_value(id sig, id invocation, struct svalue * svalue)
             str = [[NSString alloc] initWithBytes: svalue->u.string->str length: svalue->u.string->len encoding: enc];
             [str autorelease];
             pop_stack();
-            [invocation setReturnValue: &str];
+            [invocation setReturnValue: str];
 	        
 	      }
 	      else if(svalue->type == T_OBJECT)
         {
           o = svalue->u.object;
-          if(!get_storage(o, NSObject_program))
-          {
-//		    printf("Whee! We're wrappin' an object for a return value!\n");
+		    printf("Whee! We're wrappin' an object for a return value!\n");
 		    // if we don't have a wrapped object, we should make a pike object wrapper.
 		        wrapper = [PiObjCObject newWithPikeObject: o];
 		        wrapper = [wrapper retain];
 		  	    [invocation setReturnValue: wrapper];		    
-          }
-          else 
+/*          else 
           {
 	         id res;
 	         res = unwrap_objc_object(svalue->u.object);
 	         [invocation setReturnValue: &res];
           }
+          */
         }
         else
           Pike_error("expected object return value.\n");
   	    break;
       // class
       case '#':
-        break;
+//        break;
       // selector 
+      case 'v': 
+        // void return value!
+        break;
       case ':':
+      default:
+      printf("ERROR: don't know how to set a return value of encoding %s\n", type);
         break;
  	}
 }
+
+char * get_signature_for_func(struct svalue * func, SEL selector)
+{
+  char * encoding;
+  int numargs;
+  
+  push_text( "Public.ObjectiveC.get_signature_for_func"); 
+  SAFE_APPLY_MASTER("resolv", 1 );
+   
+  numargs = get_argcount_by_selector(selector);
+
+  push_svalue(func);
+  push_int(numargs);
+  // arg is at top, function is 1 down from the top 
+  apply_svalue( Pike_sp-3, 2 );
+
+  // result is at top of the stack, function is still one down 
+  // and we want to pop it. 
+  stack_swap(); 
+  pop_stack();
+
+  if(Pike_sp[-1].type != T_STRING)
+  {
+    pop_stack();
+    return NULL;
+  }
+  else
+  {
+    encoding = strdup(Pike_sp[-1].u.string->str);
+    pop_stack();
+    return encoding;
+  }
+  return 0;
+}
+
 
 struct svalue * get_func_by_selector(struct object * pobject, SEL aSelector)
 {
@@ -542,133 +608,133 @@ char * pike_signature_from_objc_signature(struct objc_method * nssig, int * lenp
       case 'c': // char
         rettype = tInt;
         sret = CONSTANT_STRLEN(tInt);
-      printf("c\n");
+//      printf("c\n");
         break;
 
       case 'i': // int
         rettype = tInt;
       sret = CONSTANT_STRLEN(tInt);
-      printf("i\n");
+//      printf("i\n");
         break;
 
       case 's': // short
         rettype = tInt;
       sret = CONSTANT_STRLEN(tInt);
-      printf("s\n");
+//      printf("s\n");
         break;
 
       case 'l': // long
         rettype = tInt;
       sret = CONSTANT_STRLEN(tInt);
-      printf("l\n");
+      //    printf("l\n");
         break;
 
       case 'q': // long long
         rettype = tInt;
         sret = CONSTANT_STRLEN(tInt);
-        printf("q\n");
+//        printf("q\n");
         break;
 
       case 'C': // unsigned char
         rettype = tInt;
         sret = CONSTANT_STRLEN(tInt);
-        printf("I\n");
+//        printf("I\n");
         break;
 
       case 'I': // unsigned int
         rettype = tInt;
       sret = CONSTANT_STRLEN(tInt);
-      printf("I\n");
+//      printf("I\n");
         break;
 
       case 'S': // unsigned short
         rettype = tInt;
       sret = CONSTANT_STRLEN(tInt);
-      printf("S\n");
+//      printf("S\n");
         break;
 
       case 'L': // unsigned long
         rettype = tInt;
       sret = CONSTANT_STRLEN(tInt);
-      printf("L\n");
+//      printf("L\n");
         break;
 
       case 'Q': // unsigned long long
         rettype = tInt;
       sret = CONSTANT_STRLEN(tInt);
-      printf("Q\n");
+//      printf("Q\n");
         break;
 
       case 'f': // float
         rettype = tFloat;
       sret = CONSTANT_STRLEN(tFloat);
-      printf("f\n");
+//      printf("f\n");
         break;
 
       case 'd': // double
         rettype = tFloat;
       sret = CONSTANT_STRLEN(tFloat);
-      printf("d\n");
+//      printf("d\n");
         break;
 
       case 'B': // bool
         rettype = tInt;
       sret = CONSTANT_STRLEN(tInt);
-      printf("B\n");
+//      printf("B\n");
         break;
 
       case 'v': // void
         rettype = tVoid;
       sret = CONSTANT_STRLEN(tVoid);
-      printf("v\n");
+//      printf("v\n");
         break;
 
       case '*': // char *
         rettype = tStr;
       sret = CONSTANT_STRLEN(tStr);
-      printf("*\n");
+//      printf("*\n");
         break;
 
       case '@': // object
         rettype = tObj;
       sret = CONSTANT_STRLEN(tObj);
-      printf("@\n");
+//      printf("@\n");
         break;
 
       case '#': // class
         rettype = tPrg(tObj);
       sret = CONSTANT_STRLEN(tPrg(tObj));
-      printf("#\n");
+//      printf("#\n");
         break;
 
       case ':': // SEL
         rettype = tString;
       sret = CONSTANT_STRLEN(tString);
-      printf(":\n");
+//      printf(":\n");
         break;
 
       case '[': // array
         rettype = tArr(tMix);
       sret = CONSTANT_STRLEN(tArr(tMix));
-      printf("[\n");
+//      printf("[\n");
         break;
 
       case '{': // struct
         rettype = tObj;
       sret = CONSTANT_STRLEN(tObj);
-      printf("{\n");
+//      printf("{\n");
         break;
 
       case '(': // union
         rettype = tObj;
       sret = CONSTANT_STRLEN(tObj);
-      printf("(\n");
+//      printf("(\n");
         break;
 
       case 'b':  // bit field
         rettype = tInt;
       sret = CONSTANT_STRLEN(tObj);
-      printf("b\n");
+//      printf("b\n");
         break;
 
       case '^':  // pointer
@@ -696,96 +762,96 @@ char * pike_signature_from_objc_signature(struct objc_method * nssig, int * lenp
     switch(*type)
     {
       case 'c': // char
-      printf("c\n");
+//      printf("c\n");
         break;
 
       case 'i': // int
-        printf("i\n");
+//        printf("i\n");
         break;
 
       case 's': // short
-        printf("s\n");
+//        printf("s\n");
         break;
 
       case 'l': // long
-        printf("l\n");
+//        printf("l\n");
         break;
 
       case 'q': // long long
-        printf("q\n");
+//        printf("q\n");
         break;
 
         case 'C': // unsigned char
-           printf("C\n");
+//           printf("C\n");
            break;
            
         case 'I': // unsigned int
-         printf("I\n");
+//         printf("I\n");
          break;
 
  
        case 'S': // unsigned short
-        printf("S\n");
+//        printf("S\n");
         break;
 
       case 'L': // unsigned long
-        printf("L\n");
+//        printf("L\n");
         break;
 
       case 'Q': // unsigned long long
-        printf("Q\n");
+//        printf("Q\n");
         break;
 
       case 'f': // float
-        printf("f\n");
+//        printf("f\n");
         break;
 
       case 'd': // double
-        printf("d\n");
+//        printf("d\n");
         break;
 
       case 'B': // bool
-        printf("B\n");
+//        printf("B\n");
         break;
 
       case 'v': // void
-        printf("v\n");
+//        printf("v\n");
         break;
 
       case '*': // char *
-        printf("*\n");
+//        printf("*\n");
         break;
 
       case '@': // object
-        printf("@\n");
+//        printf("@\n");
         break;
 
       case '#': // class
-        printf("#\n");
+//        printf("#\n");
         break;
 
       case ':': // SEL
-        printf(":\n");
+//        printf(":\n");
         break;
 
       case '[': // array
-        printf("[\n");
+//        printf("[\n");
         break;
 
       case '{': // struct
-        printf("{\n");
+//        printf("{\n");
         break;
 
       case '(': // union
-        printf("(\n");
+//        printf("(\n");
         break;
 
       case 'b':  // bit field
-        printf("b\n");
+//        printf("b\n");
         break;
 
       case '^':  // pointer
-        printf("^\n");
+//        printf("^\n");
         break;
 
       case '?':  // unknown (function ptr)
@@ -797,7 +863,7 @@ char * pike_signature_from_objc_signature(struct objc_method * nssig, int * lenp
   }
 
   spsig = CONSTANT_STRLEN("\004\021\020" tMix) + sret;
-printf("allocated %d bytes for signature.\n", spsig);
+//printf("allocated %d bytes for signature.\n", spsig);
   psig = malloc(spsig);
   psigo = psig;
   now = 0;

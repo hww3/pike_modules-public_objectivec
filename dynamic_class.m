@@ -344,10 +344,9 @@ f_call_objc_method(INT32 args, int is_instance, SEL select, id obj)
         break;
 
       case 'v':
-
+      printf("SEL: %s\n", (char *)select);
         void_dispatch_method(obj,select,method,argumentList);
-
-  push_int(0);
+        push_int(0);
         break;
 
       case '*':
@@ -363,8 +362,8 @@ f_call_objc_method(INT32 args, int is_instance, SEL select, id obj)
           id r;
 
   	  	o = object_dispatch_method(obj, select, method, argumentList);
-
-      	push_object(o);
+        if(o)
+        	push_object(o);
   		}
         break;
       case '#':
@@ -533,16 +532,17 @@ struct program * pike_low_create_objc_dynamic_class(char * classname)
       add_object_constant((char *)pikename, cmethod, 0);
       free(pikename);
     }
-  }
-  
-  /* then, we add the instance methods. */
-  iterator = 0;
-  methodList = 0;
-  selector = 0;
+  }  
 
   /* todo we should work more on the optimizations. */
   ADD_FUNCTION("create", f_objc_dynamic_create, tFunc(tNone,tVoid), 0);  
   ADD_FUNCTION("_sprintf", f_objc_dynamic_class_sprintf, tFunc(tAnd(tInt,tMixed),tVoid), 0);  
+
+  /* then, we add the instance methods. */
+
+  iterator = 0;
+  methodList = 0;
+  selector = 0;
 
   while (methodList = class_nextMethodList(isa, &iterator)) 
   {
@@ -553,21 +553,58 @@ struct program * pike_low_create_objc_dynamic_class(char * classname)
       int q;
       int siglen;
       selector = methodList->method_list[index].method_name;
-printf("SEL: %s\n", (char *) selector);
-      pikename = make_pike_name_from_selector(selector);
-      psig = pike_signature_from_objc_signature(&methodList->method_list[index], &siglen);
-      psq = make_shared_binary_string(psig, siglen);
-push_text("%O");
-push_string(psq);
-f_werror(2);
-      quick_add_function((char *)pikename, strlen((char *)pikename), f_objc_dynamic_instance_method, psig,
-                           strlen(psig), 0, 
+      // for some reason, some classes have class and instance methods of the same name.
+      if(class_getClassMethod(isa, selector)) 
+      {
+        continue;
+        // printf("Skipping %s, as it's already a class method.\n", selector);
+      }
+        pikename = make_pike_name_from_selector(selector);
+        psig = pike_signature_from_objc_signature(&methodList->method_list[index], &siglen);
+        quick_add_function((char *)pikename, strlen((char *)pikename), f_objc_dynamic_instance_method, psig,
+                           siglen, 0, 
                            OPT_SIDE_EFFECT|OPT_EXTERNAL_DEPEND);
-      free(pikename);
-      free(psig);
+        free(pikename);
+        free(psig);
     }
   }
 
+  isa = isa->super_class;
+  while (isa->super_class != isa)
+  {
+    iterator = 0;
+    methodList = 0;
+    selector = 0;
+
+    printf("name: %s\n", isa->name);
+    while (methodList = class_nextMethodList(isa, &iterator)) 
+    {
+      for (index = 0; index < methodList->method_count; index++) 
+      {
+        char * pikename;
+        char * psig;
+        int q;
+        int siglen;
+        selector = methodList->method_list[index].method_name;
+        // for some reason, some classes have class and instance methods of the same name.
+        if(class_getClassMethod(isa, selector) || class_getInstanceMethod(isa, selector)) 
+        {
+          continue;
+          // printf("Skipping %s, as it's already a class method.\n", selector);
+        }
+          pikename = make_pike_name_from_selector(selector);
+          psig = pike_signature_from_objc_signature(&methodList->method_list[index], &siglen);
+          quick_add_function((char *)pikename, strlen((char *)pikename), f_objc_dynamic_instance_method, psig,
+                           siglen, 0, 
+                           OPT_SIDE_EFFECT|OPT_EXTERNAL_DEPEND);
+          free(pikename);
+          free(psig);
+      }
+    }
+    if(isa->super_class)
+      isa = isa->super_class;
+    else break;
+  }
   /* finally, we add the low level setup callbacks */
   set_init_callback(objc_dynamic_class_init);
   set_exit_callback(objc_dynamic_class_exit);
