@@ -4,27 +4,29 @@ object pool;
 
 void create()
 {
-  Public.ObjectiveC.low_load_bundle("/System/Library/Frameworks/Growl.framework");
-  NSClass("GrowlApplicationBridge")->setGrowlDelegate_(this);
+  Public.ObjectiveC.load_bundle("Growl.framework");
+  program g = get_dynamic_class("GrowlApplicationBridge");
+  werror("%O\n", g);
+  g->setGrowlDelegate_(this);
 }
+
 
 int main()
 {
 	call_out(notify, 6);
 	return -1;
 }
-
 object p;
 
 object registrationDictionaryForGrowl(mixed ... args) {
 
-	object n = Cocoa.NSMutableDictionary->dictionaryWithCapacity(2); 
+	object n = Cocoa.NSMutableDictionary.dictionaryWithCapacity_(2); 
 
 	n->setObject_forKey_("PGrowl", "ApplicationName");  
-	n->setObject_forKey_(Cocoa.NSMutableArray->arrayWithObject("New Announcement"), "AllNotifications");
-	n->setObject_forKey_(Cocoa.NSMutableArray->arrayWithObject("New Announcement"), "DefaultNotifications");
+	n->setObject_forKey_(Cocoa.NSArray.arrayWithObject_("New Announcement"), "AllNotifications");
+	n->setObject_forKey_(Cocoa.NSArray.arrayWithObject_("New Announcement"), "DefaultNotifications");
 
-  n->setObject_forKey_(NSClass("NSWorkspace")->sharedWorkspace()->iconForFileType_("jpg")->TIFFRepresentation(), 
+  n->setObject_forKey_(Cocoa.NSWorkspace.sharedWorkspace()->iconForFileType_("jpg")->TIFFRepresentation(), 
     "ApplicationIcon");
 
 	return n;
@@ -32,16 +34,16 @@ object registrationDictionaryForGrowl(mixed ... args) {
 
 void notify()
 {
-	object n = Cocoa.NSMutableDictionary->dictionaryWithCapacity(6); 
+	object n = Cocoa.NSMutableDictionary.dictionaryWithCapacity_(6); 
 	n->setObject_forKey_("PGrowl", "ApplicationName");
 	n->setObject_forKey_("New Announcement", "NotificationName");
-	n->setObject_forKey_(Cocoa.NSNumber->new()->initWithInt_(2), "NotificationPriority");
-	n->setObject_forKey_(Cocoa.NSNumber->new()->initWithBool_(0), "NotificationSticky");
+	n->setObject_forKey_(Cocoa.NSNumber.numberWithInt_(2), "NotificationPriority");
+	n->setObject_forKey_(Cocoa.NSNumber.numberWithBool_(0), "NotificationSticky");
 	n->setObject_forKey_("notification from PGrowl", "NotificationTitle");
 	n->setObject_forKey_("whooo, it's " + Calendar.now()->format_smtp() + "!\ngreetings from Public.ObjectiveC!", "NotificationDescription");
-	n->setObject_forKey_(NSClass("NSWorkspace")->sharedWorkspace()->iconForFileType_("jpg")->TIFFRepresentation(), "NotificationIcon");
-	n->setObject_forKey_(NSClass("NSWorkspace")->sharedWorkspace()->iconForFileType_("jpg")->TIFFRepresentation(), "NotificationAppIcon");
+	n->setObject_forKey_(Cocoa.NSWorkspace.sharedWorkspace()->iconForFileType_("jpg")->TIFFRepresentation(), "NotificationIcon");
+	n->setObject_forKey_(Cocoa.NSWorkspace.sharedWorkspace()->iconForFileType_("jpg")->TIFFRepresentation(), "NotificationAppIcon");
 
-	NSClass("GrowlApplicationBridge")->notifyWithDictionary_(n);
+	get_dynamic_class("GrowlApplicationBridge")->notifyWithDictionary_(n);
 	call_out(notify, 5);
 }

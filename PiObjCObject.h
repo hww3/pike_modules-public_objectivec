@@ -15,7 +15,8 @@
 /* plus an initialization method */
 - (id)initWithPikeObject:(struct object *)obj;
 - (struct object *) getPikeObject;
-
+- (id)init;
+- (struct object *)__ObjCgetPikeObject;
 /* some other housekeeping methods */
 - (void)dealloc;
 - (NSString *)description;

@@ -122,4 +122,7 @@ struct program * pike_low_create_objc_dynamic_class(char * classname);
 unsigned pike_objc_type_alignment(char** typeptr);
 unsigned pike_objc_type_size(char** typeptr);
 BOOL CreateClassDefinition( const char * name, 
-        const char * superclassName );
+        const char * superclassName, struct program * prog );
+void * make_stub(struct program * prog);
+id init_pike_object(struct program * prog, id obj, SEL sel);
+BOOL RegisterDynamicMethod( const char * dynamicMethodName, const char * className, IMP method, char * methodTypes );

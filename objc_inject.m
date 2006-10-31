@@ -486,7 +486,7 @@ objc_inject(pid_t pid, int use_main_thread, char *bundlePath, char *systemPath, 
     IMAGE_WRAP(INJECT_test_func);
     IMAGE_WRAP(INJECT_EventLoopTimerEntry);
 #undef IMAGE_WRAP
-	err = mach_inject((mach_inject_entry)INJECT_ENTRY, param, size, pid, 0);
+//	err = mach_inject((mach_inject_entry)INJECT_ENTRY, param, size, pid, 0);
 	free(param);
 	if (err) {
 		//fprintf(stderr, "couldn't inject\n");

@@ -13,7 +13,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * $Id: PiObjCObject.m,v 1.9 2006-10-13 15:39:10 hww3 Exp $
+ * $Id: PiObjCObject.m,v 1.10 2006-10-31 20:06:51 hww3 Exp $
  */
 
 /*
@@ -72,21 +72,29 @@
 #import  <Foundation/NSObject.h>
 #import  <Foundation/NSMethodSignature.h>
 #import  <Foundation/NSInvocation.h>
+#import  <Foundation/NSString.h>
 #import "PiObjCObject.h"
 
 @implementation PiObjCObject
 
 +(id) newWithPikeObject:(struct object *) obj
-{                       
+{              
   id instance;
   add_ref(obj);
   instance = (id)unwrap_objc_object(obj);
   if(instance == NULL) 
   {
+	printf("Whoo hoo, we have a native pike object!\n");
     instance = [[self alloc] initWithPikeObject:obj];
     [instance autorelease];
   }        
   return instance;
+}
+
+-(id)init
+{
+	printf("[PiObjCObject init]\n");
+	return @"foo!";
 }
 
 - (id)initWithPikeObject:(struct object *)obj
@@ -101,14 +109,26 @@
 - (id)retain
 {
   printf("PiObjCObject.retain()\n");
-  add_ref(pobject);
+  if(pobject)
+    add_ref(pobject);
   return [super retain];
 }
+
+
+/*- (id)release
+{
+  printf("PiObjCObject.release()\n");
+  if(pobject)
+    free_object(pobject);
+  [super release];
+}
+*/
 
 - (void)dealloc
 {
   printf("PiObjCObject.dealloc()\n");
-  free_object(pobject);
+  if(pobject)
+  	free_object(pobject);
   [super dealloc];
 }
 
@@ -214,6 +234,31 @@
   //  [anInvocation release];
 
 }
+
+// [obj init] is the designated initializer, so we equate init with create(). 
+id init_pike_object(struct program  * prog, id obj, SEL sel)
+{
+	struct object * pobject;
+	printf("[PIKE PROGRAM init]\n");
+	if(prog)
+	{
+		push_program(prog);
+		apply_svalue(Pike_sp-1, 0);
+		if(Pike_sp[-1].type != T_OBJECT)
+		{
+			printf("WHOA! we didn't get an object back from create().\n");
+		}
+		else
+		{
+			
+			pobject = Pike_sp[-1].u.object;
+			add_ref(pobject); 
+			object_setInstanceVariable(obj, "pobject", pobject);
+		}
+		return obj;
+	}
+}
+
 
 void dispatch_pike_method(struct object * pobject, SEL sel, NSInvocation * anInvocation)
 {
@@ -346,16 +391,23 @@ printf("encoding: %s\n", encoding);
 
 }
 
+// see also getPikeObject... we probably want to make this hidden.
+- (struct object *) __ObjCgetPikeObject
+{
+  if(pobject)
+    return pobject;	
+}
+
 - (BOOL) respondsToSelector:(SEL) aSelector
 {
   struct callable * func;
   printf("respondsToSelector: %s\n", (char*) aSelector);
 
-  has_objc_method(self, aSelector);
-
   func = get_func_by_selector(pobject, aSelector);
-  if(func) return YES;
-  else return NO;
+  if(func) {printf("YES\n"); return YES;}
+  else if(has_objc_method(self, aSelector)) {printf("YES\n"); return YES;}
+
+    else { printf("YES\n"); return NO; }
 }
 
 - (NSString *)description

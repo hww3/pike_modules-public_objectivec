@@ -9,13 +9,14 @@
 
 extern id global_autorelease_pool;
 extern struct mapping * global_class_cache;
+extern struct mapping * global_classname_cache;
 
 void f_objc_dynamic_create(INT32 args)
 {
   Class cls;
   id obj;
   char * classname;
-
+printf("dynamic_create()\n");
   if(args!=0)
   {
     Pike_error("too many arguments to create()\n");
@@ -29,6 +30,9 @@ void f_objc_dynamic_create(INT32 args)
     Pike_error("unable to get class.\n");
     return;
   }  
+
+  /* TODO: we have to figure out how to deal with objects that are created outside of pike, then returned
+           for wrapping. In this case, we don't free up the alloced object, and have other odd behavior. */
 
   THIS->obj = [cls alloc];
   THIS->is_instance = 1;
@@ -97,7 +101,7 @@ f_call_objc_method(INT32 args, int is_instance, SEL select, id obj)
       sv = Pike_sp-args+(x-2);
 
       method_getArgumentInfo(method, x, (const char **)(&type), &offset);
-//  printf("argument %d %s\n", x, type);
+printf("argument %d %s\n", x, type);
       while((*type)&&(*type=='r' || *type =='n' || *type =='N' || *type=='o' || *type=='O' || *type =='V'))
   		type++;
 
@@ -186,13 +190,28 @@ f_call_objc_method(INT32 args, int is_instance, SEL select, id obj)
   	         break;
 
         case '@': 
+ 			/* TODO: we should check to see if the object is a Pike level object, or just a wrapper around an NSObject. */
            if(sv->type==T_OBJECT)
            {
              struct object * o = sv->u.object;
   			 // if we don't have a wrapped object, we should make a pike object wrapper.
   			 wrapper = [PiObjCObject newWithPikeObject: o];
-               marg_setValue(argumentList, offset, id, wrapper);
+             marg_setValue(argumentList, offset, id, wrapper);
+push_text("%O\n");
+push_object(o);
+f_werror(2);
   		   }
+           else if(sv->type == T_INT)
+           {
+              // let's wrap the string as an NSString object.
+              id num;
+			  if(sizeof(INT_TYPE) == sizeof(long))
+                num = [NSNumber numberWithLong: sv->u.integer];
+			  else if(sizeof(INT_TYPE) == sizeof(long long))
+                num = [NSNumber numberWithLongLong: sv->u.integer];
+
+              marg_setValue(argumentList,offset,id, num);
+           }
 
            else if(sv->type == T_STRING)
            {
@@ -203,7 +222,7 @@ f_call_objc_method(INT32 args, int is_instance, SEL select, id obj)
               push_svalue(sv);
               f_string_to_utf8(1);
               sv = &Pike_sp[-1];
-              str = [[NSString alloc] initWithBytes: sv->u.string->str length: sv->u.string->len encoding: enc];
+              str = [[NSString alloc] stringWithBytes: sv->u.string->str length: sv->u.string->len encoding: enc];
               pop_stack();
               marg_setValue(argumentList,offset,id, str);
            }
@@ -239,7 +258,7 @@ f_call_objc_method(INT32 args, int is_instance, SEL select, id obj)
     while((*type)&&(*type=='r' || *type =='n' || *type =='N' || *type=='o' || *type=='O' || *type =='V'))
   		type++;
 
-  //  printf("TYPE: %s\n", type);
+    printf("RETURN TYPE: %s\n", type);
    
 
     @try
@@ -363,7 +382,10 @@ f_call_objc_method(INT32 args, int is_instance, SEL select, id obj)
 
   	  	o = object_dispatch_method(obj, select, method, argumentList);
         if(o)
+		{
+			printf("pushing an object as return value.\n");
         	push_object(o);
+		}
   		}
         break;
       case '#':
@@ -419,8 +441,15 @@ void f_objc_dynamic_class_sprintf(INT32 args)
 {
     char * desc;
     int hash;
-    desc = malloc(strlen(THIS->obj->isa->name) + strlen("()") + 15);
-
+	if(THIS->obj && THIS->obj->isa)
+      desc = malloc(strlen(THIS->obj->isa->name) + strlen("()") + 15);
+    else 
+	{
+		pop_n_elems(args);
+		push_text("GAH!()");
+		return;
+	}
+	
     if(desc == NULL)
       Pike_error("unable to allocate string.\n");
 
@@ -443,11 +472,23 @@ void f_objc_dynamic_class_sprintf(INT32 args)
 
 void objc_dynamic_class_init()
 {
+   THIS->obj = NULL;
 }
 
 void objc_dynamic_class_exit()
 {
  if(THIS->obj) [THIS->obj release];
+}
+
+int find_dynamic_program_in_cache(struct program * prog)
+{
+  struct svalue * c = NULL;
+  push_program(prog);
+  c = low_mapping_lookup(global_classname_cache, Pike_sp-1);	
+  pop_stack();
+
+  if(c != NULL) return 1;
+  else return 0;
 }
 
 struct program * pike_create_objc_dynamic_class(struct pike_string * classname)
@@ -465,8 +506,10 @@ struct program * pike_create_objc_dynamic_class(struct pike_string * classname)
     push_program(p);
     //add_ref(classname);
     mapping_string_insert(global_class_cache, classname, Pike_sp-1);
+    push_string(classname);
+    low_mapping_insert(global_classname_cache, Pike_sp-2, Pike_sp-1, 1);
     pop_stack();
-
+    pop_stack();
     return p;
   }
   else 
@@ -498,7 +541,6 @@ struct program * pike_low_create_objc_dynamic_class(char * classname)
   }
   
   start_new_program();
-  
   p = NEW_OBJC_OBJECT_HOLDER();
   OBJ2_OBJC_OBJECT_HOLDER(p)->class = isa;
   add_ref(p);
@@ -559,6 +601,7 @@ struct program * pike_low_create_objc_dynamic_class(char * classname)
         continue;
         // printf("Skipping %s, as it's already a class method.\n", selector);
       }
+//	printf("Adding %s, as an instance method.\n", selector);
         pikename = make_pike_name_from_selector(selector);
         psig = pike_signature_from_objc_signature(&methodList->method_list[index], &siglen);
         quick_add_function((char *)pikename, strlen((char *)pikename), f_objc_dynamic_instance_method, psig,
@@ -570,7 +613,7 @@ struct program * pike_low_create_objc_dynamic_class(char * classname)
   }
 
   isa = isa->super_class;
-  while (isa->super_class != isa)
+  while (isa && isa->super_class && isa->super_class != isa)
   {
     iterator = 0;
     methodList = 0;

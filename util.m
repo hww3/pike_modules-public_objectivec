@@ -61,6 +61,8 @@
 void void_dispatch_method(id obj, SEL select, struct objc_method * method, marg_list argumentList)
 {
   THREADS_ALLOW();
+  printf("dispatching void return method: %s\n", select);
+  printf("object is: %s\n", [[obj description] UTF8String]);
   objc_msgSendv(obj,select,method_getSizeOfArguments(method),argumentList);
   THREADS_DISALLOW();
 }
@@ -74,33 +76,53 @@ struct object * object_dispatch_method(id obj, SEL select, struct objc_method * 
   r = objc_msgSendv(obj,select,method_getSizeOfArguments(method),argumentList);
   THREADS_DISALLOW();
   
-  if([r isKindOfClass: [PiObjCObject class]] == YES)
+    if([r respondsToSelector: SELUID("__ObjCgetPikeObject")] == YES)
 	{
-	  o = [r getPikeObject];
+	  printf("the object is a pike object.\n");
+	  o = [r __ObjCgetPikeObject];
 	}
 	else
 	{
-    if([r isKindOfClass: [NSString class]])
-    {
-      printf("String Value: %s", [r UTF8String]);
-    }
-    o = wrap_objc_object(r);
-    if(!o) { printf("AAAH! no object to push...\n");}
+    /*  if([r isKindOfClass: [NSString class]])
+      {
+        printf("String Value: %s", [r UTF8String]);
+      }
+*/
+      o = wrap_objc_object(r);
+      if(!o) { printf("AAAH! no object to push...\n");}
 	}
 	if(! [(id)r isKindOfClass: [NSAutoreleasePool class]])
-  	r = [(id)r retain];
+    	r = [(id)r retain];
 
   return o;
 }
 
+// ok, here's the algorithm we should use for unwrapping
+//
+// if the top level program does not have c methods, we know it's a pike object, and there's nothing to unwrap.
+// if the program does have c methods, we check to see if we've added the program as a dynamic class. if so, we can unwrap
+// otherwise, we can't unwrap (such as for someone passing an image object).
 id unwrap_objc_object(struct object * o)
 {
-  struct objc_dynamic_class * s = get_storage(o, o->prog);
+	int is_objcobj = 0;
+	if(o->prog->flags & PROGRAM_HAS_C_METHODS)
+	{
+		printf("can't unwrap a pure pike object.\n");
+		return 0;
+	}
+    else
+	{
+		is_objcobj = find_dynamic_program_in_cache(o->prog);
+		if(is_objcobj)
+		{
+		  struct objc_dynamic_class * s = get_storage(o, o->prog);
+		  if(!s) return nil;
+		  else return s->obj;
+			
+		}
+		return 0;
+	}
 
-  /* TODO: we need to be a little more careful here. what if the pike object doesn't have an objc object? */
-  if(!s) return nil;
-  
-  else return s->obj;
 }
 
 SEL selector_from_pikename(struct pike_string * name)
@@ -136,8 +158,18 @@ struct object * wrap_objc_object(id r)
   struct pike_string * ps;
   if(!r) {printf("wrap_objc_object: no object!\n"); return NULL; }
   if(!r->isa) printf("wrap_objc_object: no class!\n");
-  ps = make_shared_string(r->isa->name);
-  prog = pike_create_objc_dynamic_class(ps);
+  
+  /* TODO: Do we need to make these methods in PiObjCObject hidden? */
+  if([r respondsToSelector: SELUID("__ObjCgetPikeObject")])
+  {
+	o = [r __ObjCgetPikeObject];
+  }
+  
+  else 
+  {
+	  
+    ps = make_shared_string(r->isa->name);
+    prog = pike_create_objc_dynamic_class(ps);
 	o = clone_object(prog, 0);
 	pc = OBJ2_DYNAMIC_OBJECT(o);
 	pc->obj = (id)r;
@@ -147,6 +179,7 @@ struct object * wrap_objc_object(id r)
 	[r retain];
 
 	pc->is_instance = 1;
+  }
 
   return o;
 }
@@ -569,7 +602,7 @@ BOOL has_objc_method(id obj, SEL aSelector)
 
         while (methodList = class_nextMethodList(obj->isa, &iterator)) {
                 for (index = 0; index < methodList->method_count; index++) {
-                        if(aSelector == methodList->method_list[index].method_name) return YES;
+                        if((char *)aSelector == (char *)methodList->method_list[index].method_name) return YES;
                 }
         }
 

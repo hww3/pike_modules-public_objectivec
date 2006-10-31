@@ -4,7 +4,6 @@
 		Some rights reserved: <http://creativecommons.org/licenses/by/2.0/>
 
 	***************************************************************************/
-
 #if defined(MACOSX) && defined(__ppc__)
 #include	"mach_inject.h"
 

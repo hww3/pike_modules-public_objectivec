@@ -2,6 +2,7 @@
 #define THIS_IS_OBJC_OBJECT_HOLDER 1
 
 #include "piobjc.h"
+#import "util.h"
 #import "ObjC.h"
 #import <Foundation/NSBundle.h>
 #import <Foundation/NSString.h>
@@ -13,6 +14,7 @@
 
 id global_autorelease_pool;
 struct mapping * global_class_cache;
+struct mapping * global_classname_cache;
 CVAR NSAutoreleasePool * pool;
 
 PIKEFUN void create()
@@ -24,7 +26,7 @@ PIKEFUN int inject(int pid, int use_main_thread, string bundlePath, string syste
 {
   int r;
 
-  r = objc_inject(pid, use_main_thread, bundlePath->str, systemPath->str, carbonPath->str);
+//  r = objc_inject(pid, use_main_thread, bundlePath->str, systemPath->str, carbonPath->str);
 
   pop_n_elems(args);
   push_int(r);
@@ -97,36 +99,41 @@ EXTRA
   add_string_constant("__version", "0.1", 0);
   add_string_constant("__author", "Bill Welliver <bill@welliver.org>", 0);
 
- pike_init_piobjc_appkit();
-
+  pike_init_piobjc_appkit();
   [init_pool release];
   global_autorelease_pool = [[OC_NSAutoreleasePoolCollector alloc] init];
 }
 
 INIT
 {
- THIS->pool = [[OC_NSAutoreleasePoolCollector alloc] init];
- [THIS->pool newAutoreleasePool];
+
+  THIS->pool = [[OC_NSAutoreleasePoolCollector alloc] init];
+  [THIS->pool newAutoreleasePool];
+
  global_class_cache = allocate_mapping(10);
+ global_classname_cache = allocate_mapping(10);
  add_ref(global_class_cache);
+ add_ref(global_classname_cache);
 }
 
 EXIT
 {
   pike_exit_piobjc_appkit();
   free_mapping(global_class_cache);
+  free_mapping(global_classname_cache);
 }
 
-PIKEFUN void new_class(string name)
+PIKEFUN void new_class(string name, program p)
 {
-   add_piobjcclass(name->str);
-   pop_stack();
+   add_piobjcclass(name->str, p);
+   pop_n_elems(args);
 }
 
-void add_piobjcclass(char * name)
+
+void add_piobjcclass(char * name, struct program * prog)
 {
   int res;
-  res = CreateClassDefinition(name, "NSProxy");  
+  res = CreateClassDefinition(name, "PiObjCObject", prog);  
 
   if(res == YES)
     printf("Success!\n");
@@ -156,13 +163,14 @@ PIKEFUN int low_load_bundle(string bundle_path)
 // this method comes to us from the Apple C Runtime Reference manual.
 // we should eventually rewrite it with our own brains.
 BOOL CreateClassDefinition( const char * name, 
-        const char * superclassName )
+        const char * superclassName, struct program * prog)
 {
     struct objc_class * meta_class;
     struct objc_class * super_class;
     struct objc_class * new_class;
     struct objc_class * root_class;
-
+	struct objc_method_list ** emptyMethodLists;
+ 
     // Ensure that the superclass exists and that someone
     // hasn't already implemented a class with the same name
     //
@@ -234,12 +242,63 @@ BOOL CreateClassDefinition( const char * name,
     new_class->instance_size = super_class->instance_size;
     meta_class->instance_size = meta_class->super_class->instance_size;
 
-    // Finally, register the class with the runtime.
-    //
 
+    // We will add our methods later, so the list of lists starts with just end-of-list
+    emptyMethodLists = malloc( sizeof(void *) );
+    *emptyMethodLists = ((struct objc_method_list*)-1); // See objc-private.h in Darwin
+
+	new_class->methodLists = emptyMethodLists;
+
+/*
+	new_method_list->method_list[0].method_name = sel_registerName("whee");
+	new_method_list->method_list[0].method_types = strdup("@@:");
+	new_method_list->method_list[0].method_imp = make_stub(prog);
+*/	
+	
+//	class_addMethods(new_class, new_method_list);
+
+    // Finally, register the class with the runtime.
     objc_addClass( new_class ); 
+
+	RegisterDynamicMethod("init", name, make_stub(prog), "@4@4:4");
+    RegisterDynamicMethod("__ObjCgetPikeObject", name, , "@4@4:4");
     return YES;
 
+}
+
+BOOL RegisterDynamicMethod( const char * dynamicMethodName, const char * className, IMP method, char * methodTypes )
+{
+    BOOL result = FALSE;
+    
+    // Get the class object we want to add the method to
+    id methodClass = objc_getClass( className );
+    
+    // Make sure the class we're trying to attach a method to exists
+   if( methodClass != Nil )
+    {
+        struct objc_method_list * methodList = malloc( sizeof( struct objc_method_list ) );
+        
+        // Get or register the selector for the method name
+        SEL methodSEL = SELUID( dynamicMethodName );
+        // Registering the method seems to register the selector
+        /*if( ISSELECTOR( methodSEL ) == FALSE )
+        {
+            methodSEL = sel_registerName( dynamicMethodName );
+        }*/
+    
+        // Fill out the method list
+        methodList->method_count = 1;
+        methodList->method_list[ 0 ].method_name = methodSEL;
+        methodList->method_list[ 0 ].method_types = methodTypes;
+        methodList->method_list[ 0 ].method_imp = method;
+        
+        // Register our method
+        class_addMethods(methodClass, methodList);
+        
+        result = TRUE;
+    }
+        
+    return result;
 }
 
 unsigned pike_objc_type_alignment(char** typeptr){
