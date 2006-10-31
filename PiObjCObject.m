@@ -13,7 +13,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * $Id: PiObjCObject.m,v 1.10 2006-10-31 20:06:51 hww3 Exp $
+ * $Id: PiObjCObject.m,v 1.11 2006-10-31 23:57:09 hww3 Exp $
  */
 
 /*
@@ -235,28 +235,94 @@
 
 }
 
+id get_objc_object(id obj, SEL sel)
+{
+  id i;
+  
+  object_getInstanceVariable(obj, "pobject", &i);
+  
+  return i;
+}
+
 // [obj init] is the designated initializer, so we equate init with create(). 
 id init_pike_object(struct program  * prog, id obj, SEL sel)
 {
-	struct object * pobject;
-	printf("[PIKE PROGRAM init]\n");
+  struct thread_state *state;
+
 	if(prog)
 	{
-		push_program(prog);
-		apply_svalue(Pike_sp-1, 0);
-		if(Pike_sp[-1].type != T_OBJECT)
-		{
-			printf("WHOA! we didn't get an object back from create().\n");
-		}
-		else
-		{
-			
-			pobject = Pike_sp[-1].u.object;
-			add_ref(pobject); 
-			object_setInstanceVariable(obj, "pobject", pobject);
-		}
+
+      if((state = thread_state_for_id(th_self()))!=NULL)
+      {
+        /* This is a pike thread.  Do we have the interpreter lock? */
+        if(!state->swapped)
+        {
+          /* Yes.  Go for it... */
+          instantiate_pike_native_class(prog, obj, sel);
+        }
+        else
+        {
+          /* Nope, let's get it... */
+          mt_lock_interpreter();
+          SWAP_IN_THREAD(state);
+
+          instantiate_pike_native_class(prog, obj, sel);
+
+          /* Restore */
+          SWAP_OUT_THREAD(state);
+          mt_unlock_interpreter();
+         }
+       }
+       else
+       {
+    //printf("methodSignatureForSelector: not in pike thread.\n");
+          /* Not a pike thread.  Create a temporary thread_id... */
+          struct object *thread_obj;
+    //      printf("creating a temporary thread.\n");
+          mt_lock_interpreter();
+    //printf("got the lock.\n");
+          init_interpreter();
+          Pike_interpreter.stack_top=((char *)&state)+ (thread_stack_size-16384) * STACK_DIRECTION;
+          Pike_interpreter.recoveries = NULL;
+          thread_obj = fast_clone_object(thread_id_prog);
+          INIT_THREAD_STATE((struct thread_state *)(thread_obj->storage +
+                                                      thread_storage_offset));
+          num_threads++;
+          thread_table_insert(Pike_interpreter.thread_state);
+
+          instantiate_pike_native_class(prog, obj, sel);
+
+
+          cleanup_interpret();      /* Must be done before EXIT_THREAD_STATE */
+          Pike_interpreter.thread_state->status=THREAD_EXITED;
+          co_signal(&Pike_interpreter.thread_state->status_change);
+          thread_table_delete(Pike_interpreter.thread_state);
+          EXIT_THREAD_STATE(Pike_interpreter.thread_state);
+          Pike_interpreter.thread_state=NULL;
+          free_object(thread_obj);
+          thread_obj = NULL;
+          num_threads--;
+          mt_unlock_interpreter();     
+       }
+
 		return obj;
 	}
+	else
+	{
+	  printf("[PIKE PROGRAM init]: no program!\n");
+	}
+}
+
+void instantiate_pike_native_class(struct program * prog, id obj, SEL sel)
+{
+  struct object * pobject;
+printf("creating a clone of the program.\n");	
+  pobject = clone_object(prog, 0);	
+			
+	pobject = Pike_sp[-1].u.object;
+	add_ref(pobject); 
+	object_setInstanceVariable(obj, "pobject", pobject);
+
 }
 
 

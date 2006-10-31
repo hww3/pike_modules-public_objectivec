@@ -13,7 +13,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * $Id: AppKit.mmod,v 1.1 2006-10-13 15:39:10 hww3 Exp $
+ * $Id: AppKit.mmod,v 1.2 2006-10-31 23:57:09 hww3 Exp $
  */
 
 /*
@@ -71,6 +71,8 @@
  
  PIKECLASS AppKit
  {
+   PIKEVAR object foo;
+
    PIKEFUN void NSBeep()
    {
      NSBeep();
@@ -93,7 +95,7 @@
         args[c] = malloc(ITEM(xargv)[c].u.string->len);
         memcpy(args[c], ITEM(xargv)[c].u.string->str, ITEM(xargv)[c].u.string->len);
       }
-//printf("ARG0: %s\n", args[0]);
+printf("ARG0: %s\n", args[0]);
       c = NSApplicationMain(argc, args);
       RETURN(c);      
    }

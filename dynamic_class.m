@@ -11,19 +11,25 @@ extern id global_autorelease_pool;
 extern struct mapping * global_class_cache;
 extern struct mapping * global_classname_cache;
 
-void f_objc_dynamic_create(INT32 args)
+void f_objc_dynamic_create(Class cls, INT32 args)
 {
-  Class cls;
   id obj;
+  struct objc_object_holder_struct * pobj;
   char * classname;
-printf("dynamic_create()\n");
+  int i;
+  struct program_constant c;
+  struct svalue sval;
+  struct pike_string * cname;
+  
+printf("dynamic_create: %s()\n", cls->isa->name);
   if(args!=0)
   {
     Pike_error("too many arguments to create()\n");
     return;
   }
-
-  cls = OBJ2_OBJC_OBJECT_HOLDER(Pike_fp->current_object->prog->constants[0].sval.u.object)->class;
+  
+  i = 0;
+  pobj = NULL;
   
   if(cls == nil)
   {
@@ -57,7 +63,13 @@ void f_objc_dynamic_instance_method(INT32 args)
   f_call_objc_method(args, 1, select, obj);
 }
 
-f_call_objc_method(INT32 args, int is_instance, SEL select, id obj)
+void f_call_objc_class_method(struct objc_class_method_desc * m, INT32 args)
+{
+  printf("calling class method [%s %s]\n", m->class->name, (char *)m->select);
+  f_call_objc_method(args, 0, m->select, m->class);
+}
+
+void f_call_objc_method(INT32 args, int is_instance, SEL select, id obj)
 {
     struct objc_method * method;
     int arguments, x;
@@ -76,18 +88,22 @@ f_call_objc_method(INT32 args, int is_instance, SEL select, id obj)
     if(is_instance)
       method = class_getInstanceMethod(obj->isa, select);
     else
+    {
+      obj = objc_getClass(obj->isa->name);
       method = class_getClassMethod(obj, select);
+    }
     
     if(!method) 
     {
       Pike_error("unable to find the method.\n");
     }
-    printf("%s`()\n", (char * ) select);
+
     arguments = method_getNumberOfArguments(method);
 
     if((args) != (arguments-2))
       Pike_error("incorrect number of arguments to method provided.\n");
    
+    printf("%s(%d args)\n", (char * ) select, args);
 
     marg_malloc(argumentList,method);
     if(!argumentList)
@@ -191,24 +207,20 @@ printf("argument %d %s\n", x, type);
 
         case '@': 
  			/* TODO: we should check to see if the object is a Pike level object, or just a wrapper around an NSObject. */
-           if(sv->type==T_OBJECT)
-           {
-             struct object * o = sv->u.object;
-  			 // if we don't have a wrapped object, we should make a pike object wrapper.
-  			 wrapper = [PiObjCObject newWithPikeObject: o];
-             marg_setValue(argumentList, offset, id, wrapper);
-push_text("%O\n");
-push_object(o);
-f_werror(2);
-  		   }
-           else if(sv->type == T_INT)
-           {
-              // let's wrap the string as an NSString object.
-              id num;
-			  if(sizeof(INT_TYPE) == sizeof(long))
-                num = [NSNumber numberWithLong: sv->u.integer];
-			  else if(sizeof(INT_TYPE) == sizeof(long long))
-                num = [NSNumber numberWithLongLong: sv->u.integer];
+          if(sv->type==T_OBJECT)
+          {
+            struct object * o = sv->u.object;
+  			    // if we don't have a wrapped object, we should make a pike object wrapper.
+  			    wrapper = [PiObjCObject newWithPikeObject: o];
+            marg_setValue(argumentList, offset, id, wrapper);
+  		    }
+          else if(sv->type == T_INT)
+          {
+            id num;
+			      if(sizeof(INT_TYPE) == sizeof(long))
+              num = [NSNumber numberWithLong: sv->u.integer];
+			      else if(sizeof(INT_TYPE) == sizeof(long long))
+              num = [NSNumber numberWithLongLong: sv->u.integer];
 
               marg_setValue(argumentList,offset,id, num);
            }
@@ -222,7 +234,7 @@ f_werror(2);
               push_svalue(sv);
               f_string_to_utf8(1);
               sv = &Pike_sp[-1];
-              str = [[NSString alloc] stringWithBytes: sv->u.string->str length: sv->u.string->len encoding: enc];
+              str = [[NSString alloc] initWithBytes: sv->u.string->str length: sv->u.string->len encoding: enc];
               pop_stack();
               marg_setValue(argumentList,offset,id, str);
            }
@@ -258,8 +270,7 @@ f_werror(2);
     while((*type)&&(*type=='r' || *type =='n' || *type =='N' || *type=='o' || *type=='O' || *type =='V'))
   		type++;
 
-    printf("RETURN TYPE: %s\n", type);
-   
+    printf("SENDING MESSAGE WITH RETURN TYPE: %s\n", type);
 
     @try
     {
@@ -437,12 +448,12 @@ f_werror(2);
 
 }
 
-void f_objc_dynamic_class_sprintf(INT32 args)
+void f_objc_dynamic_class_sprintf(Class cls, INT32 args)
 {
     char * desc;
     int hash;
-	if(THIS->obj && THIS->obj->isa)
-      desc = malloc(strlen(THIS->obj->isa->name) + strlen("()") + 15);
+	if(cls)
+      desc = malloc(strlen(cls->name) + strlen("()") + 15);
     else 
 	{
 		pop_n_elems(args);
@@ -462,7 +473,7 @@ void f_objc_dynamic_class_sprintf(INT32 args)
   {
   }
   
-    sprintf(desc, "%s(%u)", THIS->obj->isa->name, hash);
+    sprintf(desc, "%s(%u)", cls->name, hash);
 
 
     push_text(desc);
@@ -541,10 +552,6 @@ struct program * pike_low_create_objc_dynamic_class(char * classname)
   }
   
   start_new_program();
-  p = NEW_OBJC_OBJECT_HOLDER();
-  OBJ2_OBJC_OBJECT_HOLDER(p)->class = isa;
-  add_ref(p);
-  add_object_constant("__objc_class", p, ID_STATIC);
   add_string_constant("__objc_classname", classname, ID_STATIC);
   
   dclass_storage_offset = ADD_STORAGE(struct objc_dynamic_class);
@@ -561,24 +568,23 @@ struct program * pike_low_create_objc_dynamic_class(char * classname)
       char * pikename;
       struct object * cmethod;
       struct objc_class_method_struct * cms;
+      struct objc_class_method_desc * desc;
       
       selector = methodList->method_list[index].method_name;
       pikename = make_pike_name_from_selector(selector);
-      push_program(objc_class_method_program);
-      apply_svalue(Pike_sp-1, 0);
-      cmethod = Pike_sp[-1].u.object;
-      add_ref(cmethod);
-      cms = OBJ2_OBJC_CLASS_METHOD(cmethod);
-      cms->class = isa;
-      cms->selector = selector;
-      add_object_constant((char *)pikename, cmethod, 0);
+      desc = malloc(sizeof(struct objc_class_method_desc));
+      
+      desc->class = isa;
+      desc->select = selector;
+
+      add_function_constant((char *)pikename, quick_make_stub(desc, f_call_objc_class_method), "function(mixed...:mixed)", 0);
       free(pikename);
     }
   }  
 
   /* todo we should work more on the optimizations. */
-  ADD_FUNCTION("create", f_objc_dynamic_create, tFunc(tNone,tVoid), 0);  
-  ADD_FUNCTION("_sprintf", f_objc_dynamic_class_sprintf, tFunc(tAnd(tInt,tMixed),tVoid), 0);  
+  ADD_FUNCTION("create", quick_make_stub(isa, f_objc_dynamic_create), tFunc(tNone,tVoid), 0);  
+  ADD_FUNCTION("_sprintf", quick_make_stub(isa, f_objc_dynamic_class_sprintf), tFunc(tAnd(tInt,tMixed),tVoid), 0);  
 
   /* then, we add the instance methods. */
 

@@ -15,7 +15,8 @@
 #include "piobjc.h"
 #import  <Foundation/NSString.h>
 
-#define HAVE_PPC_CPU 1
+#define HAVE_PPC_CPU 0
+#define HAVE_X86_CPU 1
 
 #ifdef HAVE_SPARC_CPU
 
@@ -455,3 +456,12 @@ void * make_stub(struct program * prog)
  //return disp;
 }
 
+void * quick_make_stub(void * dta, void * func)
+{
+  struct cpu_context * ctx;
+  void (*disp)() = (void (*)())func;
+
+  ctx = malloc(sizeof(struct cpu_context));
+  return low_make_stub(ctx, dta, 0, disp, 2, 0, 0);
+ //return disp;
+}

@@ -112,11 +112,17 @@ typedef void*(*pike_objc_pointer_msgSendv)(id,SEL,unsigned,marg_list);
                 result=0;\
         }
         
+struct objc_class_method_desc
+{
+  SEL select;
+  Class class;
+};
+        
 void f_objc_dynamic_class_method(INT32 args);
 void f_objc_dynamic_instance_method(INT32 args);
 void objc_dynamic_class_exit();
 void objc_dynamic_class_init();
-void f_objc_dynamic_create(INT32 args);
+void f_objc_dynamic_create(Class cls, INT32 args);
 struct object * wrap_objc_object(id r);
 struct program * pike_low_create_objc_dynamic_class(char * classname);
 unsigned pike_objc_type_alignment(char** typeptr);
@@ -126,3 +132,4 @@ BOOL CreateClassDefinition( const char * name,
 void * make_stub(struct program * prog);
 id init_pike_object(struct program * prog, id obj, SEL sel);
 BOOL RegisterDynamicMethod( const char * dynamicMethodName, const char * className, IMP method, char * methodTypes );
+id get_objc_object(id obj, SEL sel);

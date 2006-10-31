@@ -260,8 +260,8 @@ BOOL CreateClassDefinition( const char * name,
     // Finally, register the class with the runtime.
     objc_addClass( new_class ); 
 
-	RegisterDynamicMethod("init", name, make_stub(prog), "@4@4:4");
-    RegisterDynamicMethod("__ObjCgetPikeObject", name, , "@4@4:4");
+ 	 RegisterDynamicMethod("init", name, make_stub(prog), "@4@4:4");
+    RegisterDynamicMethod("__ObjCgetPikeObject", name, get_objc_object, "@4@4:4");
     return YES;
 
 }
@@ -575,20 +575,5 @@ unsigned pike_objc_type_size(char** typeptr){
 	*typeptr=(result?type:nil);
 	return result;
 	}
-
-PIKECLASS objc_object_holder
-{
-   CVAR id class;
-}
-
-PIKECLASS objc_class_method
-{
-  CVAR id class;
-  CVAR SEL selector;
-  
-  PIKEFUN mixed `()(mixed ... method_args)
-  {
-    f_call_objc_method(args, 0, THIS->selector, THIS->class);    
-  }
 
 }
