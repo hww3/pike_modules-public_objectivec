@@ -1,7 +1,9 @@
 
 #import <Foundation/NSString.h>
 #import "PiObjCObject.h"
+#include "libffi/include/ffi.h"
 #include "piobjc.h"
+
 #undef THIS
 #define THIS ((struct objc_dynamic_class *)(Pike_interpreter.frame_pointer->current_storage))
 #define OBJ2_OBJC_OBJECT_HOLDER(o) ((struct objc_object_holder_struct *)get_storage(o, objc_object_holder_program))
@@ -53,7 +55,7 @@ void f_objc_dynamic_instance_method(INT32 args)
   struct svalue sval;
   struct objc_object_holder_struct * pobj;
   SEL select;
-  
+
   name = ID_FROM_INT(Pike_fp->current_object->prog, Pike_fp->fun)->name;
   prog = Pike_fp->current_object->prog;
   obj = THIS->obj;        
@@ -61,6 +63,40 @@ void f_objc_dynamic_instance_method(INT32 args)
   select = selector_from_pikename(name);
 
   f_call_objc_method(args, 1, select, obj);
+}
+
+void low_f_call_objc_class_method(ffi_cif* cif, void* resp, void** args, void* userdata)
+{
+  INT32 pargs;
+  struct objc_class_method_desc * m;
+  m = (struct objc_class_method_desc *)userdata;
+  pargs = *((INT32 *)args[0]);
+
+  printf("low_f_call_objc_class_method: %d\n", pargs);
+
+  f_call_objc_class_method(m, pargs);
+//  stack_dup();
+//  push_text(">> RETURNING FROM CLASS METHOD: %O\n");
+//  stack_swap();
+//  f_werror(2);
+}
+
+void low_f_objc_dynamic_class_sprintf(ffi_cif* cif, void* resp, void** args, void* userdata)
+{
+  INT32 pargs;
+  Class m = (Class)userdata;
+  pargs = *((INT32 *)args[0]);
+
+  f_objc_dynamic_class_sprintf(m, pargs);
+}
+
+void low_f_objc_dynamic_create(ffi_cif* cif, void* resp, void** args, void* userdata)
+{
+  INT32 pargs;
+  Class m = (Class)userdata;
+  pargs = *((INT32 *)args[0]);
+
+  f_objc_dynamic_create(m, pargs);
 }
 
 void f_call_objc_class_method(struct objc_class_method_desc * m, INT32 args)
@@ -100,10 +136,11 @@ void f_call_objc_method(INT32 args, int is_instance, SEL select, id obj)
 
     arguments = method_getNumberOfArguments(method);
 
+    printf("%s(%d args), expecting %d\n", (char * ) select, args, arguments-2);
+
     if((args) != (arguments-2))
       Pike_error("incorrect number of arguments to method provided.\n");
    
-    printf("%s(%d args)\n", (char * ) select, args);
 
     marg_malloc(argumentList,method);
     if(!argumentList)
@@ -206,12 +243,13 @@ printf("argument %d %s\n", x, type);
   	         break;
 
         case '@': 
- 			/* TODO: we should check to see if the object is a Pike level object, or just a wrapper around an NSObject. */
           if(sv->type==T_OBJECT)
           {
             struct object * o = sv->u.object;
-  			    // if we don't have a wrapped object, we should make a pike object wrapper.
-  			    wrapper = [PiObjCObject newWithPikeObject: o];
+            wrapper = unwrap_objc_object(o);
+            // if we don't have a wrapped object, we should make a pike object wrapper.
+            if(!wrapper)
+    			    wrapper = [PiObjCObject newWithPikeObject: o];
             marg_setValue(argumentList, offset, id, wrapper);
   		    }
           else if(sv->type == T_INT)
@@ -270,151 +308,149 @@ printf("argument %d %s\n", x, type);
     while((*type)&&(*type=='r' || *type =='n' || *type =='N' || *type=='o' || *type=='O' || *type =='V'))
   		type++;
 
-    printf("SENDING MESSAGE WITH RETURN TYPE: %s\n", type);
+    printf("SENDING MESSAGE %s WITH RETURN TYPE: %s\n", select, type);
+
+    pop_n_elems(args);
 
     @try
     {
 
-    switch(*type){
-      case 'c':
+      switch(*type){
+        case 'c':
   	  THREADS_ALLOW();
-        result = (INT_TYPE *) malloc(sizeof(INT_TYPE)); 
-  	 *(INT_TYPE *)result = (INT_TYPE)((pike_objc_unsigned_char_msgSendv)objc_msgSendv)(obj,select,method_getSizeOfArguments(method),argumentList);
+          result = (INT_TYPE *) malloc(sizeof(INT_TYPE)); 
+   	  *(INT_TYPE *)result = (INT_TYPE)((pike_objc_unsigned_char_msgSendv)objc_msgSendv)(obj,select,method_getSizeOfArguments(method),argumentList);
   	  THREADS_DISALLOW();
-        push_int(*(INT_TYPE *)result);
-        break;
+printf("PUSHING INT: %d\n", *(INT_TYPE *)result);
+          push_int(*(INT_TYPE *)result);
+          break;
 
-      case 'C':
-  	  THREADS_ALLOW();
-       result = (INT_TYPE *) malloc(sizeof(INT_TYPE)); 
+       case 'C':
+         THREADS_ALLOW();
+         result = (INT_TYPE *) malloc(sizeof(INT_TYPE)); 
   	 *(INT_TYPE *)result =     (INT_TYPE)((pike_objc_unsigned_char_msgSendv)objc_msgSendv)(obj,select,method_getSizeOfArguments(method),argumentList);
-  	  THREADS_DISALLOW();
-        push_int(*(INT_TYPE *)result);
-        break;
+  	 THREADS_DISALLOW();
+         push_int(*(INT_TYPE *)result);
+         break;
 
-      case 'i':
-  	  THREADS_ALLOW();
-      result = (INT_TYPE *) malloc(sizeof(INT_TYPE)); 
+       case 'i':
+         THREADS_ALLOW();
+         result = (INT_TYPE *) malloc(sizeof(INT_TYPE)); 
   	 *(INT_TYPE *)result =      (INT_TYPE)((pike_objc_int_msgSendv)objc_msgSendv)(obj,select,method_getSizeOfArguments(method),argumentList);
-  	  THREADS_DISALLOW();
+  	 THREADS_DISALLOW();
         push_int(*(INT_TYPE *)result);
         break;
       // TODO: fix the casting... should we support auto objectize for bignums?
 
       case 'l':
-  	  THREADS_ALLOW();
-      result = (INT_TYPE *) malloc(sizeof(INT_TYPE)); 
-  	 *(INT_TYPE *)result =     (INT_TYPE)((pike_objc_long_msgSendv)objc_msgSendv)(obj,select,method_getSizeOfArguments(method),argumentList);
-  	  THREADS_DISALLOW();
+        THREADS_ALLOW();
+        result = (INT_TYPE *) malloc(sizeof(INT_TYPE)); 
+        *(INT_TYPE *)result =     (INT_TYPE)((pike_objc_long_msgSendv)objc_msgSendv)(obj,select,method_getSizeOfArguments(method),argumentList);
+        THREADS_DISALLOW();
         push_int(*(INT_TYPE *)result);
         break;
 
       case 'L':
-  	  THREADS_ALLOW();
-      result = (INT_TYPE *) malloc(sizeof(INT_TYPE)); 
-  	 *(INT_TYPE *)result = (INT_TYPE)((pike_objc_unsigned_long_msgSendv)objc_msgSendv)(obj,select,method_getSizeOfArguments(method),argumentList);
-  	  THREADS_DISALLOW();
+        THREADS_ALLOW();
+        result = (INT_TYPE *) malloc(sizeof(INT_TYPE)); 
+  	*(INT_TYPE *)result = (INT_TYPE)((pike_objc_unsigned_long_msgSendv)objc_msgSendv)(obj,select,method_getSizeOfArguments(method),argumentList);
+        THREADS_DISALLOW();
         push_int(*(INT_TYPE *)result);
         break;
 
       case 'I':
-  	  THREADS_ALLOW();
+        THREADS_ALLOW();
         result = (INT_TYPE *) malloc(sizeof(INT_TYPE)); 
         *(INT_TYPE *)result = (INT_TYPE)((pike_objc_unsigned_int_msgSendv)objc_msgSendv)(obj,select,method_getSizeOfArguments(method),argumentList);
-  	  THREADS_DISALLOW();
+        THREADS_DISALLOW();
         push_int(*(INT_TYPE *)result);
         break;
 
       case 'd':
-  	  THREADS_ALLOW();
-      result = (FLOAT_TYPE *) malloc(sizeof(FLOAT_TYPE)); 
-      *(FLOAT_TYPE *)result = (FLOAT_TYPE)((pike_objc_double_msgSendv)objc_msgSendv)(obj,select,method_getSizeOfArguments(method),argumentList);
-  	  THREADS_DISALLOW();
+        THREADS_ALLOW();
+        result = (FLOAT_TYPE *) malloc(sizeof(FLOAT_TYPE)); 
+        *(FLOAT_TYPE *)result = (FLOAT_TYPE)((pike_objc_double_msgSendv)objc_msgSendv)(obj,select,method_getSizeOfArguments(method),argumentList);
+        THREADS_DISALLOW();
         push_float(*(FLOAT_TYPE *)result);
         break;
 
       case 'f':
-  	  THREADS_ALLOW();
+        THREADS_ALLOW();
         result = (FLOAT_TYPE *) malloc(sizeof(FLOAT_TYPE)); 
         *(FLOAT_TYPE *)result =  (FLOAT_TYPE)((pike_objc_float_msgSendv)objc_msgSendv)(obj,select,method_getSizeOfArguments(method),argumentList);
-  	  THREADS_DISALLOW();
+        THREADS_DISALLOW();
         push_float(*(FLOAT_TYPE *)result);
         break;
 
       case 'q':
-  	  THREADS_ALLOW();
+        THREADS_ALLOW();
         result = (FLOAT_TYPE *) malloc(sizeof(FLOAT_TYPE)); 
         *(FLOAT_TYPE *)result = (FLOAT_TYPE)((pike_objc_long_long_msgSendv)objc_msgSendv)(obj,select,method_getSizeOfArguments(method),argumentList);
-  	  THREADS_DISALLOW();
+        THREADS_DISALLOW();
         push_float(*(FLOAT_TYPE *)result);
         break;
 
       case 'Q':
-  	  THREADS_ALLOW();
+        THREADS_ALLOW();
         result = (FLOAT_TYPE *) malloc(sizeof(FLOAT_TYPE)); 
         *(FLOAT_TYPE *)result =     (FLOAT_TYPE)((pike_objc_unsigned_long_long_msgSendv)objc_msgSendv)(obj,select,method_getSizeOfArguments(method),argumentList);
-  	  THREADS_DISALLOW();
+        THREADS_DISALLOW();
         push_float(*(FLOAT_TYPE *)result);
         break;
 
       case 's':
-  	  THREADS_ALLOW();
+        THREADS_ALLOW();
         result = (INT_TYPE *) malloc(sizeof(INT_TYPE)); 
         *(INT_TYPE *)result =     (INT_TYPE)((pike_objc_short_msgSendv)objc_msgSendv)(obj,select,method_getSizeOfArguments(method),argumentList);
-  	  THREADS_DISALLOW();
+        THREADS_DISALLOW();
         push_int(*(INT_TYPE *)result);
         break;
 
       case 'S':
-  	  THREADS_ALLOW();
+        THREADS_ALLOW();
         result = (INT_TYPE *) malloc(sizeof(INT_TYPE)); 
         *(INT_TYPE *)result =     (INT_TYPE)((pike_objc_unsigned_short_msgSendv)objc_msgSendv)(obj,select,method_getSizeOfArguments(method),argumentList);
-  	  THREADS_DISALLOW();
+        THREADS_DISALLOW();
         push_int(*(INT_TYPE *)result);
         break;
 
       case 'v':
-      printf("SEL: %s\n", (char *)select);
+        printf("SEL: %s\n", (char *)select);
         void_dispatch_method(obj,select,method,argumentList);
         push_int(0);
         break;
 
       case '*':
-  	  THREADS_ALLOW();
+        THREADS_ALLOW();
         result = (char *) malloc(sizeof(char *)); 
         result = (char *)objc_msgSendv(obj,select,method_getSizeOfArguments(method),argumentList);
-  	  THREADS_DISALLOW();
+        THREADS_DISALLOW();
         push_text(result);
         break;
+
       case '@':
         {
           struct object * o;
           id r;
 
-  	  	o = object_dispatch_method(obj, select, method, argumentList);
-        if(o)
-		{
-			printf("pushing an object as return value.\n");
-        	push_object(o);
-		}
-  		}
+          o = object_dispatch_method(obj, select, method, argumentList);
+          if(o)
+          {
+            printf("pushing an object as return value.\n");
+            push_object(o);
+          }
+        }
         break;
+
       case '#':
         {
           struct object * o;
           Class c;
-  THREADS_ALLOW();
+          THREADS_ALLOW();
           c = objc_msgSendv(obj,select,method_getSizeOfArguments(method),argumentList);
-  THREADS_DISALLOW();
-  
-  /* TODO! This isn't completely compatible with dynamic classes being worked on now. */
-/*          o = NEW_NSCLASS();
-          OBJ2_NSCLASS(o)->object_data->class = (id)c;
-          c = [(id)c retain];
-          push_object(o);
-          */
-        }
-        break;
+          THREADS_DISALLOW();
+         }  
+         break;
       case 'b':
         Pike_error("Invalid return type for method.");
       case '?':
@@ -430,22 +466,17 @@ printf("argument %d %s\n", x, type);
   // TODO: do something with the result!
         break;
       }
+      [pool release];
     }
-    [pool release];
-    stack_pop_n_elems_keep_top(args);
+  }
 
-    }
-    @catch (NSException * e)
-    {
+  @catch (NSException * e)
+  {
+    Pike_error("%s: %s\n", [(NSString *)[e name] UTF8String], [(NSString *)[e reason] UTF8String]);
+  }
 
-      pop_n_elems(args);
-      Pike_error("%s: %s\n", [(NSString *)[e name] UTF8String], [(NSString *)[e reason] UTF8String]);
-    }
-
-    if(argumentList) 
-      marg_free(argumentList);
-
-
+  if(argumentList) 
+    marg_free(argumentList);
 }
 
 void f_objc_dynamic_class_sprintf(Class cls, INT32 args)
@@ -577,14 +608,14 @@ struct program * pike_low_create_objc_dynamic_class(char * classname)
       desc->class = isa;
       desc->select = selector;
 
-      add_function_constant((char *)pikename, quick_make_stub(desc, f_call_objc_class_method), "function(mixed...:mixed)", 0);
+      add_function_constant((char *)pikename, make_static_stub(desc, low_f_call_objc_class_method), "function(mixed...:mixed)", 0);
       free(pikename);
     }
   }  
 
   /* todo we should work more on the optimizations. */
-  ADD_FUNCTION("create", quick_make_stub(isa, f_objc_dynamic_create), tFunc(tNone,tVoid), 0);  
-  ADD_FUNCTION("_sprintf", quick_make_stub(isa, f_objc_dynamic_class_sprintf), tFunc(tAnd(tInt,tMixed),tVoid), 0);  
+  ADD_FUNCTION("create", make_static_stub(isa, low_f_objc_dynamic_create), tFunc(tNone,tVoid), 0);  
+  ADD_FUNCTION("_sprintf", make_static_stub(isa, low_f_objc_dynamic_class_sprintf), tFunc(tAnd(tInt,tMixed),tVoid), 0);  
 
   /* then, we add the instance methods. */
 

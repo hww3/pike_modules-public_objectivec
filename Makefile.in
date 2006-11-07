@@ -1,7 +1,7 @@
-# $Id: Makefile.in,v 1.12 2006-10-31 20:06:51 hww3 Exp $
+# $Id: Makefile.in,v 1.13 2006-11-07 02:46:21 hww3 Exp $
 @make_variables@
 VPATH=@srcdir@:@srcdir@/../..:../..
-OBJS=ObjC.o dynamic_class.o util.o AppKit.o PiObjCObject.o objc_inject.o mach_inject.o method_dispatch.o
+OBJS=ObjC.o dynamic_class.o util.o AppKit.o PiObjCObject.o objc_inject.o mach_inject.o method_dispatch.o libffi/src/prep_cif.c libffi/src/x86/ffi_darwin.c libffi/src/x86/darwin.S
 MODDIR=Public.pmod/
 MODNAME=ObjectiveC
 MODULE_PMOD_IN=module.pmod.in

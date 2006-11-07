@@ -33,7 +33,7 @@
 #endif
 
 struct object * new_nsobject_object(id obj);
-struct svalue * get_func_by_selector(struct object * pobject, SEL aSelector);
+struct callable * get_func_by_selector(struct object * pobject, SEL aSelector);
 void piobjc_set_return_value(id sig, id invocation, struct svalue * svalue);
 id get_NSObject_from_Object(struct object *o);
 

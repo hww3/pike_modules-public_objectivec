@@ -13,7 +13,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * $Id: PiObjCObject.m,v 1.11 2006-10-31 23:57:09 hww3 Exp $
+ * $Id: PiObjCObject.m,v 1.12 2006-11-07 02:46:21 hww3 Exp $
  */
 
 /*
@@ -67,6 +67,7 @@
 #define _GNU_SOURCE
 #define THIS_IS_PIOBJCOBJECT 1
 
+#include "libffi/include/ffi.h"
 #include "piobjc.h"
 #import <pthread.h>
 #import  <Foundation/NSObject.h>
@@ -74,6 +75,7 @@
 #import  <Foundation/NSInvocation.h>
 #import  <Foundation/NSString.h>
 #import "PiObjCObject.h"
+#include "libffi/include/ffi.h"
 
 @implementation PiObjCObject
 
@@ -244,6 +246,22 @@ id get_objc_object(id obj, SEL sel)
   return i;
 }
 
+void low_init_pike_object(ffi_cif* cif, void* resp, void** args, void* userdata)
+{
+  SEL sel;
+  id obj;
+  struct program * prog;
+  id rv;
+  
+  prog = userdata;
+  obj = *(id*)args[0];
+  sel = *(SEL*)args[1];
+  
+  rv = init_pike_object(prog, obj, sel);
+
+  *(id*) resp = rv;
+}
+
 // [obj init] is the designated initializer, so we equate init with create(). 
 id init_pike_object(struct program  * prog, id obj, SEL sel)
 {
@@ -319,7 +337,7 @@ void instantiate_pike_native_class(struct program * prog, id obj, SEL sel)
 printf("creating a clone of the program.\n");	
   pobject = clone_object(prog, 0);	
 			
-	pobject = Pike_sp[-1].u.object;
+//	pobject = Pike_sp[-1].u.object;
 	add_ref(pobject); 
 	object_setInstanceVariable(obj, "pobject", pobject);
 
@@ -329,12 +347,13 @@ printf("creating a clone of the program.\n");
 void dispatch_pike_method(struct object * pobject, SEL sel, NSInvocation * anInvocation)
 {
   int args;
-  struct svalue * func;
+  struct callable * c;
+  struct svalue func;
   id sig;
   
-  func = get_func_by_selector(pobject, sel);
+  c = get_func_by_selector(pobject, sel);
 //  printf("have func.\n");
-  if(func) // jackpot!
+  if(c) // jackpot!
   {
     void * buf = NULL;
     pthread_t tid;
@@ -342,7 +361,12 @@ void dispatch_pike_method(struct object * pobject, SEL sel, NSInvocation * anInv
     sig = [anInvocation methodSignature];
     args = push_objc_types(sig, anInvocation);
 
-    apply_svalue(func, args);
+    func.type = T_FUNCTION;
+    func.u.efun = c;
+
+//    add_ref(c);
+
+    apply_svalue(&func, args);
 
     // now, we should deal with the return value.
     printf("Dealing with the return value for call to %s...", (char *) sel);
@@ -467,13 +491,13 @@ printf("encoding: %s\n", encoding);
 - (BOOL) respondsToSelector:(SEL) aSelector
 {
   struct callable * func;
-  printf("respondsToSelector: %s\n", (char*) aSelector);
+//  printf("respondsToSelector: %s\n", (char*) aSelector);
 
   func = get_func_by_selector(pobject, aSelector);
-  if(func) {printf("YES\n"); return YES;}
-  else if(has_objc_method(self, aSelector)) {printf("YES\n"); return YES;}
+  if(func) { /*printf("YES\n");*/ return YES;}
+  else if(has_objc_method(self, aSelector)) { /*printf("YES\n");*/ return YES;}
 
-    else { printf("YES\n"); return NO; }
+    else { /*printf("YES\n"); */ return NO; }
 }
 
 - (NSString *)description

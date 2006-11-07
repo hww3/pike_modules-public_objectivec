@@ -1,3 +1,4 @@
+#include "libffi/include/ffi.h"
 #import "piobjc.h"
 #import <Foundation/NSInvocation.h>
 #import <Foundation/NSMethodSignature.h>
@@ -520,13 +521,13 @@ char * get_signature_for_func(struct svalue * func, SEL selector)
 }
 
 
-struct svalue * get_func_by_selector(struct object * pobject, SEL aSelector)
+struct callable * get_func_by_selector(struct object * pobject, SEL aSelector)
 {
   char * funname;
   int funlen;
   int ind;
   int argcount;
-  struct svalue * sv;
+  struct callable * fun;
 
   
   funlen = strlen((char *)aSelector);
@@ -548,22 +549,23 @@ struct svalue * get_func_by_selector(struct object * pobject, SEL aSelector)
   }   
   funname[ind] = '\0';
 
-
   push_object(pobject);
 
   // do we need to do this?
   add_ref(pobject);
   push_text(funname);
-
   f_index(2);
 
   free(funname);
 
-  if(Pike_sp[-1].type != PIKE_T_FUNCTION) // jackpot!
-   return 0;
-  sv = (struct svalue *) malloc(sizeof(struct svalue));
-  assign_svalue(sv, &Pike_sp[-1]);
-  return sv;
+  if(Pike_sp[-1].type == PIKE_T_FUNCTION) // jackpot!
+  {
+    fun = Pike_sp[-1].u.efun;
+    pop_stack();
+    return fun;
+  }
+  else return 0;
+
 }
 
 char * make_pike_name_from_selector(SEL s)

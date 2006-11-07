@@ -133,3 +133,5 @@ void * make_stub(struct program * prog);
 id init_pike_object(struct program * prog, id obj, SEL sel);
 BOOL RegisterDynamicMethod( const char * dynamicMethodName, const char * className, IMP method, char * methodTypes );
 id get_objc_object(id obj, SEL sel);
+
+void low_init_pike_object(ffi_cif* cif, void* resp, void** args, void* userdata);

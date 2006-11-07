@@ -1,6 +1,7 @@
 
 #define THIS_IS_OBJC_OBJECT_HOLDER 1
 
+#include "libffi/include/ffi.h"
 #include "piobjc.h"
 #import "util.h"
 #import "ObjC.h"
@@ -260,7 +261,7 @@ BOOL CreateClassDefinition( const char * name,
     // Finally, register the class with the runtime.
     objc_addClass( new_class ); 
 
- 	 RegisterDynamicMethod("init", name, make_stub(prog), "@4@4:4");
+    RegisterDynamicMethod("init", name, make_init_stub(prog), "@4@4:4");
     RegisterDynamicMethod("__ObjCgetPikeObject", name, get_objc_object, "@4@4:4");
     return YES;
 
