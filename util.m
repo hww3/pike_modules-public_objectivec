@@ -115,7 +115,7 @@ id unwrap_objc_object(struct object * o)
 		is_objcobj = find_dynamic_program_in_cache(o->prog);
 		if(is_objcobj)
 		{
-		  struct objc_dynamic_class * s = get_storage(o, o->prog);
+		  struct objc_dynamic_class * s = (struct objc_dynamic_class *)get_storage(o, o->prog);
 		  if(!s) return nil;
 		  else return s->obj;
 			
@@ -408,7 +408,7 @@ void piobjc_set_return_value(id sig, id invocation, struct svalue * svalue)
     id wrapper;
 printf("piobjc_set_return_value()\n");
  	  // now, we push the argth argument onto the stack.
-	type = [sig methodReturnType];
+	type = (char *)[sig methodReturnType];
     while((*type)&&(*type=='r' || *type =='n' || *type =='N' || *type=='o' || *type=='O' || *type =='V'))
 	  type++;
    printf("return value type is %s -> %d\n", type, svalue->subtype);
@@ -485,17 +485,21 @@ printf("piobjc_set_return_value()\n");
  	}
 }
 
-char * get_signature_for_func(struct svalue * func, SEL selector)
+char * get_signature_for_func(struct callable * func, SEL selector)
 {
   char * encoding;
   int numargs;
-  
+  struct svalue sv;
+
+  printf("get_signature_for_func(%s)\n", selector);
   push_text( "Public.ObjectiveC.get_signature_for_func"); 
   SAFE_APPLY_MASTER("resolv", 1 );
    
   numargs = get_argcount_by_selector(selector);
 
-  push_svalue(func);
+  sv.type = PIKE_T_FUNCTION;
+  sv.u.efun = func;
+  push_svalue(&sv);
   push_int(numargs);
   // arg is at top, function is 1 down from the top 
   apply_svalue( Pike_sp-3, 2 );
@@ -802,7 +806,7 @@ char * pike_signature_from_objc_signature(struct objc_method * nssig, int * lenp
 
   for (x = 2; x < argcount; x++)
   {
-    method_getArgumentInfo(nssig, x, &type, &offset);
+    method_getArgumentInfo(nssig, x, (const char **)&type, &offset);
 
     while((*type)&&(*type=='r' || *type =='n' || *type =='N' || *type=='o' || *type=='O' || *type =='V'))
                 type++;

@@ -17,6 +17,7 @@
 #include "version.h"
 #include "operators.h"
 #import <Foundation/NSAutoreleasePool.h>
+#import "OC_NSAutoreleasePoolCollector.h"
 
 #if (PIKE_MAJOR_VERSION == 7 && PIKE_MINOR_VERSION == 1 && PIKE_BUILD_VERSION >= 12) || PIKE_MAJOR_VERSION > 7 || (PIKE_MAJOR_VERSION == 7 && PIKE_MINOR_VERSION > 1)
 # include "pike_error.h"
@@ -37,9 +38,5 @@ struct callable * get_func_by_selector(struct object * pobject, SEL aSelector);
 void piobjc_set_return_value(id sig, id invocation, struct svalue * svalue);
 id get_NSObject_from_Object(struct object *o);
 
-@interface OC_NSAutoreleasePoolCollector: NSObject
-{ id release_pool; id main_thread;}
--(void)newAutoreleasePool;
--(id)getAutoreleasePool;
--(void)targetForBecomingMultiThreaded:(id)sender;
-@end
+char * get_signature_for_func(struct callable * func, SEL selector);
+

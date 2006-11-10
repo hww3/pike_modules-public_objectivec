@@ -16,7 +16,7 @@
 id global_autorelease_pool;
 struct mapping * global_class_cache;
 struct mapping * global_classname_cache;
-CVAR NSAutoreleasePool * pool;
+CVAR OC_NSAutoreleasePoolCollector * pool;
 
 PIKEFUN void create()
 {
@@ -61,7 +61,7 @@ PIKEFUN array list_classes()
   int buflen = 0;
   int r = 0;
 
-  buflen = objc_getClassList(NULL, NULL);
+  buflen = objc_getClassList(NULL, 0);
 
   printf("have %d registered classes\n", buflen);
 
@@ -221,9 +221,9 @@ BOOL CreateClassDefinition( const char * name,
     //
 
     new_class->methodLists = calloc( 1, sizeof(struct objc_method_list  *) );
-    *new_class->methodLists = -1;
+    *new_class->methodLists = NULL;
     meta_class->methodLists = calloc( 1, sizeof(struct objc_method_list  *) );
-    *meta_class->methodLists = -1;
+    *meta_class->methodLists = NULL;
 
     // Connect the class definition to the class hierarchy:
     // Connect the class to the superclass.
@@ -259,9 +259,9 @@ BOOL CreateClassDefinition( const char * name,
     // Finally, register the class with the runtime.
     objc_addClass( new_class ); 
 
-    RegisterDynamicMethod("init", name, make_init_stub(prog), "@4@4:4");
-    RegisterDynamicMethod("__ObjCgetPikeObject", name, get_objc_object, "@4@4:4");
-    RegisterDynamicMethod("convert:", name, _convert, "v4@4:4");
+    RegisterDynamicMethod("init", name, (IMP)make_init_stub(prog), "@4@4:4");
+    RegisterDynamicMethod("__ObjCgetPikeObject", name, (IMP)get_objc_object, "@4@4:4");
+    //RegisterDynamicMethod("convert:", name, (IMP)_convert, "v4@4:4");
     
     return YES;
 
@@ -645,4 +645,3 @@ unsigned pike_objc_type_size(char** typeptr){
 	return result;
 	}
 
-}

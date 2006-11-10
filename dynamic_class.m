@@ -636,14 +636,14 @@ struct program * pike_low_create_objc_dynamic_class(char * classname)
       desc->class = isa;
       desc->select = selector;
 
-      add_function_constant((char *)pikename, make_static_stub(desc, low_f_call_objc_class_method), "function(mixed...:mixed)", 0);
+      add_function_constant((char *)pikename, (void *)make_static_stub(desc, low_f_call_objc_class_method), "function(mixed...:mixed)", 0);
       free(pikename);
     }
   }  
 
   /* todo we should work more on the optimizations. */
-  ADD_FUNCTION("create", make_static_stub(isa, low_f_objc_dynamic_create), tFunc(tNone,tVoid), 0);  
-  ADD_FUNCTION("_sprintf", make_static_stub(isa, low_f_objc_dynamic_class_sprintf), tFunc(tAnd(tInt,tMixed),tVoid), 0);  
+  ADD_FUNCTION("create", (void *)make_static_stub(isa, low_f_objc_dynamic_create), tFunc(tNone,tVoid), 0);  
+  ADD_FUNCTION("_sprintf", (void *)make_static_stub(isa, low_f_objc_dynamic_class_sprintf), tFunc(tAnd(tInt,tMixed),tVoid), 0);  
 
   /* then, we add the instance methods. */
 

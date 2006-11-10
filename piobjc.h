@@ -61,7 +61,7 @@ struct objc_class_method_struct
 };
 
 struct _struct {
-  NSAutoreleasePool * pool;
+  OC_NSAutoreleasePoolCollector * pool;
   struct mapping * class_cache;
 };
 #endif
@@ -138,3 +138,14 @@ id get_objc_object(id obj, SEL sel);
 
 void low_init_pike_object(ffi_cif* cif, void* resp, void** args, void* userdata);
 void _convert(id obj, SEL sel);
+void instantiate_pike_native_class(struct program * prog, id obj, SEL sel);
+struct program * pike_create_objc_dynamic_class(struct pike_string * classname);
+void add_piobjcclass(char * name, struct program * prog);
+void low_f_call_objc_class_method(ffi_cif* cif, void* resp, void** args, void* userdata);
+void f_objc_dynamic_class_sprintf(Class cls, INT32 args);
+void f_call_objc_method(INT32 args, int is_instance, SEL select, id obj);
+void f_call_objc_class_method(struct objc_class_method_desc * m, INT32 args);
+SEL selector_from_pikename(struct pike_string * name);
+struct object * object_dispatch_method(id obj, SEL select, struct objc_method * method, marg_list argumentList);
+char * make_pike_name_from_selector(SEL s);
+char * pike_signature_from_objc_signature(struct objc_method * nssig, int * lenptr);

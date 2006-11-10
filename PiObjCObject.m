@@ -13,7 +13,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * $Id: PiObjCObject.m,v 1.13 2006-11-10 04:16:38 hww3 Exp $
+ * $Id: PiObjCObject.m,v 1.14 2006-11-10 19:43:59 hww3 Exp $
  */
 
 /*
@@ -75,6 +75,8 @@
 #import  <Foundation/NSInvocation.h>
 #import  <Foundation/NSString.h>
 #import "PiObjCObject.h"
+
+void dispatch_pike_method(struct object * pobject, SEL sel, NSInvocation * anInvocation);
 
 @implementation PiObjCObject
 
@@ -238,11 +240,11 @@
 
 id get_objc_object(id obj, SEL sel)
 {
-  id i;
+  void * i;
   
   object_getInstanceVariable(obj, "pobject", &i);
   
-  return i;
+  return (id)i;
 }
 
 void _convert(id obj, SEL sel)
@@ -262,6 +264,7 @@ void low_init_pike_object(ffi_cif* cif, void* resp, void** args, void* userdata)
   obj = *(id*)args[0];
   sel = *(SEL*)args[1];
   
+  printf("low_init_pike_object()\n");
   rv = init_pike_object(prog, obj, sel);
 
   *(id*) resp = rv;
@@ -417,7 +420,7 @@ void dispatch_pike_method(struct object * pobject, SEL sel, NSInvocation * anInv
       /* Yes.  Go for it... */
       func = get_func_by_selector(pobject, aSelector);
       if(func)
-        encoding = get_signature_for_func(func, aSelector);
+        encoding = (char *)get_signature_for_func(func, aSelector);
     }
     else
     {
@@ -428,7 +431,7 @@ void dispatch_pike_method(struct object * pobject, SEL sel, NSInvocation * anInv
 
       // first, we perty up the selector.
       if(func)
-        encoding = get_signature_for_func(func, aSelector);
+        encoding = (char *)get_signature_for_func(func, aSelector);
 
       /* Restore */
       SWAP_OUT_THREAD(state);
@@ -454,7 +457,7 @@ void dispatch_pike_method(struct object * pobject, SEL sel, NSInvocation * anInv
 
       func = get_func_by_selector(pobject, aSelector);
       if(func)
-        encoding = get_signature_for_func(func, aSelector);
+        encoding = (char *)get_signature_for_func(func, aSelector);
 
       cleanup_interpret();      /* Must be done before EXIT_THREAD_STATE */
       Pike_interpreter.thread_state->status=THREAD_EXITED;
