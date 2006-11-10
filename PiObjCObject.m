@@ -13,7 +13,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * $Id: PiObjCObject.m,v 1.12 2006-11-07 02:46:21 hww3 Exp $
+ * $Id: PiObjCObject.m,v 1.13 2006-11-10 04:16:38 hww3 Exp $
  */
 
 /*
@@ -75,7 +75,6 @@
 #import  <Foundation/NSInvocation.h>
 #import  <Foundation/NSString.h>
 #import "PiObjCObject.h"
-#include "libffi/include/ffi.h"
 
 @implementation PiObjCObject
 
@@ -86,7 +85,7 @@
   instance = (id)unwrap_objc_object(obj);
   if(instance == NULL) 
   {
-	printf("Whoo hoo, we have a native pike object!\n");
+  	printf("Whoo hoo, we have a native pike object!\n");
     instance = [[self alloc] initWithPikeObject:obj];
     [instance autorelease];
   }        
@@ -245,6 +244,12 @@ id get_objc_object(id obj, SEL sel)
   
   return i;
 }
+
+void _convert(id obj, SEL sel)
+{
+printf("CONVERT!!!!!\n");  
+}
+
 
 void low_init_pike_object(ffi_cif* cif, void* resp, void** args, void* userdata)
 {
@@ -491,13 +496,13 @@ printf("encoding: %s\n", encoding);
 - (BOOL) respondsToSelector:(SEL) aSelector
 {
   struct callable * func;
-//  printf("respondsToSelector: %s\n", (char*) aSelector);
-
+  printf("respondsToSelector: %s? ", (char*) aSelector);
+  
   func = get_func_by_selector(pobject, aSelector);
-  if(func) { /*printf("YES\n");*/ return YES;}
-  else if(has_objc_method(self, aSelector)) { /*printf("YES\n");*/ return YES;}
+  if(func) { printf("YES\n"); return YES;}
+  else if(has_objc_method(self, aSelector)) { printf("YES\n"); return YES;}
 
-    else { /*printf("YES\n"); */ return NO; }
+    else { printf("NO\n");  return NO; }
 }
 
 - (NSString *)description

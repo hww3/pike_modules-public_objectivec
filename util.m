@@ -62,8 +62,7 @@
 void void_dispatch_method(id obj, SEL select, struct objc_method * method, marg_list argumentList)
 {
   THREADS_ALLOW();
-  printf("dispatching void return method: %s\n", select);
-  printf("object is: %s\n", [[obj description] UTF8String]);
+  printf("void [%s %s]\n", [[obj description] UTF8String], select);
   objc_msgSendv(obj,select,method_getSizeOfArguments(method),argumentList);
   THREADS_DISALLOW();
 }
@@ -528,7 +527,7 @@ struct callable * get_func_by_selector(struct object * pobject, SEL aSelector)
   int ind;
   int argcount;
   struct callable * fun;
-
+  int z;
   
   funlen = strlen((char *)aSelector);
 
@@ -538,9 +537,9 @@ struct callable * get_func_by_selector(struct object * pobject, SEL aSelector)
   {
     Pike_error("unable to allocate selector storage.\n");
   }
-
+  
   strncpy(funname, (char *)aSelector, funlen);
-
+  
   for(ind = 0; ind < funlen; ind++)
   {
     if(funname[ind] == ':')
@@ -548,6 +547,20 @@ struct callable * get_func_by_selector(struct object * pobject, SEL aSelector)
       argcount++;
   }   
   funname[ind] = '\0';
+
+//  printf("get_func_by_selector: %s\n", funname);
+  for(z = 0; z < pobject->prog->num_identifiers; z++)
+  {
+     struct identifier i;
+     
+     i = pobject->prog->identifiers[z];
+     
+     if(IDENTIFIER_IS_FUNCTION(i.identifier_flags))
+     {
+        printf("identifier: %s\n", i.name->str);
+     }      
+  }
+  if(!pobject) return NULL;
 
   push_object(pobject);
 

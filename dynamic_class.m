@@ -246,10 +246,11 @@ printf("argument %d %s\n", x, type);
           if(sv->type==T_OBJECT)
           {
             struct object * o = sv->u.object;
-            wrapper = unwrap_objc_object(o);
+            // wrapper = unwrap_objc_object(o);
             // if we don't have a wrapped object, we should make a pike object wrapper.
-            if(!wrapper)
-    			    wrapper = [PiObjCObject newWithPikeObject: o];
+            // if(!wrapper)
+            // seems that PiObjCObject newWithPikeObject does unwrapping. 
+    			  wrapper = [PiObjCObject newWithPikeObject: o];
             marg_setValue(argumentList, offset, id, wrapper);
   		    }
           else if(sv->type == T_INT)
@@ -321,7 +322,7 @@ printf("argument %d %s\n", x, type);
           result = (INT_TYPE *) malloc(sizeof(INT_TYPE)); 
    	  *(INT_TYPE *)result = (INT_TYPE)((pike_objc_unsigned_char_msgSendv)objc_msgSendv)(obj,select,method_getSizeOfArguments(method),argumentList);
   	  THREADS_DISALLOW();
-printf("PUSHING INT: %d\n", *(INT_TYPE *)result);
+//printf("PUSHING INT: %d\n", *(INT_TYPE *)result);
           push_int(*(INT_TYPE *)result);
           break;
 
@@ -564,10 +565,13 @@ struct program * pike_low_create_objc_dynamic_class(char * classname)
   struct program * dclass;
   static ptrdiff_t dclass_storage_offset;
   int num = -1;
+  int ivarnum = 0;
   id class;
   struct object * p;
   struct pike_string * psq;
-
+  struct objc_ivar_list * ivar_list;
+  struct objc_ivar ivar;
+  
   void *iterator = 0;
   struct objc_method_list *methodList;
   int index;
@@ -587,10 +591,34 @@ struct program * pike_low_create_objc_dynamic_class(char * classname)
   
   dclass_storage_offset = ADD_STORAGE(struct objc_dynamic_class);
 
-  /* first, we should set up any inherits.
-  low_inherit(NSObject_program, NULL, -1, 0, 0, NULL);
-  */
-  
+
+  /* first, we should add the instance variables. */
+  ivar_list = isa->ivars;
+
+  printf("have %d ivars.\n", ivar_list->ivar_count);
+
+  for(ivarnum = 0; ivarnum < ivar_list->ivar_count; ivarnum++)
+  {
+/*
+    pike_string * n;
+    pike_type *t;
+    INT32 getter_setter_offset = -1;
+    INT32 offset = Pike_compiler->new_program->num_program;
+
+
+    getter_setter_offset = ((PIKE_OPCODE_T *)(((INT32 *)0) + 1)) - ((PIKE_OPCODE_T *)0);
+    getter_setter_offset += offset;
+
+    ivar = ivar_list->ivar_list[ivarnum];
+
+    n = make_shared_string(ivar.ivar_name);
+    t = lfun_getter_type_string;
+
+    low_define_variable(n, t, flags, offset, PIKE_T_GET_SET);
+    
+*/
+  }
+
   /* next, we need to add all of the class methods. */
   while (methodList = class_nextMethodList(isa->isa, &iterator)) 
   {

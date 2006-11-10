@@ -136,10 +136,8 @@ void add_piobjcclass(char * name, struct program * prog)
   int res;
   res = CreateClassDefinition(name, "PiObjCObject", prog);  
 
-  if(res == YES)
-    printf("Success!\n");
-  else
-    printf("Failure!\n");
+  if(res == NO)
+    Pike_error("Error occurred while registering the Objective-C bridge class\n");
 }
 
 PIKEFUN int low_load_bundle(string bundle_path)
@@ -256,14 +254,89 @@ BOOL CreateClassDefinition( const char * name,
 	new_method_list->method_list[0].method_imp = make_stub(prog);
 */	
 	
-//	class_addMethods(new_class, new_method_list);
+  //  RegisterInstanceVariables(new_class, prog);
 
     // Finally, register the class with the runtime.
     objc_addClass( new_class ); 
 
     RegisterDynamicMethod("init", name, make_init_stub(prog), "@4@4:4");
     RegisterDynamicMethod("__ObjCgetPikeObject", name, get_objc_object, "@4@4:4");
+    RegisterDynamicMethod("convert:", name, _convert, "v4@4:4");
+    
     return YES;
+
+}
+
+BOOL RegisterInstanceVariables(Class cls, struct program * prog)
+{
+   int z = 0;
+   int q = 0;
+   int num_vars = 0;
+   struct objc_ivar_list * l;
+   int offset;
+      
+   printf("  %d identifiers\n", prog->num_identifiers);
+   for(z = 0; z < prog->num_identifiers; z++)
+   {
+      struct identifier i;
+      
+      i = prog->identifiers[z];
+      
+      if(IDENTIFIER_IS_VARIABLE(i.identifier_flags))
+      {
+         num_vars++;
+      }      
+   }
+
+   if(num_vars == 0)
+   {
+     cls->ivars = NULL;
+     return;
+   }  
+   
+   l = malloc(sizeof(struct objc_ivar_list) + ((num_vars) * sizeof(struct objc_ivar) ));
+
+   l->ivar_count = 0;
+   
+   if(l == NULL)
+   {
+     Pike_error("unable to allocate memory.\n");
+   }
+   
+   offset = cls->super_class->instance_size;
+   
+   for(z = 0; z < prog->num_identifiers; z++)
+   {
+     struct identifier i;
+     struct objc_ivar * v;
+     
+     i = prog->identifiers[z];
+   
+     if(IDENTIFIER_IS_VARIABLE(i.identifier_flags))
+     {
+       char * ivn;
+       
+       v = l->ivar_list + l->ivar_count;
+       ivn = malloc(i.name->len);
+       strncpy(ivn, i.name->str, i.name->len);     
+       v->ivar_name = ivn;
+       
+       v->ivar_type = @encode(id);
+       v->ivar_offset = offset;
+       offset += sizeof(id);
+       l->ivar_count++;
+       printf("added ivar!\n");
+     }      
+   }
+
+   cls->ivars = l;
+
+   for(z = 0; z < cls->ivars->ivar_count; z++)
+   {
+      printf("registered variable %s of type %s\n", cls->ivars->ivar_list[z].ivar_name, cls->ivars->ivar_list[z].ivar_type);
+   }
+
+   cls->instance_size = offset;
 
 }
 
@@ -281,11 +354,6 @@ BOOL RegisterDynamicMethod( const char * dynamicMethodName, const char * classNa
         
         // Get or register the selector for the method name
         SEL methodSEL = SELUID( dynamicMethodName );
-        // Registering the method seems to register the selector
-        /*if( ISSELECTOR( methodSEL ) == FALSE )
-        {
-            methodSEL = sel_registerName( dynamicMethodName );
-        }*/
     
         // Fill out the method list
         methodList->method_count = 1;
