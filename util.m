@@ -170,7 +170,9 @@ struct object * wrap_objc_object(id r)
 	  
     ps = make_shared_string(r->isa->name);
     prog = pike_create_objc_dynamic_class(ps);
+//  add_ref(prog);
 	o = clone_object(prog, 0);
+//  add_ref(o);
 	pc = OBJ2_DYNAMIC_OBJECT(o);
 	pc->obj = (id)r;
 
@@ -458,7 +460,7 @@ printf("piobjc_set_return_value()\n");
 		    printf("Whee! We're wrappin' an object for a return value!\n");
 		    // if we don't have a wrapped object, we should make a pike object wrapper.
 		        wrapper = [PiObjCObject newWithPikeObject: o];
-		        wrapper = [wrapper retain];
+		        // wrapper = [wrapper retain];
 		  	    [invocation setReturnValue: wrapper];		    
 /*          else 
           {
@@ -485,24 +487,23 @@ printf("piobjc_set_return_value()\n");
  	}
 }
 
-char * get_signature_for_func(struct callable * func, SEL selector)
+char * get_signature_for_func(struct object * obj, struct callable * func, SEL selector)
 {
   char * encoding;
   int numargs;
   struct svalue sv;
 
-  printf("get_signature_for_func(%s)\n", selector);
+  printf("|-> get_signature_for_func(%s)\n", func->name->str);
   push_text( "Public.ObjectiveC.get_signature_for_func"); 
   SAFE_APPLY_MASTER("resolv", 1 );
    
   numargs = get_argcount_by_selector(selector);
 
-  sv.type = PIKE_T_FUNCTION;
-  sv.u.efun = func;
-  push_svalue(&sv);
+  ref_push_function(obj, func);
+  ref_push_object(obj);
   push_int(numargs);
   // arg is at top, function is 1 down from the top 
-  apply_svalue( Pike_sp-3, 2 );
+  apply_svalue( Pike_sp-4, 3 );
 
   // result is at top of the stack, function is still one down 
   // and we want to pop it. 
@@ -553,6 +554,8 @@ struct callable * get_func_by_selector(struct object * pobject, SEL aSelector)
   funname[ind] = '\0';
 
 //  printf("get_func_by_selector: %s\n", funname);
+
+#if 0
   for(z = 0; z < pobject->prog->num_identifiers; z++)
   {
      struct identifier i;
@@ -564,12 +567,14 @@ struct callable * get_func_by_selector(struct object * pobject, SEL aSelector)
         printf("identifier: %s\n", i.name->str);
      }      
   }
+#endif
+
   if(!pobject) return NULL;
 
-  push_object(pobject);
+  add_ref(pobject->prog);
+  ref_push_object(pobject);
 
   // do we need to do this?
-  add_ref(pobject);
   push_text(funname);
   f_index(2);
 
@@ -578,6 +583,9 @@ struct callable * get_func_by_selector(struct object * pobject, SEL aSelector)
   if(Pike_sp[-1].type == PIKE_T_FUNCTION) // jackpot!
   {
     fun = Pike_sp[-1].u.efun;
+if(!fun) { printf("no fun!\n"); return 0;}
+//    printf("-> get_func_by_selector(%d)\n", fun->name->len);
+//    add_ref_svalue(Pike_sp-1);
     pop_stack();
     return fun;
   }

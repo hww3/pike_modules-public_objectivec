@@ -13,7 +13,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * $Id: PiObjCObject.m,v 1.14 2006-11-10 19:43:59 hww3 Exp $
+ * $Id: PiObjCObject.m,v 1.15 2006-11-14 03:08:17 hww3 Exp $
  */
 
 /*
@@ -83,7 +83,6 @@ void dispatch_pike_method(struct object * pobject, SEL sel, NSInvocation * anInv
 +(id) newWithPikeObject:(struct object *) obj
 {              
   id instance;
-  add_ref(obj);
   instance = (id)unwrap_objc_object(obj);
   if(instance == NULL) 
   {
@@ -199,7 +198,9 @@ void dispatch_pike_method(struct object * pobject, SEL sel, NSInvocation * anInv
       /* Nope, let's get it... */ 
       mt_lock_interpreter();
       SWAP_IN_THREAD(state);
+
       dispatch_pike_method(pobject, sel, anInvocation);
+
       /* Restore */
       SWAP_OUT_THREAD(state);
       mt_unlock_interpreter();
@@ -241,7 +242,7 @@ void dispatch_pike_method(struct object * pobject, SEL sel, NSInvocation * anInv
 id get_objc_object(id obj, SEL sel)
 {
   void * i;
-  
+  printf("get_objc_object()\n");
   object_getInstanceVariable(obj, "pobject", &i);
   
   return (id)i;
@@ -260,7 +261,7 @@ void low_init_pike_object(ffi_cif* cif, void* resp, void** args, void* userdata)
   struct program * prog;
   id rv;
   
-  prog = userdata;
+  prog = (struct program *)userdata;
   obj = *(id*)args[0];
   sel = *(SEL*)args[1];
   
@@ -301,12 +302,9 @@ id init_pike_object(struct program  * prog, id obj, SEL sel)
        }
        else
        {
-    //printf("methodSignatureForSelector: not in pike thread.\n");
           /* Not a pike thread.  Create a temporary thread_id... */
           struct object *thread_obj;
-    //      printf("creating a temporary thread.\n");
           mt_lock_interpreter();
-    //printf("got the lock.\n");
           init_interpreter();
           Pike_interpreter.stack_top=((char *)&state)+ (thread_stack_size-16384) * STACK_DIRECTION;
           Pike_interpreter.recoveries = NULL;
@@ -346,8 +344,10 @@ printf("creating a clone of the program.\n");
   pobject = clone_object(prog, 0);	
 			
 //	pobject = Pike_sp[-1].u.object;
-	add_ref(pobject); 
-	object_setInstanceVariable(obj, "pobject", pobject);
+  add_ref(pobject);
+  add_ref(prog);
+
+	object_setInstanceVariable(obj, "pobject",  pobject);
 
 }
 
@@ -358,7 +358,7 @@ void dispatch_pike_method(struct object * pobject, SEL sel, NSInvocation * anInv
   struct callable * c;
   struct svalue func;
   id sig;
-  
+  printf("dispatch_pike_method(%s)\n", sel);
   c = get_func_by_selector(pobject, sel);
 //  printf("have func.\n");
   if(c) // jackpot!
@@ -366,15 +366,14 @@ void dispatch_pike_method(struct object * pobject, SEL sel, NSInvocation * anInv
     void * buf = NULL;
     pthread_t tid;
 
+
+//    add_ref(pobject);
+    ref_push_function(pobject, c);
     sig = [anInvocation methodSignature];
     args = push_objc_types(sig, anInvocation);
-
-    func.type = T_FUNCTION;
-    func.u.efun = c;
-
-//    add_ref(c);
-
-    apply_svalue(&func, args);
+    printf("making the call.\n");
+    apply_svalue(Pike_sp-(2+args), args);
+    printf("done making the call.\n");
 
     // now, we should deal with the return value.
     printf("Dealing with the return value for call to %s...", (char *) sel);
@@ -397,6 +396,7 @@ void dispatch_pike_method(struct object * pobject, SEL sel, NSInvocation * anInv
 
 - (struct object *) getPikeObject
 {
+  printf("getPikeObject()\n");
 	return pobject;
 }
 
@@ -420,7 +420,11 @@ void dispatch_pike_method(struct object * pobject, SEL sel, NSInvocation * anInv
       /* Yes.  Go for it... */
       func = get_func_by_selector(pobject, aSelector);
       if(func)
-        encoding = (char *)get_signature_for_func(func, aSelector);
+      {
+        encoding = (char *)get_signature_for_func(pobject, func, aSelector);
+        encoding = (char *)get_signature_for_func(pobject, func, aSelector);
+        encoding = (char *)get_signature_for_func(pobject, func, aSelector);
+      }
     }
     else
     {
@@ -430,8 +434,13 @@ void dispatch_pike_method(struct object * pobject, SEL sel, NSInvocation * anInv
       SWAP_IN_THREAD(state);
 
       // first, we perty up the selector.
+      func = get_func_by_selector(pobject, aSelector);
       if(func)
-        encoding = (char *)get_signature_for_func(func, aSelector);
+      {
+        encoding = (char *)get_signature_for_func(pobject, func, aSelector);
+        encoding = (char *)get_signature_for_func(pobject, func, aSelector);
+        encoding = (char *)get_signature_for_func(pobject, func, aSelector);
+      }
 
       /* Restore */
       SWAP_OUT_THREAD(state);
@@ -457,7 +466,11 @@ void dispatch_pike_method(struct object * pobject, SEL sel, NSInvocation * anInv
 
       func = get_func_by_selector(pobject, aSelector);
       if(func)
-        encoding = (char *)get_signature_for_func(func, aSelector);
+      {
+        encoding = (char *)get_signature_for_func(pobject, func, aSelector);
+        encoding = (char *)get_signature_for_func(pobject, func, aSelector);
+        encoding = (char *)get_signature_for_func(pobject, func, aSelector);
+      }
 
       cleanup_interpret();      /* Must be done before EXIT_THREAD_STATE */
       Pike_interpreter.thread_state->status=THREAD_EXITED;
@@ -492,6 +505,7 @@ printf("encoding: %s\n", encoding);
 // see also getPikeObject... we probably want to make this hidden.
 - (struct object *) __ObjCgetPikeObject
 {
+  printf("__ObjCgetPikeObject()\n");
   if(pobject)
     return pobject;	
 }
@@ -500,10 +514,11 @@ printf("encoding: %s\n", encoding);
 {
   struct callable * func;
   printf("respondsToSelector: %s? ", (char*) aSelector);
-  
+
   func = get_func_by_selector(pobject, aSelector);
-  if(func) { printf("YES\n"); return YES;}
-  else if(has_objc_method(self, aSelector)) { printf("YES\n"); return YES;}
+
+  if(func) { printf("YES (1)\n"); return YES;}
+  else if(has_objc_method(self, aSelector)) { printf("YES (2)\n"); return YES;}
 
     else { printf("NO\n");  return NO; }
 }

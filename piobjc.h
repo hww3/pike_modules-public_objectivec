@@ -149,3 +149,10 @@ SEL selector_from_pikename(struct pike_string * name);
 struct object * object_dispatch_method(id obj, SEL select, struct objc_method * method, marg_list argumentList);
 char * make_pike_name_from_selector(SEL s);
 char * pike_signature_from_objc_signature(struct objc_method * nssig, int * lenptr);
+
+
+
+typedef Ivar (* object_setInstanceVariableProc)(id object, const char *name, void  *value);
+Ivar new_object_setInstanceVariable(id object, const char *name, void *value);
+
+object_setInstanceVariableProc old_object_setInstanceVariable;

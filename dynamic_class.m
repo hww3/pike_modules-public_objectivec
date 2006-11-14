@@ -250,6 +250,8 @@ printf("argument %d %s\n", x, type);
             // if we don't have a wrapped object, we should make a pike object wrapper.
             // if(!wrapper)
             // seems that PiObjCObject newWithPikeObject does unwrapping. 
+            add_ref(o);
+//            add_ref(o->prog);
     			  wrapper = [PiObjCObject newWithPikeObject: o];
             marg_setValue(argumentList, offset, id, wrapper);
   		    }
@@ -526,7 +528,7 @@ void objc_dynamic_class_exit()
 int find_dynamic_program_in_cache(struct program * prog)
 {
   struct svalue * c = NULL;
-  push_program(prog);
+  ref_push_program(prog);
   c = low_mapping_lookup(global_classname_cache, Pike_sp-1);	
   pop_stack();
 
@@ -546,7 +548,7 @@ struct program * pike_create_objc_dynamic_class(struct pike_string * classname)
   {
     p = pike_low_create_objc_dynamic_class(classname->str);
     if(!p) return 0;
-    push_program(p);
+    ref_push_program(p);
     //add_ref(classname);
     mapping_string_insert(global_class_cache, classname, Pike_sp-1);
     push_string(classname);

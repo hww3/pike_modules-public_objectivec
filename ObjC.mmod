@@ -1,6 +1,7 @@
 
 #define THIS_IS_OBJC_OBJECT_HOLDER 1
 
+#include "mach_override.h"
 #include "libffi/include/ffi.h"
 #include "piobjc.h"
 #import "util.h"
@@ -13,9 +14,12 @@
  *!
  */
 
+object_setInstanceVariableProc old_objectSetInstanceVariable;
+
 id global_autorelease_pool;
 struct mapping * global_class_cache;
 struct mapping * global_classname_cache;
+
 CVAR OC_NSAutoreleasePoolCollector * pool;
 
 PIKEFUN void create()
@@ -94,8 +98,9 @@ EXTRA
 
       }
 
-
   init_pool = [[NSAutoreleasePool alloc] init];
+
+  override_object_setInstanceVariable();
 
   add_string_constant("__version", "0.1", 0);
   add_string_constant("__author", "Bill Welliver <bill@welliver.org>", 0);
@@ -130,6 +135,26 @@ PIKEFUN void new_class(string name, program p)
    pop_n_elems(args);
 }
 
+
+// set up method override for 
+void override_object_setInstanceVariable()
+{
+
+  kern_return_t err = mach_override("_object_setInstanceVariable", NULL, 
+                                    (void*)new_object_setInstanceVariable, 
+                                    (void**)&old_object_setInstanceVariable
+                                    );
+  if(err)
+  {
+      Pike_error("an error occurred while setting up the Objective-C environment.\n");
+  }
+}
+
+Ivar new_object_setInstanceVariable(id object, const char *name, void *value)
+{
+  printf("new_object_setInstanceVariable()\n");
+  return (old_object_setInstanceVariable(object, name, value));
+}
 
 void add_piobjcclass(char * name, struct program * prog)
 {
