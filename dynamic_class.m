@@ -12,6 +12,8 @@
 extern id global_autorelease_pool;
 extern struct mapping * global_class_cache;
 extern struct mapping * global_classname_cache;
+static char *lfun_getter_type_string = NULL;
+static char *lfun_setter_type_string = NULL;
 
 void f_objc_dynamic_create(Class cls, INT32 args)
 {
@@ -573,12 +575,17 @@ struct program * pike_low_create_objc_dynamic_class(char * classname)
   struct pike_string * psq;
   struct objc_ivar_list * ivar_list;
   struct objc_ivar ivar;
-  
+  struct mapping * m;
+
   void *iterator = 0;
   struct objc_method_list *methodList;
   int index;
   SEL selector;
   Class isa;
+  
+  char * vn;
+  char * sg;
+  char * ss;
   
   /* get the objc class to make sure it exists, first. */
   isa = objc_getClass(classname);
@@ -597,29 +604,59 @@ struct program * pike_low_create_objc_dynamic_class(char * classname)
   /* first, we should add the instance variables. */
   ivar_list = isa->ivars;
 
-  printf("have %d ivars.\n", ivar_list->ivar_count);
+  printf("|-> have %d ivars.\n", ivar_list->ivar_count);
+
+  m = allocate_mapping(5);
+  if(!lfun_getter_type_string)
+    lfun_getter_type_string = tFuncV(tNone, tVoid, tMix);
+  if(!lfun_setter_type_string)
+    lfun_setter_type_string = tFuncV(tVoid, tVoid, tMix);
 
   for(ivarnum = 0; ivarnum < ivar_list->ivar_count; ivarnum++)
   {
-/*
-    pike_string * n;
-    pike_type *t;
-    INT32 getter_setter_offset = -1;
-    INT32 offset = Pike_compiler->new_program->num_program;
-
-
-    getter_setter_offset = ((PIKE_OPCODE_T *)(((INT32 *)0) + 1)) - ((PIKE_OPCODE_T *)0);
-    getter_setter_offset += offset;
-
+    int vl;
+    struct svalue * c = NULL;
+ 
     ivar = ivar_list->ivar_list[ivarnum];
+    vn = (ivar.ivar_name);
 
-    n = make_shared_string(ivar.ivar_name);
-    t = lfun_getter_type_string;
+    if(vn[0] == '_') continue;
 
-    low_define_variable(n, t, flags, offset, PIKE_T_GET_SET);
+    c = simple_mapping_string_lookup(m, vn);
+
+    if(c)
+      continue;
+
+    vl = strlen(vn);
+
+    sg = malloc(vl + 8);
+    ss = malloc(vl + 9);
+
+    snprintf(sg, vl+8, "`->var_%s", vn);
+    snprintf(ss, vl+9, "`->var_%s=", vn);
     
-*/
+    printf("registering %s\n", vn);
+
+    quick_add_function((const char *)sg, vl+8, (void *)make_static_stub(vn, low_f_objc_dynamic_create), 
+                 lfun_getter_type_string, 
+                 strlen(lfun_getter_type_string), 0, OPT_SIDE_EFFECT|OPT_EXTERNAL_DEPEND);  
+    quick_add_function((const char *)ss, vl+9, (void *)make_static_stub(vn, low_f_objc_dynamic_create), 
+                 lfun_setter_type_string, 
+                 strlen(lfun_setter_type_string), 0, OPT_SIDE_EFFECT|OPT_EXTERNAL_DEPEND);  
+    free(ss);
+    free(sg);
+    
+    push_text(vn);
+    add_ref(Pike_sp[-1].u.string);
+    push_int(1);
+    mapping_string_insert(m, Pike_sp-2, Pike_sp-1);
+    pop_stack();
+    pop_stack();
   }
+
+  free_mapping(m);
+
+
 
   /* next, we need to add all of the class methods. */
   while (methodList = class_nextMethodList(isa->isa, &iterator)) 
@@ -662,6 +699,9 @@ struct program * pike_low_create_objc_dynamic_class(char * classname)
       int q;
       int siglen;
       selector = methodList->method_list[index].method_name;
+
+      if(((char *)selector)[0] == '_') continue;
+
       // for some reason, some classes have class and instance methods of the same name.
       if(class_getClassMethod(isa, selector)) 
       {

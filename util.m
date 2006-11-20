@@ -170,17 +170,16 @@ struct object * wrap_objc_object(id r)
 	  
     ps = make_shared_string(r->isa->name);
     prog = pike_create_objc_dynamic_class(ps);
-//  add_ref(prog);
-	o = clone_object(prog, 0);
-//  add_ref(o);
-	pc = OBJ2_DYNAMIC_OBJECT(o);
-	pc->obj = (id)r;
+    if(!prog) return NULL;
+    o = clone_object(prog, 0);
+    pc = OBJ2_DYNAMIC_OBJECT(o);
+    pc->obj = (id)r;
 
   // we need to retain the object, because the dynamic_class object 
   // will free it when the object is destroyed.
-	[r retain];
+    [r retain];
 
-	pc->is_instance = 1;
+    pc->is_instance = 1;
   }
 
   return o;
@@ -414,7 +413,7 @@ printf("piobjc_set_return_value()\n");
     while((*type)&&(*type=='r' || *type =='n' || *type =='N' || *type=='o' || *type=='O' || *type =='V'))
 	  type++;
    printf("return value type is %s -> %d\n", type, svalue->subtype);
-   printf("arg 0 type is %s\n", [sig getArgumentTypeAtIndex: 2]);
+//   printf("arg 0 type is %s\n", [sig getArgumentTypeAtIndex: 2]);
 
   //  printf("returned value type is %d\n", svalue->type);
     switch(*type)
@@ -453,22 +452,19 @@ printf("piobjc_set_return_value()\n");
             pop_stack();
             [invocation setReturnValue: str];
 	        
-	      }
-	      else if(svalue->type == T_OBJECT)
-        {
-          o = svalue->u.object;
-		    printf("Whee! We're wrappin' an object for a return value!\n");
-		    // if we don't have a wrapped object, we should make a pike object wrapper.
-		        wrapper = [PiObjCObject newWithPikeObject: o];
-		        // wrapper = [wrapper retain];
-		  	    [invocation setReturnValue: wrapper];		    
-/*          else 
-          {
-	         id res;
-	         res = unwrap_objc_object(svalue->u.object);
-	         [invocation setReturnValue: &res];
-          }
-          */
+	    }
+	    else if(svalue->type == T_OBJECT)
+            {
+              o = svalue->u.object;
+	      wrapper = unwrap_objc_object(o);
+              if(!wrapper)
+              {
+                printf("Whee! We're wrappin' an object for a return value!\n");
+	        // if we don't have a wrapped object, we should make a pike object wrapper.
+	        wrapper = [PiObjCObject newWithPikeObject: o];
+              }
+              // wrapper = [wrapper retain];
+              [invocation setReturnValue: wrapper];		    
         }
         else
           Pike_error("expected object return value.\n");
@@ -493,22 +489,24 @@ char * get_signature_for_func(struct object * obj, struct callable * func, SEL s
   int numargs;
   struct svalue sv;
 
-  printf("|-> get_signature_for_func(%s)\n", func->name->str);
+  printf("|-> get_signature_for_func()\n");
+
   push_text( "Public.ObjectiveC.get_signature_for_func"); 
   SAFE_APPLY_MASTER("resolv", 1 );
    
   numargs = get_argcount_by_selector(selector);
 
-  ref_push_function(obj, func);
   ref_push_object(obj);
+  push_text(selector);
   push_int(numargs);
-  // arg is at top, function is 1 down from the top 
-  apply_svalue( Pike_sp-4, 3 );
+
+  mega_apply(APPLY_STACK,4,0,0);
 
   // result is at top of the stack, function is still one down 
   // and we want to pop it. 
-  stack_swap(); 
-  pop_stack();
+//  stack_swap(); 
+//  pop_stack();
+
 
   if(Pike_sp[-1].type != T_STRING)
   {
@@ -555,37 +553,26 @@ struct callable * get_func_by_selector(struct object * pobject, SEL aSelector)
 
 //  printf("get_func_by_selector: %s\n", funname);
 
-#if 0
-  for(z = 0; z < pobject->prog->num_identifiers; z++)
-  {
-     struct identifier i;
-     
-     i = pobject->prog->identifiers[z];
-     
-     if(IDENTIFIER_IS_FUNCTION(i.identifier_flags))
-     {
-        printf("identifier: %s\n", i.name->str);
-     }      
-  }
-#endif
-
   if(!pobject) return NULL;
 
-  add_ref(pobject->prog);
   ref_push_object(pobject);
+  // push_object(pobject);
 
   // do we need to do this?
   push_text(funname);
   f_index(2);
 
+  // free_object(pobject);
   free(funname);
 
   if(Pike_sp[-1].type == PIKE_T_FUNCTION) // jackpot!
   {
     fun = Pike_sp[-1].u.efun;
-if(!fun) { printf("no fun!\n"); return 0;}
-//    printf("-> get_func_by_selector(%d)\n", fun->name->len);
-//    add_ref_svalue(Pike_sp-1);
+
+    if(!fun) { printf("no fun!\n"); pop_stack(); return 0;}
+
+    printf("**> fun refs: %d, prog refs: %d, obj refs: %d\n\n", fun->refs, pobject->prog->refs, pobject->refs); 
+
     pop_stack();
     return fun;
   }

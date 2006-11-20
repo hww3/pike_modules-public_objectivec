@@ -591,8 +591,8 @@ void * make_static_stub(void * dta, void * func)
     free(closure);
     Pike_error("Cannot create FFI closure.\n");
   }
-
-  return (void *)closure;
+  else
+    return (void *)closure;
 }
 
 
