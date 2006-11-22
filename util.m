@@ -107,7 +107,7 @@ id unwrap_objc_object(struct object * o)
 	int is_objcobj = 0;
 	if(o->prog->flags & PROGRAM_HAS_C_METHODS)
 	{
-		printf("can't unwrap a pure pike object.\n");
+//		printf("can't unwrap a pure pike object.\n");
 		return 0;
 	}
     else

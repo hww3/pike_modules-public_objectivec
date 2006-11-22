@@ -13,7 +13,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * $Id: PiObjCObject.m,v 1.17 2006-11-22 02:09:17 hww3 Exp $
+ * $Id: PiObjCObject.m,v 1.18 2006-11-22 03:06:55 hww3 Exp $
  */
 
 /*
@@ -95,7 +95,7 @@ void dispatch_pike_method(struct object * pobject, SEL sel, NSInvocation * anInv
 
 -(id)init
 {
-	printf("[PiObjCObject init]\n");
+	// printf("[PiObjCObject init]\n");
 	return @"foo!";
 }
 
@@ -242,8 +242,8 @@ void dispatch_pike_method(struct object * pobject, SEL sel, NSInvocation * anInv
 struct object * get_pike_object(id obj, SEL sel)
 {
   void * i;
-  printf("get_pike_object()\n");
-  object_getInstanceVariable(obj, "pobject", &i);
+  // printf("get_pike_object()\n");
+  old_object_getInstanceVariable(obj, "pobject", &i);
   
   return (struct object *)i;
 }
@@ -334,7 +334,7 @@ id init_pike_object(struct program  * prog, id obj, SEL sel)
 void instantiate_pike_native_class(struct program * prog, id obj, SEL sel)
 {
   struct object * pobject;
-printf("creating a clone of the program.\n");	
+// printf("creating a clone of the program.\n");	
   pobject = clone_object(prog, 0);	
 			
 //	pobject = Pike_sp[-1].u.object;
@@ -363,7 +363,7 @@ void dispatch_pike_method(struct object * pobject, SEL sel, NSInvocation * anInv
     sig = [anInvocation methodSignature];
 
     args = push_objc_types(sig, anInvocation);
-    printf("making the call.\n");
+    // printf("making the call.\n");
     apply_svalue(c, args);
     printf("done making the call.\n");
 

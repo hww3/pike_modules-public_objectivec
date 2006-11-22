@@ -14,7 +14,8 @@
  *!
  */
 
-object_setInstanceVariableProc old_objectSetInstanceVariable;
+object_setInstanceVariableProc old_object_setInstanceVariable;
+object_getInstanceVariableProc old_object_getInstanceVariable;
 
 id global_autorelease_pool;
 struct mapping * global_class_cache;
@@ -101,6 +102,7 @@ EXTRA
   init_pool = [[NSAutoreleasePool alloc] init];
 
   override_object_setInstanceVariable();
+  override_object_getInstanceVariable();
 
   add_string_constant("__version", "0.1", 0);
   add_string_constant("__author", "Bill Welliver <bill@welliver.org>", 0);
@@ -150,6 +152,20 @@ void override_object_setInstanceVariable()
   }
 }
 
+void override_object_getInstanceVariable()
+{
+
+  kern_return_t err = mach_override("_object_getInstanceVariable", NULL, 
+                                    (void*)new_object_getInstanceVariable, 
+                                    (void**)&old_object_getInstanceVariable
+                                    );
+  if(err)
+  {
+      Pike_error("an error occurred while setting up the Objective-C environment.\n");
+  }
+}
+
+
 Ivar new_object_setInstanceVariable(id object, const char *name, void *value)
 {
   printf("new_object_setInstanceVariable(%s, %s, %s)\n", object->isa->name, [[object description] UTF8String], name);
@@ -157,11 +173,11 @@ Ivar new_object_setInstanceVariable(id object, const char *name, void *value)
   // if we're a wrapped pike object, the instance variables will be in the pike object itself.
   if([object respondsToSelector: SELUID("__ObjCgetPikeObject")] == YES)
   {
-    int z;
     struct object * pobj;
     struct object * pset;
-
-    printf("  and is a wrapped Pike object.\n");
+    Ivar x;
+    
+//    printf("  and is a wrapped Pike object.\n");
 
     // TODO: we assume that all set variables are objects. we should fix this sooner rather than later.
     // TODO: do we need to lock here?
@@ -170,27 +186,72 @@ Ivar new_object_setInstanceVariable(id object, const char *name, void *value)
     
     if(!pobj)
     {
-      printf("AAAHHH! no pike object!\n");
+   //   printf("AAAHHH! no pike object!\n");
       return NULL;
     }
-
 
     push_text(name);
     
     pset = wrap_objc_object(value);
     push_object(pset);
-    printf("applying lfun.\n");
+ //   printf("applying lfun.\n");
     object_set_index(pobj, Pike_sp-2, Pike_sp-1);
-    printf("done applying lfun.\n");
+//    printf("done applying lfun.\n");
 
     pop_n_elems(2);    
-    return class_getInstanceVariable(object->isa, name);    
+    x = class_getInstanceVariable(object->isa, name);    
+  //  printf("returning.\n");
+    return NULL;
   }
   else
-    return (old_object_setInstanceVariable(object, name, value));
-    
-
+    return (old_object_setInstanceVariable(object, name, value));    
 }
+
+Ivar new_object_getInstanceVariable(id object, const char *name, void **value)
+{
+  printf("new_object_getInstanceVariable(%s, %s, %s)\n", object->isa->name, [[object description] UTF8String], name);
+
+  // if we're a wrapped pike object, the instance variables will be in the pike object itself.
+  if([object respondsToSelector: SELUID("__ObjCgetPikeObject")] == YES)
+  {
+    struct object * pobj;
+    struct object * pset;
+    Ivar x;
+    struct svalue to;
+    id rv;
+    
+    // TODO: we assume that all set variables are objects. we should fix this sooner rather than later.
+    // TODO: do we need to lock here?
+
+    pobj = [object __ObjCgetPikeObject];
+    
+    if(!pobj)
+    {
+      return NULL;
+    }
+
+    push_text(name);
+
+    object_index_no_free(&to, pobj, Pike_sp-1);
+
+    if(to.type == T_INT && to.subtype)
+    {
+      free_svalue(&to);
+      return NULL;
+    }
+
+    rv = unwrap_objc_object(to.u.object);
+    
+    *value = rv;
+    
+    pop_stack(); 
+    x = class_getInstanceVariable(object->isa, name);    
+    return x;
+  }
+  else  
+    return (old_object_getInstanceVariable(object, name, value));
+}
+
 
 void add_piobjcclass(char * name, struct program * prog)
 {
@@ -331,7 +392,6 @@ BOOL RegisterInstanceVariables(Class cls, struct program * prog)
    struct objc_ivar_list * l;
    int offset;
       
-   printf("  %d identifiers\n", prog->num_identifiers);
    for(z = 0; z < prog->num_identifiers; z++)
    {
       struct identifier i;
@@ -387,11 +447,12 @@ BOOL RegisterInstanceVariables(Class cls, struct program * prog)
 
    cls->ivars = l;
 
+/*
    for(z = 0; z < cls->ivars->ivar_count; z++)
    {
       printf("registered variable %s of type %s\n", cls->ivars->ivar_list[z].ivar_name, cls->ivars->ivar_list[z].ivar_type);
    }
-
+*/
    cls->instance_size = offset;
 
 }

@@ -156,4 +156,8 @@ char * pike_signature_from_objc_signature(struct objc_method * nssig, int * lenp
 typedef Ivar (* object_setInstanceVariableProc)(id object, const char *name, void  *value);
 Ivar new_object_setInstanceVariable(id object, const char *name, void *value);
 
+typedef Ivar (* object_getInstanceVariableProc)(id object, const char *name, void  **value);
+Ivar new_object_getInstanceVariable(id object, const char *name, void **value);
+
 object_setInstanceVariableProc old_object_setInstanceVariable;
+object_getInstanceVariableProc old_object_getInstanceVariable;
