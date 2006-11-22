@@ -28,6 +28,7 @@ void f_objc_dynamic_create(Class cls, INT32 args)
 printf("dynamic_create: %s()\n", cls->isa->name);
   if(args!=0)
   {
+    printf("args: %d\n", args);
     Pike_error("too many arguments to create()\n");
     return;
   }
@@ -288,9 +289,28 @@ printf("argument %d %s\n", x, type);
 
   /* TODO: How should we support these? */
         case '#':
-  Pike_error("unable to support type #\n");
-  //           marg_setValue(argumentList,offset,Class , OBJ2_NSOBJECT(o)->object_data->object);
-           break;
+        if(Pike_sp[-1].type != T_PROGRAM)
+        {
+          printf("got %d\n", Pike_sp[-1].type);
+          Pike_error("expected program as argument of type class\n");
+        }
+        else
+        {
+          Class c;
+          struct svalue * sval;
+          char * classname;
+
+          sval = low_mapping_lookup(global_classname_cache, Pike_sp-1);
+
+          if(!sval)
+          {
+            Pike_error("unable to find program in cache.\n");
+          }
+          c = objc_getClass(sval->u.string->str);
+          
+          marg_setValue(argumentList,offset,Class, c);
+        }
+        break;
 
 
         case '^':
@@ -582,6 +602,7 @@ struct program * pike_low_create_objc_dynamic_class(char * classname)
   int index;
   SEL selector;
   Class isa;
+  struct svalue * c = NULL;
   
   char * vn;
   char * sg;
@@ -604,58 +625,59 @@ struct program * pike_low_create_objc_dynamic_class(char * classname)
   /* first, we should add the instance variables. */
   ivar_list = isa->ivars;
 
-  printf("|-> have %d ivars.\n", ivar_list->ivar_count);
+//  printf("|-> have %d ivars.\n", ivar_list->ivar_count);
 
-  m = allocate_mapping(5);
+  m = allocate_mapping(100);
   if(!lfun_getter_type_string)
     lfun_getter_type_string = tFuncV(tNone, tVoid, tMix);
   if(!lfun_setter_type_string)
     lfun_setter_type_string = tFuncV(tVoid, tVoid, tMix);
 
-  for(ivarnum = 0; ivarnum < ivar_list->ivar_count; ivarnum++)
+  if(ivar_list && ivar_list->ivar_count)
   {
-    int vl;
-    struct svalue * c = NULL;
+    for(ivarnum = 0; ivarnum < ivar_list->ivar_count; ivarnum++)
+    {
+      int vl;
  
-    ivar = ivar_list->ivar_list[ivarnum];
-    vn = (ivar.ivar_name);
+      ivar = ivar_list->ivar_list[ivarnum];
+      vn = (ivar.ivar_name);
 
-    if(vn[0] == '_') continue;
+      if(vn[0] == '_') continue;
 
-    c = simple_mapping_string_lookup(m, vn);
+      c = NULL;
+      c = simple_mapping_string_lookup(m, vn);
 
-    if(c)
-      continue;
+      if(c)
+        continue;
 
-    vl = strlen(vn);
+      vl = strlen(vn);
 
-    sg = malloc(vl + 8);
-    ss = malloc(vl + 9);
+      sg = malloc(vl + 8);
+      ss = malloc(vl + 9);
 
-    snprintf(sg, vl+8, "`->var_%s", vn);
-    snprintf(ss, vl+9, "`->var_%s=", vn);
+      snprintf(sg, vl+8, "`->var_%s", vn);
+      snprintf(ss, vl+9, "`->var_%s=", vn);
     
-    printf("registering %s\n", vn);
+//      printf("registering %s\n", vn);
 
-    quick_add_function((const char *)sg, vl+8, (void *)make_static_stub(vn, low_f_objc_dynamic_create), 
+      quick_add_function((const char *)sg, vl+8, (void *)make_static_stub(vn, low_f_objc_dynamic_create), 
                  lfun_getter_type_string, 
                  strlen(lfun_getter_type_string), 0, OPT_SIDE_EFFECT|OPT_EXTERNAL_DEPEND);  
-    quick_add_function((const char *)ss, vl+9, (void *)make_static_stub(vn, low_f_objc_dynamic_create), 
+      quick_add_function((const char *)ss, vl+9, (void *)make_static_stub(vn, low_f_objc_dynamic_create), 
                  lfun_setter_type_string, 
                  strlen(lfun_setter_type_string), 0, OPT_SIDE_EFFECT|OPT_EXTERNAL_DEPEND);  
-    free(ss);
-    free(sg);
+      free(ss);
+      free(sg);
     
-    push_text(vn);
-    add_ref(Pike_sp[-1].u.string);
-    push_int(1);
-    mapping_string_insert(m, Pike_sp-2, Pike_sp-1);
-    pop_stack();
-    pop_stack();
+      push_text(vn);
+      // add_ref(Pike_sp[-1].u.string);
+
+      push_int(1);
+      mapping_string_insert(m, Pike_sp[-2].u.string, Pike_sp-1);
+      pop_n_elems(2);
+    }
+
   }
-
-  free_mapping(m);
-
 
 
   /* next, we need to add all of the class methods. */
@@ -669,14 +691,28 @@ struct program * pike_low_create_objc_dynamic_class(char * classname)
       struct objc_class_method_desc * desc;
       
       selector = methodList->method_list[index].method_name;
+ 
+      // for some reason, some classes have class and instance methods of the same name.
+
+      c = NULL;
+      c = simple_mapping_string_lookup(m, selector);
+
+      if(!c)
+       {        
       pikename = make_pike_name_from_selector(selector);
       desc = malloc(sizeof(struct objc_class_method_desc));
-      
       desc->class = isa;
-      desc->select = selector;
+      desc->select = selector; 
 
       add_function_constant((char *)pikename, (void *)make_static_stub(desc, low_f_call_objc_class_method), "function(mixed...:mixed)", 0);
+      push_text(selector);
+    //  add_ref(Pike_sp[-1].u.string);
+      push_int(1);
+      mapping_string_insert(m, Pike_sp[-2].u.string, Pike_sp-1);
+      pop_n_elems(2);
+
       free(pikename);
+    }
     }
   }  
 
@@ -703,19 +739,27 @@ struct program * pike_low_create_objc_dynamic_class(char * classname)
       if(((char *)selector)[0] == '_') continue;
 
       // for some reason, some classes have class and instance methods of the same name.
-      if(class_getClassMethod(isa, selector)) 
-      {
-        continue;
-        // printf("Skipping %s, as it's already a class method.\n", selector);
-      }
+      c = NULL;
+      c = simple_mapping_string_lookup(m, selector);
+
+      if(!c)
+{
 //	printf("Adding %s, as an instance method.\n", selector);
         pikename = make_pike_name_from_selector(selector);
         psig = pike_signature_from_objc_signature(&methodList->method_list[index], &siglen);
         quick_add_function((char *)pikename, strlen((char *)pikename), f_objc_dynamic_instance_method, psig,
                            siglen, 0, 
                            OPT_SIDE_EFFECT|OPT_EXTERNAL_DEPEND);
-        free(pikename);
-        free(psig);
+         push_text(selector);
+         // printf("added %s to mapping.\n", Pike_sp[-1].u.string->str);
+  //       add_ref(Pike_sp[-1].u.string);
+         push_int(1);
+         mapping_string_insert(m, Pike_sp[-2].u.string, Pike_sp-1);
+         pop_n_elems(2);
+
+//        free(pikename);
+//        free(psig);
+      }
     }
   }
 
@@ -726,9 +770,11 @@ struct program * pike_low_create_objc_dynamic_class(char * classname)
     methodList = 0;
     selector = 0;
 
-    printf("name: %s\n", isa->name);
+//    printf("name: %s\n", isa->name);
     while (methodList = class_nextMethodList(isa, &iterator)) 
     {
+//      printf("methods in list: %d\n", methodList->method_count);
+      
       for (index = 0; index < methodList->method_count; index++) 
       {
         char * pikename;
@@ -736,25 +782,38 @@ struct program * pike_low_create_objc_dynamic_class(char * classname)
         int q;
         int siglen;
         selector = methodList->method_list[index].method_name;
-        // for some reason, some classes have class and instance methods of the same name.
-        if(class_getClassMethod(isa, selector) || class_getInstanceMethod(isa, selector)) 
+
+          // for some reason, some classes have class and instance methods of the same name.
+        c = NULL;
+        c = simple_mapping_string_lookup(m, selector);
+
+        if(!c)
         {
-          continue;
-          // printf("Skipping %s, as it's already a class method.\n", selector);
-        }
+          if(((char *)selector)[0] == '_') continue;
           pikename = make_pike_name_from_selector(selector);
           psig = pike_signature_from_objc_signature(&methodList->method_list[index], &siglen);
+
           quick_add_function((char *)pikename, strlen((char *)pikename), f_objc_dynamic_instance_method, psig,
                            siglen, 0, 
                            OPT_SIDE_EFFECT|OPT_EXTERNAL_DEPEND);
-          free(pikename);
-          free(psig);
+
+           push_text(selector);
+           add_ref(Pike_sp[-1].u.string);
+           push_int(1);
+           mapping_string_insert(m, Pike_sp[-2].u.string, Pike_sp-1);
+           pop_n_elems(2);
+
+//          free(pikename);
+//          free(psig);
+        }
       }
     }
     if(isa->super_class)
       isa = isa->super_class;
     else break;
   }
+  
+  free_mapping(m);
   /* finally, we add the low level setup callbacks */
   set_init_callback(objc_dynamic_class_init);
   set_exit_callback(objc_dynamic_class_exit);

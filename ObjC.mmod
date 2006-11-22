@@ -152,8 +152,44 @@ void override_object_setInstanceVariable()
 
 Ivar new_object_setInstanceVariable(id object, const char *name, void *value)
 {
-  printf("new_object_setInstanceVariable()\n");
-  return (old_object_setInstanceVariable(object, name, value));
+  printf("new_object_setInstanceVariable(%s, %s, %s)\n", object->isa->name, [[object description] UTF8String], name);
+
+  // if we're a wrapped pike object, the instance variables will be in the pike object itself.
+  if([object respondsToSelector: SELUID("__ObjCgetPikeObject")] == YES)
+  {
+    int z;
+    struct object * pobj;
+    struct object * pset;
+
+    printf("  and is a wrapped Pike object.\n");
+
+    // TODO: we assume that all set variables are objects. we should fix this sooner rather than later.
+    // TODO: do we need to lock here?
+
+    pobj = [object __ObjCgetPikeObject];
+    
+    if(!pobj)
+    {
+      printf("AAAHHH! no pike object!\n");
+      return NULL;
+    }
+
+
+    push_text(name);
+    
+    pset = wrap_objc_object(value);
+    push_object(pset);
+    printf("applying lfun.\n");
+    object_set_index(pobj, Pike_sp-2, Pike_sp-1);
+    printf("done applying lfun.\n");
+
+    pop_n_elems(2);    
+    return class_getInstanceVariable(object->isa, name);    
+  }
+  else
+    return (old_object_setInstanceVariable(object, name, value));
+    
+
 }
 
 void add_piobjcclass(char * name, struct program * prog)
@@ -184,7 +220,7 @@ PIKEFUN int low_load_bundle(string bundle_path)
   push_int(0);
   
 }
-// this method comes to us from the Apple C Runtime Reference manual.
+// most of this method comes to us from the Apple C Runtime Reference manual.
 // we should eventually rewrite it with our own brains.
 BOOL CreateClassDefinition( const char * name, 
         const char * superclassName, struct program * prog)
@@ -273,25 +309,20 @@ BOOL CreateClassDefinition( const char * name,
 
 	new_class->methodLists = emptyMethodLists;
 
-/*
-	new_method_list->method_list[0].method_name = sel_registerName("whee");
-	new_method_list->method_list[0].method_types = strdup("@@:");
-	new_method_list->method_list[0].method_imp = make_stub(prog);
-*/	
-	
-  //  RegisterInstanceVariables(new_class, prog);
+   RegisterInstanceVariables(new_class, prog);
 
     // Finally, register the class with the runtime.
     objc_addClass( new_class ); 
 
     RegisterDynamicMethod("init", name, (IMP)make_init_stub(prog), "@4@4:4");
-    RegisterDynamicMethod("__ObjCgetPikeObject", name, (IMP)get_objc_object, "@4@4:4");
-    //RegisterDynamicMethod("convert:", name, (IMP)_convert, "v4@4:4");
+    RegisterDynamicMethod("__ObjCgetPikeObject", name, (IMP)get_pike_object, "@4@4:4");
     
     return YES;
 
 }
 
+// TODO: We assume that all instance variables are of type id. This should be fixed
+//  sooner rather than later.
 BOOL RegisterInstanceVariables(Class cls, struct program * prog)
 {
    int z = 0;

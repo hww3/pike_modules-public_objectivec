@@ -13,7 +13,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * $Id: PiObjCObject.m,v 1.16 2006-11-20 21:54:24 hww3 Exp $
+ * $Id: PiObjCObject.m,v 1.17 2006-11-22 02:09:17 hww3 Exp $
  */
 
 /*
@@ -239,20 +239,14 @@ void dispatch_pike_method(struct object * pobject, SEL sel, NSInvocation * anInv
 
 }
 
-id get_objc_object(id obj, SEL sel)
+struct object * get_pike_object(id obj, SEL sel)
 {
   void * i;
-  printf("get_objc_object()\n");
+  printf("get_pike_object()\n");
   object_getInstanceVariable(obj, "pobject", &i);
   
-  return (id)i;
+  return (struct object *)i;
 }
-
-void _convert(id obj, SEL sel)
-{
-printf("CONVERT!!!!!\n");  
-}
-
 
 void low_init_pike_object(ffi_cif* cif, void* resp, void** args, void* userdata)
 {
@@ -347,7 +341,7 @@ printf("creating a clone of the program.\n");
   add_ref(pobject);
   add_ref(prog);
 
-	object_setInstanceVariable(obj, "pobject",  pobject);
+	old_object_setInstanceVariable(obj, "pobject",  pobject);
 
 }
 
@@ -355,7 +349,7 @@ printf("creating a clone of the program.\n");
 void dispatch_pike_method(struct object * pobject, SEL sel, NSInvocation * anInvocation)
 {
   int args;
-  struct callable * c;
+  struct svalue * c;
   struct svalue func;
   id sig;
   int x;
@@ -366,20 +360,18 @@ void dispatch_pike_method(struct object * pobject, SEL sel, NSInvocation * anInv
     void * buf = NULL;
     pthread_t tid;
 
-
-    push_function(pobject, c);
-
     sig = [anInvocation methodSignature];
 
     args = push_objc_types(sig, anInvocation);
     printf("making the call.\n");
-    apply_svalue(Pike_sp-(2+args), args);
+    apply_svalue(c, args);
     printf("done making the call.\n");
 
     // now, we should deal with the return value.
     printf("Dealing with the return value for call to %s...", (char *) sel);
     piobjc_set_return_value(sig, anInvocation, &Pike_sp[-1]);
     printf(" done.\n");
+    free_svalue(c);
 //    pop_stack();
   }
   else
@@ -409,7 +401,7 @@ void dispatch_pike_method(struct object * pobject, SEL sel, NSInvocation * anInv
 - (NSMethodSignature *) methodSignatureForSelector: (SEL)aSelector
 {
   char * encoding;
-  struct callable * func;
+  struct svalue * func;
   struct thread_state *state;
   printf("PiObjCObject.methodSignatureForSelector: %s\n", (char *)aSelector);
 
@@ -428,7 +420,8 @@ void dispatch_pike_method(struct object * pobject, SEL sel, NSInvocation * anInv
            encoding = strdup("i@:");
         else encoding = strdup("@@:");
 */
-        encoding = (char *)get_signature_for_func(pobject, func, aSelector);
+        encoding = (char *)get_signature_for_func(func, aSelector);
+        free_svalue(func);
       }
     }
     else
@@ -441,9 +434,10 @@ void dispatch_pike_method(struct object * pobject, SEL sel, NSInvocation * anInv
       func = get_func_by_selector(pobject, aSelector);
       if(func)
       {
-        encoding = (char *)get_signature_for_func(pobject, func, aSelector);
+        encoding = (char *)get_signature_for_func(func, aSelector);
+        free_svalue(func);
       }
-
+      
       /* Restore */
       SWAP_OUT_THREAD(state);
       mt_unlock_interpreter();
@@ -466,9 +460,10 @@ void dispatch_pike_method(struct object * pobject, SEL sel, NSInvocation * anInv
       func = get_func_by_selector(pobject, aSelector);
       if(func)
       {
-        encoding = (char *)get_signature_for_func(pobject, func, aSelector);
+        encoding = (char *)get_signature_for_func(func, aSelector);
+        free_svalue(func);
       }
-
+      
       cleanup_interpret();      /* Must be done before EXIT_THREAD_STATE */
       Pike_interpreter.thread_state->status=THREAD_EXITED;
       co_signal(&Pike_interpreter.thread_state->status_change);
@@ -504,15 +499,14 @@ void dispatch_pike_method(struct object * pobject, SEL sel, NSInvocation * anInv
 
 - (BOOL) respondsToSelector:(SEL) aSelector
 {
-  struct callable * func;
+  struct svalue * func;
   printf("respondsToSelector: %s? ", (char*) aSelector);
 
   func = get_func_by_selector(pobject, aSelector);
 
-  if(func) { printf("YES (1)\n"); return YES;}
+  if(func) { printf("YES (1)\n");  free_svalue(func); return YES;}
   else if(has_objc_method(self, aSelector)) { printf("YES (2)\n"); return YES;}
-
-    else { printf("NO\n");  return NO; }
+  else { printf("NO\n");  return NO; }
 }
 
 - (NSString *)description

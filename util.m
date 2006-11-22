@@ -16,7 +16,7 @@
 /* this code is from pyobjc-1.4. */
 
  static struct pike_type *a_markers[10], *b_markers[10];
-
+ static struct svalue * get_signature_for_func_sval;
 
 @implementation OC_NSAutoreleasePoolCollector
 -(void)newAutoreleasePool
@@ -185,6 +185,22 @@ struct object * wrap_objc_object(id r)
   return o;
 }
 
+struct program * wrap_objc_class(Class r)
+{
+  struct program * prog;
+  struct objc_dynamic_class * pc; 
+  struct pike_string * ps;
+  if(!r) {printf("wrap_objc_object: no object!\n"); return NULL; }
+  if(!r->isa) printf("wrap_objc_object: no class!\n");
+
+  push_text(r->name);
+
+  prog = pike_create_objc_dynamic_class(Pike_sp[-1].u.string);
+  pop_stack();  
+  
+  return prog;
+}
+
 int push_objc_types(NSMethodSignature* sig, NSInvocation* invocation)
 {
 	char * type = NULL;
@@ -194,13 +210,13 @@ int push_objc_types(NSMethodSignature* sig, NSInvocation* invocation)
 	struct object * pobj = NULL;
 	int args_pushed = 0;
  	// args 0 and 1 are the object and the method, respectively.
-
 	for(arg = 2; arg < [sig numberOfArguments];arg++)
     {
 	  // now, we push the argth argument onto the stack.
 	  type = (char*)[sig getArgumentTypeAtIndex: arg];
       while((*type)&&(*type=='r' || *type =='n' || *type =='N' || *type=='o' || *type=='O' || *type =='V'))
 		type++;
+  printf("type for arg %d: %s\n", arg, type);
 
       switch(*type)
       {
@@ -363,16 +379,18 @@ int push_objc_types(NSMethodSignature* sig, NSInvocation* invocation)
 //           free(buf);
 	       break;
 	     case '#':
-	       // int
-	       buf = (Class)malloc(sizeof(Class));
+	       {
+	         struct program * pprog;
+           buf = (Class)malloc(sizeof(Class));
            if(buf == NULL)
              Pike_error("unable to allocate memory.\n");
            [invocation getArgument: &buf atIndex: arg];
-           pobj = wrap_objc_object((Class)buf);
-if(!pobj){printf("AAAAAH! No object to push.\n");}
-		   args_pushed++;
-           push_object(pobj);
-//           free(buf);
+           pprog = wrap_objc_class((Class)buf);
+           if(!pprog){printf("AAAAAH! No program to push.\n");}
+    		   args_pushed++;
+           push_program(pprog);
+           //free(buf);
+         }
 	       break;
 	
          default:
@@ -415,13 +433,15 @@ printf("piobjc_set_return_value()\n");
    printf("return value type is %s -> %d\n", type, svalue->subtype);
 //   printf("arg 0 type is %s\n", [sig getArgumentTypeAtIndex: 2]);
 
-  //  printf("returned value type is %d\n", svalue->type);
+    printf("returned value type is %d\n", svalue->type);
     switch(*type)
     {
 	  // id
+    case 'c':
     case 'i':
       if(svalue->type == T_INT)
       {
+        printf("returning %d\n", svalue->u.integer);
         [invocation setReturnValue: &svalue->u.integer];    
       }
       else
@@ -483,7 +503,7 @@ printf("piobjc_set_return_value()\n");
  	}
 }
 
-char * get_signature_for_func(struct object * obj, struct callable * func, SEL selector)
+char * get_signature_for_func(struct svalue * func, SEL selector)
 {
   char * encoding;
   int numargs;
@@ -491,16 +511,21 @@ char * get_signature_for_func(struct object * obj, struct callable * func, SEL s
 
   printf("|-> get_signature_for_func()\n");
 
-  push_text( "Public.ObjectiveC.get_signature_for_func"); 
-  SAFE_APPLY_MASTER("resolv", 1 );
-   
+  if(!get_signature_for_func_sval)
+  {
+    get_signature_for_func_sval = malloc(sizeof(struct svalue));
+    push_text( "Public.ObjectiveC.get_signature_for_func"); 
+    SAFE_APPLY_MASTER("resolv", 1 );
+    assign_svalue(get_signature_for_func_sval, &(Pike_sp[-1]));
+    pop_stack();
+  }
   numargs = get_argcount_by_selector(selector);
 
-  ref_push_object(obj);
+  push_svalue(func);
   push_text(selector);
   push_int(numargs);
 
-  mega_apply(APPLY_STACK,4,0,0);
+  apply_svalue(get_signature_for_func_sval, 3);
 
   // result is at top of the stack, function is still one down 
   // and we want to pop it. 
@@ -523,7 +548,7 @@ char * get_signature_for_func(struct object * obj, struct callable * func, SEL s
 }
 
 
-struct callable * get_func_by_selector(struct object * pobject, SEL aSelector)
+struct svalue * get_func_by_selector(struct object * pobject, SEL aSelector)
 {
   char * funname;
   int funlen;
@@ -567,14 +592,15 @@ struct callable * get_func_by_selector(struct object * pobject, SEL aSelector)
 
   if(Pike_sp[-1].type == PIKE_T_FUNCTION) // jackpot!
   {
-    fun = Pike_sp[-1].u.efun;
+    struct svalue * sv;
+    if(!Pike_sp[-1].u.efun) { printf("no fun!\n"); pop_stack(); return NULL;}
 
-    if(!fun) { printf("no fun!\n"); pop_stack(); return 0;}
-
-    printf("**> fun refs: %d, prog refs: %d, obj refs: %d\n\n", fun->refs, pobject->prog->refs, pobject->refs); 
+    sv = malloc(sizeof(struct svalue));
+    assign_svalue(sv, &(Pike_sp[-1]));
+//    printf("**> fun refs: %d, prog refs: %d, obj refs: %d\n\n", fun->refs, pobject->prog->refs, pobject->refs); 
 
     pop_stack();
-    return fun;
+    return sv;
   }
   else return 0;
 
