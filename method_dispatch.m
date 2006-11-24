@@ -16,8 +16,8 @@
 #include "libffi/include/ffi.h"
 #include "piobjc.h"
 
-#define HAVE_PPC_CPU 0
-#define HAVE_X86_CPU 1
+#define HAVE_PPC_CPU 1
+#define HAVE_X86_CPU 0
 
 extern void low_init_pike_object(ffi_cif* cif, void* resp, void** args, void* userdata);
 
