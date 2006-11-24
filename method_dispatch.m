@@ -172,28 +172,3 @@ void * make_static_stub(void * dta, void * func)
 }
 
 
-/*
-void * make_stub(struct program * prog)
-{
-  struct cpu_context * ctx;
-  void (*disp)() = (void (*)())init_pike_object;
-
-  // since Objective-C classes cannot be un-registered, we just add a reference and forget about it.
-  // technically this is not a leak, i think.
-  add_ref(prog);
-
-  ctx = malloc(sizeof(struct cpu_context));
-  return low_make_stub(ctx, prog, 0, disp, 2, 0, 0);
- //return disp;
-}
-
-void * quick_make_stub(void * dta, void * func)
-{
-  struct cpu_context * ctx;
-  void (*disp)() = (void (*)())func;
-
-  ctx = malloc(sizeof(struct cpu_context));
-  return low_make_stub(ctx, dta, 0, disp, 2, 0, 0);
- //return disp;
-}
-*/
