@@ -559,7 +559,7 @@ struct svalue * get_func_by_selector(struct object * pobject, SEL aSelector)
   
   funlen = strlen((char *)aSelector);
 
-  funname = malloc(funlen);
+  funname = malloc(funlen + 1);
 
   if(funname == NULL)
   {
@@ -594,6 +594,8 @@ struct svalue * get_func_by_selector(struct object * pobject, SEL aSelector)
   {
     struct svalue * sv;
     if(!Pike_sp[-1].u.efun) { printf("no fun!\n"); pop_stack(); return NULL;}
+
+//    printf("Pike_sp[-1]: <%p> <%D>\n", Pike_sp[-1], &Pike_sp[-1]);
 
     sv = malloc(sizeof(struct svalue));
     assign_svalue(sv, &(Pike_sp[-1]));

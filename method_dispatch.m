@@ -40,7 +40,7 @@ void * make_init_stub(struct program * prog)
     cl_arg_types = malloc(sizeof(ffi_type *) * 2);
     if(cl_arg_types == NULL)
     {
-      Pike_error("quick_make_stub: out of memory\n");
+      Pike_error("make_init_stub: out of memory\n");
     }
     
     cl_arg_types[0] = &ffi_type_pointer;

@@ -13,7 +13,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * $Id: PiObjCObject.m,v 1.18 2006-11-22 03:06:55 hww3 Exp $
+ * $Id: PiObjCObject.m,v 1.19 2006-11-27 04:23:57 hww3 Exp $
  */
 
 /*
@@ -269,10 +269,15 @@ void low_init_pike_object(ffi_cif* cif, void* resp, void** args, void* userdata)
 id init_pike_object(struct program  * prog, id obj, SEL sel)
 {
   struct thread_state *state;
+printf("init_pike_object()\n");
+
+    if(!prog || !obj || !sel)
+    {
+	   printf("AIEEEEE!\n");
+}
 
 	if(prog)
 	{
-
       if((state = thread_state_for_id(th_self()))!=NULL)
       {
         /* This is a pike thread.  Do we have the interpreter lock? */
@@ -286,7 +291,6 @@ id init_pike_object(struct program  * prog, id obj, SEL sel)
           /* Nope, let's get it... */
           mt_lock_interpreter();
           SWAP_IN_THREAD(state);
-
           instantiate_pike_native_class(prog, obj, sel);
 
           /* Restore */
@@ -334,15 +338,17 @@ id init_pike_object(struct program  * prog, id obj, SEL sel)
 void instantiate_pike_native_class(struct program * prog, id obj, SEL sel)
 {
   struct object * pobject;
-// printf("creating a clone of the program.\n");	
+ printf("creating a clone of the program.\n");	
   pobject = clone_object(prog, 0);	
 			
 //	pobject = Pike_sp[-1].u.object;
-  add_ref(pobject);
+//  add_ref(pobject);
   add_ref(prog);
+printf("setting the object's instance variable\n");
 
+//	object_setInstanceVariable(obj, "pobject",  pobject);
 	old_object_setInstanceVariable(obj, "pobject",  pobject);
-
+printf("done\n");
 }
 
 

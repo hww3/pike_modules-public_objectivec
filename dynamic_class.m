@@ -120,7 +120,8 @@ void f_call_objc_method(INT32 args, int is_instance, SEL select, id obj)
     struct NSObject_struct * d;
     id pool;
     int ind;
-
+	int num_float_arguments = 0;
+	
     pool = [global_autorelease_pool getAutoreleasePool];
     
     printf("select: %s, is_instance: %d\n", (char *) select, is_instance);
@@ -184,6 +185,8 @@ printf("argument %d %s\n", x, type);
         case 'f':
            if(sv->type!=T_FLOAT)
              Pike_error("Type mismatch for method argument.");
+           ((double *)argumentList)[num_float_arguments] = (double)(sv->u.float_number);
+           num_float_arguments ++;
            marg_setValue(argumentList,offset,float , (float)sv->u.float_number);
   	 break;
 

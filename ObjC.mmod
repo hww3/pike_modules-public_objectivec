@@ -186,7 +186,7 @@ Ivar new_object_setInstanceVariable(id object, const char *name, void *value)
     
     if(!pobj)
     {
-   //   printf("AAAHHH! no pike object!\n");
+      printf("AAAHHH! no pike object!\n");
       return NULL;
     }
 
@@ -194,14 +194,15 @@ Ivar new_object_setInstanceVariable(id object, const char *name, void *value)
     
     pset = wrap_objc_object(value);
     push_object(pset);
- //   printf("applying lfun.\n");
+    printf("applying lfun.\n");
     object_set_index(pobj, Pike_sp-2, Pike_sp-1);
-//    printf("done applying lfun.\n");
+    printf("done applying lfun.\n");
 
     pop_n_elems(2);    
+
     x = class_getInstanceVariable(object->isa, name);    
-  //  printf("returning.\n");
-    return NULL;
+    printf("returning.\n");
+    return x;
   }
   else
     return (old_object_setInstanceVariable(object, name, value));    
@@ -370,7 +371,7 @@ BOOL CreateClassDefinition( const char * name,
 
 	new_class->methodLists = emptyMethodLists;
 
-   RegisterInstanceVariables(new_class, prog);
+ //  RegisterInstanceVariables(new_class, prog);
 
     // Finally, register the class with the runtime.
     objc_addClass( new_class ); 
