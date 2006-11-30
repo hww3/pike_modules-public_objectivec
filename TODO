@@ -1,2 +1,19 @@
-- NSNumber: floating point inits don't seem to work... getting float values
-  do work, so what's the deal??
+- getting pike object variables from objective c
+- setting pike object variables from objective c (works, but we assume 
+    that everything is an object).
+- getting objective c object variables from pike (this point and the next 
+    rely on the new `->symbol() in Pike 7.7.
+- setting objective c object variables from pike
+- support for passing and returning pointers, structs and arrays from an 
+    objective c call
+- providing a way to overlay hand-coded functions on top of auto-generated 
+    classes
+- better conversion of pike_type to objective c encodings
+- provide an easier way to bundle up applications (perhaps a stub 
+    application that uses libpike?)
+- integrate runloops and NSApplicationMain() with the pike backend
+- wrappers for NSDictionary and NSArray so that we can access them more 
+    easily from Pike.
+- objective-c wrappers for mappings and arrays so that we can seamlessly 
+    pass pike datatypes back and forth.
+- support for kvo
