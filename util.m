@@ -150,6 +150,19 @@ SEL selector_from_pikename(struct pike_string * name)
   return select;
 }
 
+struct svalue * ptr_to_svalue(void * ptr, char * type)
+{
+	struct svalue * sv;
+	
+	sv = malloc(sizeof(struct svalue));
+	
+	sv->type = T_OBJECT;
+	sv->subtype = 0;
+	sv->u.object = wrap_objc_object((id)ptr);
+	
+	return sv;
+}
+
 struct object * wrap_objc_object(id r)
 {
   struct object * o;

@@ -174,11 +174,9 @@ Ivar new_object_setInstanceVariable(id object, const char *name, void *value)
   if([object respondsToSelector: SELUID("__ObjCgetPikeObject")] == YES)
   {
     struct object * pobj;
-    struct object * pset;
+    struct svalue * pset;
     Ivar x;
     
-//    printf("  and is a wrapped Pike object.\n");
-
     // TODO: we assume that all set variables are objects. we should fix this sooner rather than later.
     // TODO: do we need to lock here?
 
@@ -190,22 +188,24 @@ Ivar new_object_setInstanceVariable(id object, const char *name, void *value)
       return NULL;
     }
 
+	x = class_getInstanceVariable(object->isa, name);
+if(!x) printf("AAAAAAHHHHH!!!\n");
     push_text(name);
-    
-    pset = wrap_objc_object(value);
-    push_object(pset);
+
+    pset = ptr_to_svalue(value, x->ivar_type);
+//    push_object(pset);
     printf("applying lfun.\n");
-    object_set_index(pobj, Pike_sp-2, Pike_sp-1);
+    object_set_index(pobj, Pike_sp-1, pset);
     printf("done applying lfun.\n");
 
-    pop_n_elems(2);    
+    pop_n_elems(1);
+    free_svalue(pset);
 
-    x = class_getInstanceVariable(object->isa, name);    
     printf("returning.\n");
     return x;
   }
   else
-    return (old_object_setInstanceVariable(object, name, value));    
+    return (old_object_setInstanceVariable(object, name, value));
 }
 
 Ivar new_object_getInstanceVariable(id object, const char *name, void **value)
@@ -371,7 +371,7 @@ BOOL CreateClassDefinition( const char * name,
 
 	new_class->methodLists = emptyMethodLists;
 
- //  RegisterInstanceVariables(new_class, prog);
+    RegisterInstanceVariables(new_class, prog);
 
     // Finally, register the class with the runtime.
     objc_addClass( new_class ); 
@@ -434,15 +434,15 @@ BOOL RegisterInstanceVariables(Class cls, struct program * prog)
        char * ivn;
        
        v = l->ivar_list + l->ivar_count;
-       ivn = malloc(i.name->len);
-       strncpy(ivn, i.name->str, i.name->len);     
+       ivn = malloc(i.name->len +1);
+       strncpy(ivn, i.name->str, i.name->len+1);     
        v->ivar_name = ivn;
        
        v->ivar_type = @encode(id);
        v->ivar_offset = offset;
        offset += sizeof(id);
        l->ivar_count++;
-       printf("added ivar!\n");
+       printf("added ivar: %s!\n", ivn);
      }      
    }
 
