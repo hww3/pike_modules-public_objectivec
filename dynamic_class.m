@@ -443,7 +443,7 @@ printf("argument %d %s\n", x, type);
         break;
 
       case 'v':
-        printf("SEL: %s\n", (char *)select);
+//        printf("SEL: %s\n", (char *)select);
         void_dispatch_method(obj,select,method,argumentList);
         push_int(0);
         break;

@@ -13,7 +13,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * $Id: PiObjCObject.m,v 1.19 2006-11-27 04:23:57 hww3 Exp $
+ * $Id: PiObjCObject.m,v 1.20 2006-12-02 05:06:26 hww3 Exp $
  */
 
 /*
@@ -498,7 +498,7 @@ void dispatch_pike_method(struct object * pobject, SEL sel, NSInvocation * anInv
 // see also getPikeObject... we probably want to make this hidden.
 - (struct object *) __ObjCgetPikeObject
 {
-  printf("__ObjCgetPikeObject()\n");
+//  printf("__ObjCgetPikeObject()\n");
   if(pobject)
     return pobject;	
 }
@@ -506,13 +506,13 @@ void dispatch_pike_method(struct object * pobject, SEL sel, NSInvocation * anInv
 - (BOOL) respondsToSelector:(SEL) aSelector
 {
   struct svalue * func;
-  printf("respondsToSelector: %s? ", (char*) aSelector);
+//  printf("respondsToSelector: %s? ", (char*) aSelector);
 
   func = get_func_by_selector(pobject, aSelector);
 
-  if(func) { printf("YES (1)\n");  free_svalue(func); return YES;}
-  else if(has_objc_method(self, aSelector)) { printf("YES (2)\n"); return YES;}
-  else { printf("NO\n");  return NO; }
+  if(func) { /*printf("YES (1)\n"); */ free_svalue(func); return YES;}
+  else if(has_objc_method(self, aSelector)) { /*printf("YES (2)\n");*/ return YES;}
+  else { /*printf("NO\n");*/  return NO; }
 }
 
 - (NSString *)description

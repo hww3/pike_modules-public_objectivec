@@ -8,14 +8,9 @@
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
- 
-#ifdef HAVE_FFI_H
-#include <ffi.h>
-#endif
- 
-#ifdef HAVE_FFI_CONFIG_H
-#include <ffi_config.h>
-#endif
+
+#import <ffi.h>
+#import <fficonfig.h>
   
 #ifdef HAVE_OBJC_OBJC_RUNTIME_H
 #include <objc/objc-runtime.h>

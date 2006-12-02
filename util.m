@@ -6,6 +6,7 @@
 #import <Foundation/NSThread.h>
 #import <Foundation/NSString.h>
 #import "PiObjCObject.h"
+#import "OC_Array.h"
 #import "ObjC.h"
 /*
  *  util.c: helper functions and objects.
@@ -97,6 +98,81 @@ struct object * object_dispatch_method(id obj, SEL select, struct objc_method * 
   return o;
 }
 
+struct svalue * id_to_svalue(id obj)
+{
+	struct svalue * sv;
+	struct object * o;
+	
+	sv = malloc(sizeof(struct svalue));
+	
+	o = wrap_objc_object(obj);
+
+    if(o)
+    {
+		sv->type = T_OBJECT;
+		sv->subtype = 0;
+		sv->u.object = o;
+	}
+
+	if([obj respondsToSelector: SELUID("__ObjCgetPikeArray")])
+	{
+		struct array * a;
+		
+		a = [obj __ObjCgetPikeArray];
+		sv->type = T_ARRAY;
+		sv->subtype = 0;
+		sv->u.array = a;
+	}
+
+    return sv;
+}
+
+id svalue_to_id(struct svalue * sv)
+{
+  id rv;
+
+	if(sv->type == T_INT)
+	{
+	  printf("Sending an integer.\n");           
+	  rv = [NSNumber numberWithLong: sv->u.integer];
+	//          [invocation setReturnValue: num]; 
+    }
+    else if(sv->type == T_STRING) // we need to wrap the value as a string.
+    {
+	  // let's wrap the string as an NSString object.
+	  NSStringEncoding enc;
+	  enc =  NSUTF8StringEncoding;
+	  push_svalue(sv);
+	  f_string_to_utf8(1);
+	  sv = &Pike_sp[-1];
+	  rv = [[NSString alloc] initWithBytes: sv->u.string->str length: sv->u.string->len encoding: enc];
+	  [rv autorelease];
+	  pop_stack();
+    }
+	else if(sv->type == T_ARRAY)
+	{
+		rv = [OC_Array newWithPikeArray: sv->u.array];
+	}
+    else if(sv->type == T_OBJECT) 
+    {
+	  struct object * o;
+	  o = sv->u.object;
+	  rv = unwrap_objc_object(o);
+	  if(!rv)
+	  {
+	    printf("Whee! We're wrappin' an object for a return value!\n");
+	    // if we don't have a wrapped object, we should make a pike object wrapper.
+	    rv = [PiObjCObject newWithPikeObject: o];
+	  }
+	  // wrapper = [wrapper retain];
+	  
+	}
+	else
+	  Pike_error("expected object return value.\n");
+
+	return rv;	
+}
+
 // ok, here's the algorithm we should use for unwrapping
 //
 // if the top level program does not have c methods, we know it's a pike object, and there's nothing to unwrap.
@@ -156,9 +232,17 @@ struct svalue * ptr_to_svalue(void * ptr, char * type)
 	
 	sv = malloc(sizeof(struct svalue));
 	
-	sv->type = T_OBJECT;
-	sv->subtype = 0;
-	sv->u.object = wrap_objc_object((id)ptr);
+	switch(*type)
+	{
+		case '@':
+			sv->type = T_OBJECT;
+			sv->subtype = 0;
+			sv->u.object = wrap_objc_object((id)ptr);
+			break;
+
+		default:
+			printf("whee! %s\n", type);
+	}
 	
 	return sv;
 }
@@ -180,7 +264,6 @@ struct object * wrap_objc_object(id r)
   
   else 
   {
-	  
     ps = make_shared_string(r->isa->name);
     prog = pike_create_objc_dynamic_class(ps);
     if(!prog) return NULL;
@@ -463,44 +546,11 @@ printf("piobjc_set_return_value()\n");
       }
       break;
 	  case '@':
-	      if(svalue->type == T_INT)
-	      {
-          id num;
-           printf("Sending an integer.\n");           
-//          num = [NSNumber numberWithLong: svalue->u.integer];
-//          [invocation setReturnValue: num]; 
-           [invocation setReturnValue: &svalue->u.integer];
-	      }
-	      else if(svalue->type == T_STRING) // we need to wrap the value as a string.
-	      {
-            // let's wrap the string as an NSString object.
-            id str;
-            NSStringEncoding enc;
-            enc =  NSUTF8StringEncoding;
-            push_svalue(svalue);
-            f_string_to_utf8(1);
-            svalue = &Pike_sp[-1];
-            str = [[NSString alloc] initWithBytes: svalue->u.string->str length: svalue->u.string->len encoding: enc];
-            [str autorelease];
-            pop_stack();
-            [invocation setReturnValue: str];
-	        
-	    }
-	    else if(svalue->type == T_OBJECT)
-            {
-              o = svalue->u.object;
-	      wrapper = unwrap_objc_object(o);
-              if(!wrapper)
-              {
-                printf("Whee! We're wrappin' an object for a return value!\n");
-	        // if we don't have a wrapped object, we should make a pike object wrapper.
-	        wrapper = [PiObjCObject newWithPikeObject: o];
-              }
-              // wrapper = [wrapper retain];
-              [invocation setReturnValue: wrapper];		    
-        }
-        else
-          Pike_error("expected object return value.\n");
+		{
+			id val;
+			val = svalue_to_id(svalue);
+			[invocation setReturnValue: val];
+		}
   	    break;
       // class
       case '#':

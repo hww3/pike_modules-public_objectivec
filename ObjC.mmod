@@ -194,9 +194,9 @@ if(!x) printf("AAAAAAHHHHH!!!\n");
 
     pset = ptr_to_svalue(value, x->ivar_type);
 //    push_object(pset);
-    printf("applying lfun.\n");
+//    printf("applying lfun.\n");
     object_set_index(pobj, Pike_sp-1, pset);
-    printf("done applying lfun.\n");
+//    printf("done applying lfun.\n");
 
     pop_n_elems(1);
     free_svalue(pset);

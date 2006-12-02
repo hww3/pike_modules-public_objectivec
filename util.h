@@ -39,4 +39,5 @@ void piobjc_set_return_value(id sig, id invocation, struct svalue * svalue);
 id get_NSObject_from_Object(struct object *o);
 
 char * get_signature_for_func(struct svalue * func, SEL selector);
+id unwrap_objc_object(struct object * o);
 
