@@ -617,8 +617,16 @@ struct svalue * get_func_by_selector(struct object * pobject, SEL aSelector)
   int funlen;
   int ind;
   int argcount;
-  struct callable * fun;
+  struct svalue * sv2;
   int z;
+
+  if(!pobject) return NULL;
+
+  sv2 = malloc(sizeof(struct svalue));
+  if(!sv2)
+	{
+		Pike_error("Unable to allocate memory.\n");
+	}
   
   funlen = strlen((char *)aSelector);
 
@@ -639,35 +647,26 @@ struct svalue * get_func_by_selector(struct object * pobject, SEL aSelector)
   }   
   funname[ind] = '\0';
 
-//  printf("get_func_by_selector: %s\n", funname);
-
-  if(!pobject) return NULL;
-
-  ref_push_object(pobject);
-  // push_object(pobject);
+  printf("get_func_by_selector: %s\n", funname);
 
   // do we need to do this?
   push_text(funname);
-  f_index(2);
 
-  // free_object(pobject);
+  object_index_no_free(sv2, pobject, Pike_sp-1);
+  pop_stack();
   free(funname);
 
-  if(Pike_sp[-1].type == PIKE_T_FUNCTION) // jackpot!
+  if(sv2->type == PIKE_T_FUNCTION) // jackpot!
   {
-    struct svalue * sv;
-    if(!Pike_sp[-1].u.efun) { printf("no fun!\n"); pop_stack(); return NULL;}
-
+    if(!sv2->u.efun) { printf("no fun!\n");}
+    else
+	    return sv2;
 //    printf("Pike_sp[-1]: <%p> <%D>\n", Pike_sp[-1], &Pike_sp[-1]);
-
-    sv = malloc(sizeof(struct svalue));
-    assign_svalue(sv, &(Pike_sp[-1]));
-//    printf("**> fun refs: %d, prog refs: %d, obj refs: %d\n\n", fun->refs, pobject->prog->refs, pobject->refs); 
-
-    pop_stack();
-    return sv;
+//    printf("**> fun refs: %d\n\n", Pike_sp[-1].u.efun->refs); 
   }
-  else return 0;
+
+  free_svalue(sv2);
+  return NULL;
 
 }
 
