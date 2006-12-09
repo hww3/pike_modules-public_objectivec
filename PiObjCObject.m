@@ -13,7 +13,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * $Id: PiObjCObject.m,v 1.20 2006-12-02 05:06:26 hww3 Exp $
+ * $Id: PiObjCObject.m,v 1.21 2006-12-09 04:38:28 hww3 Exp $
  */
 
 /*
@@ -86,7 +86,14 @@ void dispatch_pike_method(struct object * pobject, SEL sel, NSInvocation * anInv
   instance = (id)unwrap_objc_object(obj);
   if(instance == NULL) 
   {
-  	printf("Whoo hoo, we have a native pike object!\n");
+//  	printf("Whoo hoo, we have a native pike object!\n");
+/*
+push_text("Whoo hoo, we have a native pike object: %O\n");
+ref_push_object(obj);
+f_sprintf(2);
+printf("%s", Pike_sp[-1].u.string->str);
+pop_stack();
+*/
     instance = [[self alloc] initWithPikeObject:obj];
     [instance autorelease];
   }        
@@ -378,7 +385,6 @@ void dispatch_pike_method(struct object * pobject, SEL sel, NSInvocation * anInv
     piobjc_set_return_value(sig, anInvocation, &Pike_sp[-1]);
     printf(" done.\n");
     free_svalue(c);
-//    pop_stack();
   }
   else
   {

@@ -17,7 +17,8 @@
 /* this code is from pyobjc-1.4. */
 
  static struct pike_type *a_markers[10], *b_markers[10];
- static struct svalue * get_signature_for_func_sval;
+ static struct svalue get_signature_for_func_sval;
+ static int got_signature_for_func_func = 0;
 
 @implementation OC_NSAutoreleasePoolCollector
 -(void)newAutoreleasePool
@@ -62,36 +63,24 @@
 
 void void_dispatch_method(id obj, SEL select, struct objc_method * method, marg_list argumentList)
 {
+	printf("void_dispatch_method()\n");
   THREADS_ALLOW();
-  printf("void [%s %s]\n", [[obj description] UTF8String], select);
+//  printf("void [%s %s]\n", [[obj description] UTF8String], select);
   objc_msgSendv(obj,select,method_getSizeOfArguments(method),argumentList);
   THREADS_DISALLOW();
 }
 
-struct object * object_dispatch_method(id obj, SEL select, struct objc_method * method, marg_list argumentList)
+struct svalue * object_dispatch_method(id obj, SEL select, struct objc_method * method, marg_list argumentList)
 {
-  struct object * o;
+  struct svalue * o;
   id r;
   
   THREADS_ALLOW();
   r = objc_msgSendv(obj,select,method_getSizeOfArguments(method),argumentList);
   THREADS_DISALLOW();
+
+  o = id_to_svalue(r);
   
-    if([r respondsToSelector: SELUID("__ObjCgetPikeObject")] == YES)
-	{
-	  printf("the object is a pike object.\n");
-	  o = [r __ObjCgetPikeObject];
-	}
-	else
-	{
-    /*  if([r isKindOfClass: [NSString class]])
-      {
-        printf("String Value: %s", [r UTF8String]);
-      }
-*/
-      o = wrap_objc_object(r);
-      if(!o) { printf("AAAH! no object to push...\n");}
-	}
 	if(! [(id)r isKindOfClass: [NSAutoreleasePool class]])
     	r = [(id)r retain];
 
@@ -130,6 +119,16 @@ struct svalue * id_to_svalue(id obj)
 id svalue_to_id(struct svalue * sv)
 {
   id rv;
+/*
+push_text("svalue_to_id(): %O");
+push_svalue(sv);
+f_sprintf(2);
+printf("%s, %d\n", Pike_sp[-1].u.string->str, Pike_sp[-1].type);
+//printf("string value: %s", Pike_sp[-1].u.string->str);
+pop_stack();
+*/
+
+ printf("svalue_to_id(): %d", sv->type);
 
 	if(sv->type == T_INT)
 	{
@@ -139,6 +138,7 @@ id svalue_to_id(struct svalue * sv)
     }
     else if(sv->type == T_STRING) // we need to wrap the value as a string.
     {
+	printf("string!\n");
 	  // let's wrap the string as an NSString object.
 	  NSStringEncoding enc;
 	  enc =  NSUTF8StringEncoding;
@@ -151,11 +151,14 @@ id svalue_to_id(struct svalue * sv)
     }
 	else if(sv->type == T_ARRAY)
 	{
+		printf("array!\n");
 		rv = [OC_Array newWithPikeArray: sv->u.array];
+		[rv autorelease];
 	}
     else if(sv->type == T_OBJECT) 
     {
 	  struct object * o;
+	  printf("object!\n");
 	  o = sv->u.object;
 	  rv = unwrap_objc_object(o);
 	  if(!rv)
@@ -164,12 +167,15 @@ id svalue_to_id(struct svalue * sv)
 	    // if we don't have a wrapped object, we should make a pike object wrapper.
 	    rv = [PiObjCObject newWithPikeObject: o];
 	  }
-	  // wrapper = [wrapper retain];
-	  
+//	  else
+//	  {
+//		[rv retain];
+//		printf("Whee: %s\n", [[rv description] UTF8String]);
+//	  }	  
 	}
-	else
-	  Pike_error("expected object return value.\n");
-
+//	else
+//	  Pike_error("expected object return value.\n");
+printf("returning from svalue_to_id()\n");
 	return rv;	
 }
 
@@ -181,9 +187,9 @@ id svalue_to_id(struct svalue * sv)
 id unwrap_objc_object(struct object * o)
 {
 	int is_objcobj = 0;
-	if(o->prog->flags & PROGRAM_HAS_C_METHODS)
+	if(o->prog->flags & !PROGRAM_HAS_C_METHODS)
 	{
-//		printf("can't unwrap a pure pike object.\n");
+		printf("unwrap_objc_object(): can't unwrap a pure pike object.\n");
 		return 0;
 	}
     else
@@ -192,9 +198,12 @@ id unwrap_objc_object(struct object * o)
 		if(is_objcobj)
 		{
 		  struct objc_dynamic_class * s = (struct objc_dynamic_class *)get_storage(o, o->prog);
-		  if(!s) return nil;
-		  else return s->obj;
-			
+		  if(!s) { printf("unwrap_objc_object(): couldn't get storage!\n"); return nil; }
+		  else { printf("unwrap_objc_object(): got the id!\n"); return s->obj; }
+		}
+		else
+		{
+			printf("unwrap_objc_object(): didn't find an objc class for the object\n");
 		}
 		return 0;
 	}
@@ -303,7 +312,7 @@ int push_objc_types(NSMethodSignature* sig, NSInvocation* invocation)
     void * buf = NULL;
 	int arg = 0;
 	id cobj = NULL;
-	struct object * pobj = NULL;
+	struct svalue * sval = NULL;
 	int args_pushed = 0;
  	// args 0 and 1 are the object and the method, respectively.
 	for(arg = 2; arg < [sig numberOfArguments];arg++)
@@ -462,16 +471,9 @@ int push_objc_types(NSMethodSignature* sig, NSInvocation* invocation)
              Pike_error("unable to allocate memory.\n");
            [invocation getArgument: &buf atIndex: arg];
            cobj = (id)buf;
-           if(cobj->isa == [PiObjCObject class])
-           {
-	         printf("got a pike object as argument!\n");
-             pobj = [cobj getPikeObject];
-           }
-           else
-            pobj = wrap_objc_object(cobj);
-            if(!pobj) { printf("AAAAAH! no object to push!\n");}
+           sval = id_to_svalue(cobj);
 		        args_pushed++;
-            push_object(pobj);
+            push_svalue(sval);
 //           free(buf);
 	       break;
 	     case '#':
@@ -549,7 +551,8 @@ printf("piobjc_set_return_value()\n");
 		{
 			id val;
 			val = svalue_to_id(svalue);
-			[invocation setReturnValue: val];
+//printf("id object: %s", [[val description] UTF8String]);
+			[invocation setReturnValue: &val];
 		}
   	    break;
       // class
@@ -574,13 +577,17 @@ char * get_signature_for_func(struct svalue * func, SEL selector)
 
   printf("|-> get_signature_for_func()\n");
 
-  if(!get_signature_for_func_sval)
+  if(!got_signature_for_func_func)
   {
-    get_signature_for_func_sval = malloc(sizeof(struct svalue));
     push_text( "Public.ObjectiveC.get_signature_for_func"); 
     SAFE_APPLY_MASTER("resolv", 1 );
-    assign_svalue(get_signature_for_func_sval, &(Pike_sp[-1]));
+	if(!(Pike_sp-1))
+	{
+		Pike_error("aieee!\n");
+	}
+    assign_svalue_no_free(&get_signature_for_func_sval, Pike_sp-1);
     pop_stack();
+    got_signature_for_func_func = 1;
   }
   numargs = get_argcount_by_selector(selector);
 
@@ -588,7 +595,7 @@ char * get_signature_for_func(struct svalue * func, SEL selector)
   push_text(selector);
   push_int(numargs);
 
-  apply_svalue(get_signature_for_func_sval, 3);
+  apply_svalue(&get_signature_for_func_sval, 3);
 
   // result is at top of the stack, function is still one down 
   // and we want to pop it. 

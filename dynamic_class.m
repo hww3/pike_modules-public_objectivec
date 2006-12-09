@@ -2,6 +2,7 @@
 #import <Foundation/NSString.h>
 #import "PiObjCObject.h"
 #include "libffi/include/ffi.h"
+#import "OC_Array.h"
 #include "piobjc.h"
 
 #undef THIS
@@ -249,6 +250,7 @@ printf("argument %d %s\n", x, type);
   	         break;
 
         case '@': 
+// TODO: do we need to integrate this with svalue_to_id()?
           if(sv->type==T_OBJECT)
           {
             struct object * o = sv->u.object;
@@ -258,9 +260,15 @@ printf("argument %d %s\n", x, type);
             // seems that PiObjCObject newWithPikeObject does unwrapping. 
             add_ref(o);
 //            add_ref(o->prog);
-    			  wrapper = [PiObjCObject newWithPikeObject: o];
+    	    wrapper = [PiObjCObject newWithPikeObject: o];
             marg_setValue(argumentList, offset, id, wrapper);
   		    }
+		  else if(sv->type == T_ARRAY)
+		  {
+			id rv;
+			rv = [OC_Array newWithPikeArray: sv->u.array];
+            marg_setValue(argumentList,offset,id, rv);
+		  }
           else if(sv->type == T_INT)
           {
             id num;
@@ -286,7 +294,7 @@ printf("argument %d %s\n", x, type);
               marg_setValue(argumentList,offset,id, str);
            }
   		 else
-  		    Pike_error("Type mismatch for method argument..");
+  		    Pike_error("Type mismatch for method argument.");
 
   	 break;
 
@@ -443,9 +451,11 @@ printf("argument %d %s\n", x, type);
         break;
 
       case 'v':
-//        printf("SEL: %s\n", (char *)select);
+printf("VOID\n");
+        printf("SEL:: %s\n", (char *)select);
         void_dispatch_method(obj,select,method,argumentList);
         push_int(0);
+printf("Pushed zero.\n");
         break;
 
       case '*':
@@ -458,14 +468,13 @@ printf("argument %d %s\n", x, type);
 
       case '@':
         {
-          struct object * o;
-          id r;
+          struct svalue * o;
 
           o = object_dispatch_method(obj, select, method, argumentList);
+
           if(o)
           {
-            printf("pushing an object as return value.\n");
-            push_object(o);
+            push_svalue(o);
           }
         }
         break;

@@ -142,10 +142,10 @@ void f_objc_dynamic_class_sprintf(Class cls, INT32 args);
 void f_call_objc_method(INT32 args, int is_instance, SEL select, id obj);
 void f_call_objc_class_method(struct objc_class_method_desc * m, INT32 args);
 SEL selector_from_pikename(struct pike_string * name);
-struct object * object_dispatch_method(id obj, SEL select, struct objc_method * method, marg_list argumentList);
+struct svalue * object_dispatch_method(id obj, SEL select, struct objc_method * method, marg_list argumentList);
 char * make_pike_name_from_selector(SEL s);
 char * pike_signature_from_objc_signature(struct objc_method * nssig, int * lenptr);
-
+struct svalue * id_to_svalue(id obj);
 
 
 typedef Ivar (* object_setInstanceVariableProc)(id object, const char *name, void  *value);

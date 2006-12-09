@@ -2,6 +2,11 @@ import Public.ObjectiveC;
 int i;
 object pool;
 
+int isKindOfClass_(program p)
+{
+  return 1;
+}
+
 void create()
 {
   Public.ObjectiveC.load_bundle("Growl.framework");
@@ -23,12 +28,11 @@ object registrationDictionaryForGrowl(mixed ... args) {
 	object n = Cocoa.NSMutableDictionary.dictionaryWithCapacity_(2); 
 
 	n->setObject_forKey_("PGrowl", "ApplicationName");  
-	n->setObject_forKey_(Cocoa.NSArray.arrayWithObject_("New Announcement"), "AllNotifications");
-	n->setObject_forKey_(Cocoa.NSArray.arrayWithObject_("New Announcement"), "DefaultNotifications");
+	n->setObject_forKey_(({"New Announcement"}), "AllNotifications");
+	n->setObject_forKey_(({"New Announcement"}), "DefaultNotifications");
 
   n->setObject_forKey_(Cocoa.NSWorkspace.sharedWorkspace()->iconForFileType_("jpg")->TIFFRepresentation(), 
     "ApplicationIcon");
-
 	return n;
 }
 

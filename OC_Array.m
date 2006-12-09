@@ -2,6 +2,7 @@
 #import "OC_Array.h"
 
 @implementation OC_Array
+
 + newWithPikeArray:(struct array*)value;
 {
 	OC_Array * rv;
@@ -19,7 +20,8 @@
 	array = value;
 	
 	add_ref(array);
-	
+
+    printf("[OC_Array initWithPikeArray:]\n");	
 	return self;
 }
 
@@ -36,24 +38,35 @@
 
 -(int)count
 {
+    printf("[OC_Array count]\n");	
 	return array->size;
 }
 
 - (id)objectAtIndex:(int)idx
 {
+	printf("[OC_Array objectAtIndex: %d]\n", idx);	
+    
 	if(idx >= array->size) return nil;
+	printf("[OC_Array objetAtIndex:] converting to id.\n");
 	
-	return svalue_to_id(array->item[idx]);
+	id x = svalue_to_id(&(ITEM(array)[idx]));
+
+	printf("[OC_Array objetAtIndex:] finished converting to id.\n");
+    
+    return x;
 }
 
 -(void)replaceObjectAtIndex:(int)idx withObject:newValue
 {
+	printf("[OC_Array replaceObjectAtIndex:]\n");	
+    
 	array_set_index(array, idx, id_to_svalue(newValue));
 }
 
 -(void)getObjects:(id*)buffer inRange:(NSRange)range;
 {
-	
+	printf("[OC_Array getObjects: inRange:]\n");	
+    
 }
 
 @end /* implementation OC_Array */
