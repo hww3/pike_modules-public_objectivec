@@ -156,3 +156,5 @@ Ivar new_object_getInstanceVariable(id object, const char *name, void **value);
 
 object_setInstanceVariableProc old_object_setInstanceVariable;
 object_getInstanceVariableProc old_object_getInstanceVariable;
+
+int piobjc_classhandler_callback(const char* className);
