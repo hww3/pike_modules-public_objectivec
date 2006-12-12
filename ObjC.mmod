@@ -20,6 +20,7 @@ object_getInstanceVariableProc old_object_getInstanceVariable;
 id global_autorelease_pool;
 struct mapping * global_class_cache;
 struct mapping * global_classname_cache;
+struct mapping * global_overlay_dict;
 
 CVAR OC_NSAutoreleasePoolCollector * pool;
 
@@ -87,6 +88,21 @@ PIKEFUN array list_classes()
   f_aggregate(r);
 }
 
+void add_overlay_callback(const char * classname, OverlayRegistrationCallback c)
+{
+   struct svalue s;
+   struct pike_string * str;
+
+   str = make_shared_string(classname);
+
+   // TODO: what's the proper type for this?
+   s.type = T_INT;
+   s.subtype = 4711;
+   s.u.ptr = c;   
+
+   mapping_string_insert(global_overlay_dict, str, &s);
+   free_string(str);
+}
 
 EXTRA
 {
@@ -121,15 +137,22 @@ INIT
 
  global_class_cache = allocate_mapping(10);
  global_classname_cache = allocate_mapping(10);
+ global_overlay_dict = allocate_mapping(10);
  add_ref(global_class_cache);
  add_ref(global_classname_cache);
+ add_ref(global_overlay_dict);
+
+ start_overlay();
+
 }
 
 EXIT
 {
   pike_exit_piobjc_appkit();
+  stop_overlay();
   free_mapping(global_class_cache);
   free_mapping(global_classname_cache);
+  free_mapping(global_overlay_dict);
 }
 
 PIKEFUN void new_class(string name, program p)

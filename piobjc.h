@@ -20,12 +20,16 @@
 
 #include "util.h"
 
-struct program * NSString_program;
-struct program * NSObject_program;
-struct program * NSClass_program;
-struct program * MethodWrapper_program;
-struct program * objc_object_holder_program;
-struct program * objc_class_method_program;
+
+#ifndef THIS_IS_OBJC_OBJECT_HOLDER
+static ptrdiff_t objc_class_method_storage_offset;
+#define OBJ2_OBJC_CLASS_METHOD(o) ((struct objc_class_method_struct *)(o->storage+objc_class_method_storage_offset))
+#endif
+
+
+struct objc_object_holder_struct {
+  id class;
+};
 
 struct objc_dynamic_class
 {
@@ -33,33 +37,21 @@ struct objc_dynamic_class
   int is_instance;
 };
 
+#define OBJ2_DYNAMIC_OBJECT(o) ((struct objc_dynamic_class *)get_storage(o, o->prog))
+
 #define NEW_OBJC_OBJECT_HOLDER() clone_object(objc_object_holder_program, 0)
 #define NEW_NSCLASS() clone_object(NSClass_program, 0)
 #define NEW_NSSTRING() clone_object(NSString_program, 0)
 #define NEW_NSOBJECT() clone_object(NSObject_program, 0)
 #define NEW_METHODWRAPPER() clone_object(MethodWrapper_program, 0);
 
-#define OBJ2_DYNAMIC_OBJECT(o) ((struct objc_dynamic_class *)get_storage(o, o->prog))
 
+void start_overlay();
+void stop_overlay();
 
-#ifndef THIS_IS_OBJC_OBJECT_HOLDER
-static ptrdiff_t objc_class_method_storage_offset;
-#define OBJ2_OBJC_CLASS_METHOD(o) ((struct objc_class_method_struct *)(o->storage+objc_class_method_storage_offset))
-struct objc_object_holder_struct {
-  id class;
-};
+typedef void(*OverlayRegistrationCallback)(struct mapping *);
 
-struct objc_class_method_struct
-{
-  id class;
-  SEL selector;
-};
-
-struct _struct {
-  OC_NSAutoreleasePoolCollector * pool;
-  struct mapping * class_cache;
-};
-#endif
+void add_overlay_callback(const char * classname, OverlayRegistrationCallback c);
 
 typedef char(*pike_objc_char_msgSendv)(id,SEL,unsigned,marg_list);
 typedef unsigned char(*pike_objc_unsigned_char_msgSendv)(id,SEL,unsigned,marg_list);
