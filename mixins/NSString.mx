@@ -1,0 +1,11 @@
+#include "../piobjc.h"
+
+MIXIN NSString
+{
+
+  PIKEFUN mixed cast(string t)
+  {
+    pop_stack();
+    push_text("whee");   
+  }
+}
