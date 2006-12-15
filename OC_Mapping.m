@@ -6,7 +6,7 @@
 	struct object* iterator;
 	BOOL valid;
 	int next_id;
-	int value_id;
+	int key_id;
 }
 + newWithWrappedMapping:(OC_Mapping*)value;
 - initWithWrappedMapping:(OC_Mapping*)value;
@@ -49,7 +49,7 @@
     pop_stack();
 
 	next_id=find_identifier("next", iterator->program);
-	next_id=find_identifier("value", iterator->program);
+	key_id=find_identifier("key", iterator->program);
 
 	valid = YES;
 	return self;
@@ -84,7 +84,7 @@
 	}	
 	else
 	{
-		apply_low(iterator, value_id, 0);
+		apply_low(iterator, key_id, 0);
 		if(Pike_sp[-1].type == T_INT && Pike_sp[-1].subtype)
 		{
 			pop_n_elems(2);
@@ -99,3 +99,4 @@
 }
 
 @end /* implementation OC_MappingEnumerator */
+
