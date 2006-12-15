@@ -100,3 +100,68 @@
 
 @end /* implementation OC_MappingEnumerator */
 
+@implementation OC_Mapping
+
++ newWithPikeMapping:(struct mapping*)value
+{
+  OC_Mapping * res = [[OC_Mapping alloc] initWithPikeMapping: value];
+  [res autorelease];
+  return res;
+}
+
+- initWithPikeMapping:(struct mapping*)value
+{
+  	self = [super init];
+	if (!self) return nil;
+	
+	add_ref(value);
+	mapping = value;
+	
+	return self;	
+}
+
+- (void)dealloc
+{
+	sub_ref(mapping);
+	[super dealloc];
+}
+
+- (struct mapping *)__ObjCgetPikeMapping
+{
+  return mapping;
+}
+
+- (int)count
+{ 
+  int r;
+
+  ref_push_mapping(mapping);
+  f_sizeof(1);
+
+  r = Pike_sp[-1].u.integer; 
+  pop_stack();
+
+  return r; 
+}
+
+- (NSEnumerator*)keyEnumerator
+{
+	
+}
+
+- (void)setObject:(id)object forKey:(id)key
+{
+	
+}
+
+- (void)removeObjectForKey:(id)key
+{
+	
+}
+
+- (id)objectForKey:(id)key
+{
+	
+}
+
+@end /* implementation OC_Mapping */
