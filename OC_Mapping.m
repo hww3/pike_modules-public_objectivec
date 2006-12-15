@@ -146,7 +146,11 @@
 
 - (NSEnumerator*)keyEnumerator
 {
+	OC_MappingEnumerator * e;
 	
+	e = [OC_MappingEnumerator newWithWrappedMapping: self];
+
+	return e;
 }
 
 - (void)setObject:(id)object forKey:(id)key
@@ -161,6 +165,9 @@
 
 - (id)objectForKey:(id)key
 {
+	svalue k = id_to_svalue(key);
+
+	
 	
 }
 

@@ -113,6 +113,16 @@ struct svalue * id_to_svalue(id obj)
 		sv->u.array = a;
 	}
 
+	else if([obj respondsToSelector: SELUID("__ObjCgetPikeMapping")])
+	{
+		struct mapping * m;
+		
+		m = [obj __ObjCgetPikeMapping];
+		sv->type = T_MAPPING;
+		sv->subtype = 0;
+		sv->u.mapping = m;
+	}
+
     return sv;
 }
 
@@ -153,6 +163,12 @@ pop_stack();
 	{
 		printf("array!\n");
 		rv = [OC_Array newWithPikeArray: sv->u.array];
+		[rv autorelease];
+	}
+	else if(sv->type == T_MAPPING)
+	{
+		printf("mapping!\n");
+		rv = [OC_Mapping newWithPikeMapping: sv->u.mapping];
 		[rv autorelease];
 	}
     else if(sv->type == T_OBJECT) 
