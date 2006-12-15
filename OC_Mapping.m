@@ -155,19 +155,36 @@
 
 - (void)setObject:(id)object forKey:(id)key
 {
+	svalue * v;
+	svalue * k;
 	
+	k = id_to_svalue(key);
+	v = id_to_svalue(object);
+	
+	mapping_insert(mapping, k, v);
 }
 
 - (void)removeObjectForKey:(id)key
 {
+	struct svalue * k = id_to_svalue(key);
 	
+	map_delete(mapping,k);	
 }
 
 - (id)objectForKey:(id)key
 {
-	svalue k = id_to_svalue(key);
+	svalue * v;
+	id vid;
+	svalue * k = id_to_svalue(key);
 
-	
+    v = low_mapping_lookup(mapping, k);
+
+    if(!v)
+		return nil;
+		
+    vid = svalue_to_id(v);	
+
+	return vid;
 	
 }
 
