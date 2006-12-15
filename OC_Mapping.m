@@ -66,7 +66,20 @@
 -(id)nextObject
 {
 	id rv;
+
+    if(!valid)
+      return nil;	
 	
+	apply_low(iterator, key_id, 0);
+	if(Pike_sp[-1].type == T_INT && Pike_sp[-1].subtype)
+	{
+		pop_n_elems(2);
+		return NSNull;
+	}
+		
+	rv = svalue_to_id(Pike_sp[-1]);
+	pop_n_elems(2);
+		
     printf("next object\n");
 	apply_low(iterator, next_id, 0);
 	
@@ -76,26 +89,13 @@
 		                            reason:@"Something went wrong while advancing the iterator."  userInfo:nil];
 		@throw exception;		
 	}
-	
-	if(!Pike_sp[-1].u.integer)
+	else if(!Pike_sp[-1].u.integer)
 	{
 		pop_stack();
-		return nil;
+		valid = NO;
 	}	
-	else
-	{
-		apply_low(iterator, key_id, 0);
-		if(Pike_sp[-1].type == T_INT && Pike_sp[-1].subtype)
-		{
-			pop_n_elems(2);
-			return nil;
-		}
-		
-		rv = svalue_to_id(Pike_sp[-1]);
-		pop_n_elems(2);
-		
-		return rv;
-	}
+
+	return rv;
 }
 
 @end /* implementation OC_MappingEnumerator */
