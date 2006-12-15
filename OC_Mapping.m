@@ -20,7 +20,7 @@
 
 + newWithWrappedMapping:(OC_Mapping*)value
 {
-	return [[[self alloc] initWithWrappedMapping:v] autorelease];
+	return [[[self alloc] initWithWrappedMapping:value] autorelease];
 }
 
 - initWithWrappedMapping:(OC_Mapping*)value
@@ -45,11 +45,10 @@
 
 	iterator = Pike_sp[-1].u.object;
 
-    add_ref(iterator);
     pop_stack();
 
-	next_id=find_identifier("next", iterator->program);
-	key_id=find_identifier("key", iterator->program);
+	next_id=find_identifier("next", iterator->prog);
+	key_id=find_identifier("index", iterator->prog);
 
 	valid = YES;
 	return self;
@@ -57,7 +56,7 @@
 
 -(void)dealloc
 {
-	[value release];
+	sub_ref(iterator);
 	[super dealloc];	
 }
 
@@ -74,7 +73,7 @@
 	if(Pike_sp[-1].type == T_INT && Pike_sp[-1].subtype)
 	{
 		pop_n_elems(2);
-		return NSNull;
+		return [NSNull null];
 	}
 		
 	rv = svalue_to_id(Pike_sp[-1]);
@@ -155,8 +154,8 @@
 
 - (void)setObject:(id)object forKey:(id)key
 {
-	svalue * v;
-	svalue * k;
+	struct svalue * v;
+	struct svalue * k;
 	
 	k = id_to_svalue(key);
 	v = id_to_svalue(object);
@@ -173,9 +172,11 @@
 
 - (id)objectForKey:(id)key
 {
-	svalue * v;
+	struct svalue * v;
 	id vid;
-	svalue * k = id_to_svalue(key);
+	struct svalue * k;
+	
+	k = id_to_svalue(key);
 
     v = low_mapping_lookup(mapping, k);
 

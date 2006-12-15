@@ -21,7 +21,7 @@
  */
 @interface OC_Mapping : NSMutableDictionary
 {
-	struct mapping * mapping
+	struct mapping * mapping;
 }
 
 /*!

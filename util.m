@@ -7,6 +7,7 @@
 #import <Foundation/NSString.h>
 #import "PiObjCObject.h"
 #import "OC_Array.h"
+#import "OC_Mapping.h"
 #import "ObjC.h"
 /*
  *  util.c: helper functions and objects.

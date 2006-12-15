@@ -23,16 +23,15 @@ int main()
 }
 object p;
 
-object registrationDictionaryForGrowl(mixed ... args) {
+mapping registrationDictionaryForGrowl(mixed ... args) {
 
-	object n = Cocoa.NSMutableDictionary.dictionaryWithCapacity_(2); 
+	mapping n = ([]);
+	
+	n->ApplicationName = "PGrowl";
+	n->AllNotifications = ({"New Announcement"});
+	n->DefaultNotifications = ({"New Announcement"});
 
-	n->setObject_forKey_("PGrowl", "ApplicationName");  
-	n->setObject_forKey_(({"New Announcement"}), "AllNotifications");
-	n->setObject_forKey_(({"New Announcement"}), "DefaultNotifications");
-
-  n->setObject_forKey_(Cocoa.NSWorkspace.sharedWorkspace()->iconForFileType_("jpg")->TIFFRepresentation(), 
-    "ApplicationIcon");
+    n->ApplicationIcon = Cocoa.NSWorkspace.sharedWorkspace()->iconForFileType_("jpg")->TIFFRepresentation();
 	return n;
 }
 
