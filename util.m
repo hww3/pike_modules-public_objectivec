@@ -130,16 +130,16 @@ struct svalue * id_to_svalue(id obj)
 id svalue_to_id(struct svalue * sv)
 {
   id rv;
-/*
+
 push_text("svalue_to_id(): %O");
 push_svalue(sv);
 f_sprintf(2);
 printf("%s, %d\n", Pike_sp[-1].u.string->str, Pike_sp[-1].type);
 //printf("string value: %s", Pike_sp[-1].u.string->str);
 pop_stack();
-*/
 
- printf("svalue_to_id(): %d", sv->type);
+
+ printf("svalue_to_id(): %d\n", sv->type);
 
 	if(sv->type == T_INT)
 	{
@@ -154,6 +154,7 @@ pop_stack();
 	  NSStringEncoding enc;
 	  enc =  NSUTF8StringEncoding;
 	  push_svalue(sv);
+//	  add_ref(sv->u.string);
 	  f_string_to_utf8(1);
 	  sv = &Pike_sp[-1];
 	  rv = [[NSString alloc] initWithBytes: sv->u.string->str length: sv->u.string->len encoding: enc];
@@ -163,12 +164,14 @@ pop_stack();
 	else if(sv->type == T_ARRAY)
 	{
 		printf("array!\n");
+		add_ref(sv->u.array);
 		rv = [OC_Array newWithPikeArray: sv->u.array];
 		[rv autorelease];
 	}
 	else if(sv->type == T_MAPPING)
 	{
 		printf("mapping!\n");
+		add_ref(sv->u.mapping);
 		rv = [OC_Mapping newWithPikeMapping: sv->u.mapping];
 		[rv autorelease];
 	}
@@ -176,6 +179,7 @@ pop_stack();
     {
 	  struct object * o;
 	  printf("object!\n");
+	  add_ref(sv->u.object);
 	  o = sv->u.object;
 	  rv = unwrap_objc_object(o);
 	  if(!rv)

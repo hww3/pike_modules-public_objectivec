@@ -7,9 +7,10 @@
 	BOOL valid;
 	int next_id;
 	int key_id;
+	int type;
 }
-+ newWithWrappedMapping:(OC_Mapping*)value;
-- initWithWrappedMapping:(OC_Mapping*)value;
++ newWithWrappedMapping:(OC_Mapping*)value type: (int) t;
+- initWithWrappedMapping:(OC_Mapping*)value type: (int) t;
 -(void)dealloc;
 
 -(id)nextObject;
@@ -18,12 +19,12 @@
 
 @implementation OC_MappingEnumerator
 
-+ newWithWrappedMapping:(OC_Mapping*)value
++ newWithWrappedMapping:(OC_Mapping*)value type: (int) t
 {
-	return [[[self alloc] initWithWrappedMapping:value] autorelease];
+	return [[[self alloc] initWithWrappedMapping:value type: t] autorelease];
 }
 
-- initWithWrappedMapping:(OC_Mapping*)value
+- initWithWrappedMapping:(OC_Mapping*)value type: (int) t
 {
 	struct mapping * m;
 	
@@ -44,11 +45,16 @@
 	}
 
 	iterator = Pike_sp[-1].u.object;
-
+    add_ref(iterator);
+    add_ref(m);
     pop_stack();
 
 	next_id=find_identifier("next", iterator->prog);
-	key_id=find_identifier("index", iterator->prog);
+
+    if(t)
+  	  key_id=find_identifier("value", iterator->prog);
+    else
+  	  key_id=find_identifier("index", iterator->prog);
 
 	valid = YES;
 	return self;
@@ -65,25 +71,31 @@
 -(id)nextObject
 {
 	id rv;
-
+    printf("[OC_MappingEnumerator nextObject]\n");
     if(!valid)
+	{
+	  printf("we're at the end of the enumerator.\n");
       return nil;	
+	}
 	
+//	add_ref(iterator);
 	apply_low(iterator, key_id, 0);
 	if(Pike_sp[-1].type == T_INT && Pike_sp[-1].subtype)
 	{
-		pop_n_elems(2);
-		return [NSNull null];
+	  printf("got unexpected response.\n");
+		pop_stack();
+		return NULL;
 	}
 		
-	rv = svalue_to_id(Pike_sp[-1]);
-	pop_n_elems(2);
+	rv = svalue_to_id(Pike_sp-1);
+	pop_stack();
 		
-    printf("next object\n");
+//    printf("next object\n");
 	apply_low(iterator, next_id, 0);
 	
 	if(Pike_sp[-1].type != T_INT)
 	{
+		pop_stack();
 		NSException *exception = [NSException exceptionWithName:@"IteratorException"
 		                            reason:@"Something went wrong while advancing the iterator."  userInfo:nil];
 		@throw exception;		
@@ -93,7 +105,8 @@
 		pop_stack();
 		valid = NO;
 	}	
-
+	
+//	[rv retain];
 	return rv;
 }
 
@@ -113,10 +126,10 @@
   	self = [super init];
 	if (!self) return nil;
 	
-	add_ref(value);
 	mapping = value;
+	add_ref(mapping);
 	
-	return self;	
+	return self;
 }
 
 - (void)dealloc
@@ -133,21 +146,28 @@
 - (int)count
 { 
   int r;
-
-  ref_push_mapping(mapping);
+  push_mapping(mapping);
   f_sizeof(1);
-
-  r = Pike_sp[-1].u.integer; 
+  r = Pike_sp[-1].u.integer;
+  printf("[OC_Mapping count] returns %d\n", r);
   pop_stack();
-
   return r; 
 }
 
 - (NSEnumerator*)keyEnumerator
 {
 	OC_MappingEnumerator * e;
-	
-	e = [OC_MappingEnumerator newWithWrappedMapping: self];
+	printf("[OC_Mapping keyEnumerator]\n");
+	e = [OC_MappingEnumerator newWithWrappedMapping: self type: 0];
+
+	return e;
+}
+
+- (NSEnumerator*)objectEnumerator
+{
+	OC_MappingEnumerator * e;
+	printf("[OC_Mapping objectEnumerator]\n");
+	e = [OC_MappingEnumerator newWithWrappedMapping: self type: 1];
 
 	return e;
 }
@@ -157,6 +177,7 @@
 	struct svalue * v;
 	struct svalue * k;
 	
+	printf("[OC_Mapping keyEnumerator]\n");
 	k = id_to_svalue(key);
 	v = id_to_svalue(object);
 	
@@ -175,7 +196,7 @@
 	struct svalue * v;
 	id vid;
 	struct svalue * k;
-	
+	printf("[OC_Mapping objectForKey: %s]\n", [[key description] UTF8String]);
 	k = id_to_svalue(key);
 
     v = low_mapping_lookup(mapping, k);

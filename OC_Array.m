@@ -63,10 +63,13 @@
 	array_set_index(array, idx, id_to_svalue(newValue));
 }
 
+/*
 -(void)getObjects:(id*)buffer inRange:(NSRange)range;
 {
 	printf("[OC_Array getObjects: inRange:]\n");	
     
 }
+
+*/
 
 @end /* implementation OC_Array */
