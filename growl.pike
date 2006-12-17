@@ -30,23 +30,26 @@ mapping registrationDictionaryForGrowl(mixed ... args) {
 	n->ApplicationName = "PGrowl";
 	n->AllNotifications = ({"New Announcement"});
 	n->DefaultNotifications = ({"New Announcement"});
-
     n->ApplicationIcon = Cocoa.NSWorkspace.sharedWorkspace()->iconForFileType_("jpg")->TIFFRepresentation();
+
 	return n;
 }
 
 void notify()
 {
-	object n = Cocoa.NSMutableDictionary.dictionaryWithCapacity_(6); 
-	n->setObject_forKey_("PGrowl", "ApplicationName");
-	n->setObject_forKey_("New Announcement", "NotificationName");
-	n->setObject_forKey_(Cocoa.NSNumber.numberWithInt_(2), "NotificationPriority");
-	n->setObject_forKey_(Cocoa.NSNumber.numberWithBool_(0), "NotificationSticky");
-	n->setObject_forKey_("notification from PGrowl", "NotificationTitle");
-	n->setObject_forKey_("whooo, it's " + Calendar.now()->format_smtp() + "!\ngreetings from Public.ObjectiveC!", "NotificationDescription");
-	n->setObject_forKey_(Cocoa.NSWorkspace.sharedWorkspace()->iconForFileType_("jpg")->TIFFRepresentation(), "NotificationIcon");
-	n->setObject_forKey_(Cocoa.NSWorkspace.sharedWorkspace()->iconForFileType_("jpg")->TIFFRepresentation(), "NotificationAppIcon");
+	mapping n = ([]);
+
+	n->ApplicationName = "PGrowl";
+	n->NotificationName = "New Announcement";
+	n->NotificationPriority = Cocoa.NSNumber.numberWithInt_(2);
+	n->NotificationSticky = Cocoa.NSNumber.numberWithBool_(0);
+	n->NotificationTitle = "notification from PGrowl";
+	n->NotificationDescription = "whooo, it's " + Calendar.now()->format_smtp() + "!\ngreetings from Public.ObjectiveC!";
+	n->NotificationIcon = Cocoa.NSWorkspace.sharedWorkspace()->iconForFileType_("jpg")->TIFFRepresentation();
+	n->NotificationAppIcon = Cocoa.NSWorkspace.sharedWorkspace()->iconForFileType_("jpg")->TIFFRepresentation();
 
 	get_dynamic_class("GrowlApplicationBridge")->notifyWithDictionary_(n);
+
+    // lather, rinse and repeat.
 	call_out(notify, 5);
 }
