@@ -46,7 +46,7 @@
 
 	iterator = Pike_sp[-1].u.object;
     add_ref(iterator);
-    add_ref(m);
+//    add_ref(m);
     pop_stack();
 
 	next_id=find_identifier("next", iterator->prog);
@@ -78,19 +78,18 @@
       return nil;	
 	}
 	
-//	add_ref(iterator);
+	add_ref(iterator);
 	apply_low(iterator, key_id, 0);
 	if(Pike_sp[-1].type == T_INT && Pike_sp[-1].subtype)
 	{
-	  printf("got unexpected response.\n");
 		pop_stack();
-		return NULL;
+		return nil;
 	}
-		
+//printf("got the key id.\n");	
 	rv = svalue_to_id(Pike_sp-1);
 	pop_stack();
 		
-//    printf("next object\n");
+    printf("forwarding iterator to next object.\n");
 	apply_low(iterator, next_id, 0);
 	
 	if(Pike_sp[-1].type != T_INT)
@@ -100,12 +99,14 @@
 		                            reason:@"Something went wrong while advancing the iterator."  userInfo:nil];
 		@throw exception;		
 	}
-	else if(!Pike_sp[-1].u.integer)
+	else if(Pike_sp[-1].subtype)
 	{
-		pop_stack();
+		printf("at the end of the iterator.\n");
 		valid = NO;
 	}	
-	
+    printf("next value: %d", Pike_sp[-1].u.integer);	
+	pop_stack();
+
 //	[rv retain];
 	return rv;
 }
@@ -197,17 +198,28 @@
 	id vid;
 	struct svalue * k;
 	printf("[OC_Mapping objectForKey: %s]\n", [[key description] UTF8String]);
-	k = id_to_svalue(key);
+	k = low_id_to_svalue(key, 1);
+    add_ref(mapping);
 
+	push_text("objectForKey: %O");
+	push_svalue(k);
+	f_sprintf(2);
+	printf("%s, %d\n", Pike_sp[-1].u.string->str, Pike_sp[-1].type);
+	//printf("string value: %s", Pike_sp[-1].u.string->str);
+	pop_stack();
+
+
+//    add_ref(mapping);
     v = low_mapping_lookup(mapping, k);
 
     if(!v)
+{
+	printf("missed the entry.\n");
 		return nil;
-		
+}		
     vid = svalue_to_id(v);	
 
 	return vid;
-	
 }
 
 @end /* implementation OC_Mapping */

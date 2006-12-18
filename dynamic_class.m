@@ -3,6 +3,7 @@
 #import "PiObjCObject.h"
 #include "libffi/include/ffi.h"
 #import "OC_Array.h"
+#import "OC_Mapping.h"
 #include "piobjc.h"
 
 #undef THIS
@@ -268,6 +269,13 @@ printf("argument %d %s\n", x, type);
 		  {
 			id rv;
 			rv = [OC_Array newWithPikeArray: sv->u.array];
+            marg_setValue(argumentList,offset,id, rv);
+		  }
+			
+		  else if(sv->type == T_MAPPING)
+		  {
+			id rv;
+			rv = [OC_Mapping newWithPikeMapping: sv->u.mapping];
             marg_setValue(argumentList,offset,id, rv);
 		  }
           else if(sv->type == T_INT)

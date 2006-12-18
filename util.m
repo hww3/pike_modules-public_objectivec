@@ -88,22 +88,38 @@ struct svalue * object_dispatch_method(id obj, SEL select, struct objc_method * 
   return o;
 }
 
-struct svalue * id_to_svalue(id obj)
+struct svalue * low_id_to_svalue(id obj, int prefer_native)
 {
 	struct svalue * sv;
 	struct object * o;
 	
 	sv = malloc(sizeof(struct svalue));
 	
-	o = wrap_objc_object(obj);
+	// TODO: this method very likely has flaws.
+	if(prefer_native)
+	{
+		if([obj respondsToSelector: SELUID("characterAtIndex:")])
+		{
+			NSStringEncoding enc;		  
+			struct pike_string * str;
+			
+		    enc =  NSUTF8StringEncoding;
+		  
+			printf("got a string to convert.\n");
+			str = make_shared_binary_string([obj UTF8String], [obj lengthOfBytesUsingEncoding: enc]);
 
-    if(o)
-    {
-		sv->type = T_OBJECT;
-		sv->subtype = 0;
-		sv->u.object = o;
+			push_string(str);
+			f_utf8_to_string(1);
+			
+			sv->type = T_STRING;
+			sv->subtype = 0;
+			sv->u.string = Pike_sp[-1].u.string;
+            add_ref(sv->u.string);
+			pop_stack();
+            return sv;
+		}
 	}
-
+	
 	if([obj respondsToSelector: SELUID("__ObjCgetPikeArray")])
 	{
 		struct array * a;
@@ -124,7 +140,22 @@ struct svalue * id_to_svalue(id obj)
 		sv->u.mapping = m;
 	}
 
+	o = wrap_objc_object(obj);
+
+    if(o)
+    {
+		sv->type = T_OBJECT;
+		sv->subtype = 0;
+		sv->u.object = o;
+	}
+
+
     return sv;
+}
+
+struct svalue * id_to_svalue(id obj)
+{
+	return low_id_to_svalue(obj, 0);
 }
 
 id svalue_to_id(struct svalue * sv)
@@ -291,7 +322,6 @@ struct object * wrap_objc_object(id r)
   {
 	o = [r __ObjCgetPikeObject];
   }
-  
   else 
   {
     ps = make_shared_string(r->isa->name);

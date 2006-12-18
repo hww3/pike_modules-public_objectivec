@@ -23,6 +23,7 @@ int main()
 }
 object p;
 
+
 mapping registrationDictionaryForGrowl(mixed ... args) {
 
 	mapping n = ([]);

@@ -93,6 +93,6 @@
  * @param buffer  The output buffer
  * @param range   The range of objects to fetch.
  */
-//-(void)getObjects:(id*)buffer inRange:(NSRange)range;
+-(void)getObjects:(id*)buffer inRange:(NSRange)range;
 
 @end
