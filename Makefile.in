@@ -1,4 +1,4 @@
-# $Id: Makefile.in,v 1.23 2006-12-19 02:41:06 hww3 Exp $
+# $Id: Makefile.in,v 1.24 2006-12-19 23:27:23 hww3 Exp $
 @make_variables@
 VPATH=@srcdir@:@srcdir@/../..:../..
 OBJS=ObjC.o dynamic_class.o util.o OC_Array.o OC_Mapping.o AppKit.o PiObjCObject.o objc_inject.o mach_override.o method_dispatch.o libffi/src/types.o overlay_glue.o libffi/src/prep_cif.o libffi/src/powerpc/ffi_darwin.o libffi/src/powerpc/darwin_closure.o libffi/src/powerpc/darwin.o mixins/NSString.o mixins/NSArray.o mixins/NSCFArray.o mixins/NSCFDictionary.o
@@ -11,6 +11,12 @@ MODULE_CPPFLAGS=-Ilibffi -Ilibffi/include
 MODULE_CFLAGS=-fobjc-exceptions
 CONFIG_HEADERS=@CONFIG_HEADERS@
 
+override:  compile0
+        @:
 
 @dynamic_module_makefile@
+
+compile0:
+	$(RUNPIKE) $(SRCDIR)/build_mixin.pike $(SRCDIR)/mixins > _mixins.m
+
 @dependencies@

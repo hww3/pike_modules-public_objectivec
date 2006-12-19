@@ -7,7 +7,6 @@ AC_C_CONST
 
 AC_CHECK_HEADERS(objc/objc-runtime.h)
 AC_CHECK_LIB(objc, class_createInstance)
-#AC_CHECK_FUNCS(pam_authenticate pam_chauthtok pam_end pam_start)
 
 AC_FUNC_ALLOCA
 
