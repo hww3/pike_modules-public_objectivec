@@ -46,7 +46,7 @@
 
 	iterator = Pike_sp[-1].u.object;
     add_ref(iterator);
-//    add_ref(m);
+    add_ref(m);
     pop_stack();
 
 	next_id=find_identifier("next", iterator->prog);
@@ -90,6 +90,7 @@
 	pop_stack();
 		
     printf("forwarding iterator to next object.\n");
+ //   add_ref(iterator);
 	apply_low(iterator, next_id, 0);
 	
 	if(Pike_sp[-1].type != T_INT)
@@ -104,7 +105,7 @@
 		printf("at the end of the iterator.\n");
 		valid = NO;
 	}	
-    printf("next value: %d", Pike_sp[-1].u.integer);	
+ //   printf("next value: %d", Pike_sp[-1].u.integer);	
 	pop_stack();
 
 //	[rv retain];
@@ -147,7 +148,7 @@
 - (int)count
 { 
   int r;
-  push_mapping(mapping);
+  ref_push_mapping(mapping);
   f_sizeof(1);
   r = Pike_sp[-1].u.integer;
   printf("[OC_Mapping count] returns %d\n", r);
@@ -181,14 +182,15 @@
 	printf("[OC_Mapping keyEnumerator]\n");
 	k = id_to_svalue(key);
 	v = id_to_svalue(object);
-	
+
+//	add_ref(mapping);
 	mapping_insert(mapping, k, v);
 }
 
 - (void)removeObjectForKey:(id)key
 {
 	struct svalue * k = id_to_svalue(key);
-	
+//	add_ref(mapping);
 	map_delete(mapping,k);	
 }
 
@@ -197,17 +199,8 @@
 	struct svalue * v;
 	id vid;
 	struct svalue * k;
-	printf("[OC_Mapping objectForKey: %s]\n", [[key description] UTF8String]);
+//	printf("[OC_Mapping objectForKey: %s]\n", [[key description] UTF8String]);
 	k = low_id_to_svalue(key, 1);
-    add_ref(mapping);
-
-	push_text("objectForKey: %O");
-	push_svalue(k);
-	f_sprintf(2);
-	printf("%s, %d\n", Pike_sp[-1].u.string->str, Pike_sp[-1].type);
-	//printf("string value: %s", Pike_sp[-1].u.string->str);
-	pop_stack();
-
 
 //    add_ref(mapping);
     v = low_mapping_lookup(mapping, k);

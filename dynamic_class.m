@@ -485,6 +485,10 @@ printf("Pushed zero.\n");
           {
             push_svalue(o);
           }
+		  else
+		  {
+			push_undefined();
+		  }
         }
         break;
 

@@ -108,7 +108,7 @@ struct svalue * low_id_to_svalue(id obj, int prefer_native)
 			printf("got a string to convert.\n");
 			str = make_shared_binary_string([obj UTF8String], [obj lengthOfBytesUsingEncoding: enc]);
 
-			push_string(str);
+			ref_push_string(str);
 			f_utf8_to_string(1);
 			
 			sv->type = T_STRING;
@@ -125,6 +125,7 @@ struct svalue * low_id_to_svalue(id obj, int prefer_native)
 		struct array * a;
 		
 		a = [obj __ObjCgetPikeArray];
+        add_ref(a);
 		sv->type = T_ARRAY;
 		sv->subtype = 0;
 		sv->u.array = a;
@@ -135,6 +136,7 @@ struct svalue * low_id_to_svalue(id obj, int prefer_native)
 		struct mapping * m;
 		
 		m = [obj __ObjCgetPikeMapping];
+        add_ref(m);
 		sv->type = T_MAPPING;
 		sv->subtype = 0;
 		sv->u.mapping = m;
@@ -144,11 +146,18 @@ struct svalue * low_id_to_svalue(id obj, int prefer_native)
 
     if(o)
     {
+	    add_ref(o);
 		sv->type = T_OBJECT;
 		sv->subtype = 0;
 		sv->u.object = o;
 	}
-
+    else
+    {
+	  sv->type = T_INT;
+	  sv->subtype = 1;
+	  sv->u.integer = 0;
+//	  printf("id_to_svalue(): no object!\n");
+    }
 
     return sv;
 }
@@ -162,72 +171,69 @@ id svalue_to_id(struct svalue * sv)
 {
   id rv;
 
-push_text("svalue_to_id(): %O");
-push_svalue(sv);
-f_sprintf(2);
-printf("%s, %d\n", Pike_sp[-1].u.string->str, Pike_sp[-1].type);
-//printf("string value: %s", Pike_sp[-1].u.string->str);
-pop_stack();
+// printf("svalue_to_id(): %d\n", sv->type);
 
+	switch(sv->type)
+	{
+		case T_INT:
+		  rv = [NSNumber numberWithLong: sv->u.integer];
+	  	  break;
+	
+		case T_FLOAT:
+		  rv = [NSNumber numberWithDouble: sv->u.float_number];
+  		  break;
+		
+		case T_STRING:
+			{
+			  NSStringEncoding enc;
+			  enc =  NSUTF8StringEncoding;
+			  push_svalue(sv);
+			  add_ref(sv->u.string);
+			  add_ref(sv->u.string);
+			  f_string_to_utf8(1);
+			  sv = &Pike_sp[-1];
+			  rv = [[NSString alloc] initWithBytes: sv->u.string->str length: sv->u.string->len encoding: enc];
+			  [rv autorelease];
+			  pop_stack();
+			}		
+			
+			break;
 
- printf("svalue_to_id(): %d\n", sv->type);
+		case T_ARRAY:
+			add_ref(sv->u.array);
+			rv = [OC_Array newWithPikeArray: sv->u.array];
+			[rv autorelease];
+		
+			break;
+			
+		case T_MAPPING:
+			add_ref(sv->u.mapping);
+			rv = [OC_Mapping newWithPikeMapping: sv->u.mapping];
+			[rv autorelease];
+		
+			break;
+		
+		case T_OBJECT:
+	    	{
+		  		struct object * o;
+		  		add_ref(sv->u.object);
+		  		o = sv->u.object;
+		  		rv = unwrap_objc_object(o);
+		  		if(!rv)
+		  		{
+		    		printf("Whee! We're wrappin' an object for a return value!\n");
+		    	// if we don't have a wrapped object, we should make a pike object wrapper.
+		    		rv = [PiObjCObject newWithPikeObject: o];
+		  		}
+			}
+			break;
+			
+		default:
+			printf("SV TYPE: %d\n", sv->type);
+		  Pike_error("expected object return value.\n");		
+	}
 
-	if(sv->type == T_INT)
-	{
-	  printf("Sending an integer.\n");           
-	  rv = [NSNumber numberWithLong: sv->u.integer];
-	//          [invocation setReturnValue: num]; 
-    }
-    else if(sv->type == T_STRING) // we need to wrap the value as a string.
-    {
-	printf("string!\n");
-	  // let's wrap the string as an NSString object.
-	  NSStringEncoding enc;
-	  enc =  NSUTF8StringEncoding;
-	  push_svalue(sv);
-//	  add_ref(sv->u.string);
-	  f_string_to_utf8(1);
-	  sv = &Pike_sp[-1];
-	  rv = [[NSString alloc] initWithBytes: sv->u.string->str length: sv->u.string->len encoding: enc];
-	  [rv autorelease];
-	  pop_stack();
-    }
-	else if(sv->type == T_ARRAY)
-	{
-		printf("array!\n");
-		add_ref(sv->u.array);
-		rv = [OC_Array newWithPikeArray: sv->u.array];
-		[rv autorelease];
-	}
-	else if(sv->type == T_MAPPING)
-	{
-		printf("mapping!\n");
-		add_ref(sv->u.mapping);
-		rv = [OC_Mapping newWithPikeMapping: sv->u.mapping];
-		[rv autorelease];
-	}
-    else if(sv->type == T_OBJECT) 
-    {
-	  struct object * o;
-	  printf("object!\n");
-	  add_ref(sv->u.object);
-	  o = sv->u.object;
-	  rv = unwrap_objc_object(o);
-	  if(!rv)
-	  {
-	    printf("Whee! We're wrappin' an object for a return value!\n");
-	    // if we don't have a wrapped object, we should make a pike object wrapper.
-	    rv = [PiObjCObject newWithPikeObject: o];
-	  }
-//	  else
-//	  {
-//		[rv retain];
-//		printf("Whee: %s\n", [[rv description] UTF8String]);
-//	  }	  
-	}
-//	else
-//	  Pike_error("expected object return value.\n");
-printf("returning from svalue_to_id()\n");
+	printf("returning from svalue_to_id()\n");
 	return rv;	
 }
 
@@ -346,8 +352,8 @@ struct program * wrap_objc_class(Class r)
   struct program * prog;
   struct objc_dynamic_class * pc; 
   struct pike_string * ps;
-  if(!r) {printf("wrap_objc_object: no object!\n"); return NULL; }
-  if(!r->isa) printf("wrap_objc_object: no class!\n");
+  if(!r) {printf("wrap_objc_class: no object!\n"); return NULL; }
+  if(!r->isa) printf("wrap_objc_class: no class!\n");
 
   push_text(r->name);
 
