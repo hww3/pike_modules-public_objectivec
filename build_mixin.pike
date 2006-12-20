@@ -2288,6 +2288,7 @@ int main(int argc, array(string) argv)
   }
 
   write("#include \"piobjc.h\"\n");
+  write("#define THIS ((struct objc_dynamic_class *)(Pike_interpreter.frame_pointer->current_storage))\n");
 
   foreach(glob("*.mx", get_dir(dir));; string fn)
   {

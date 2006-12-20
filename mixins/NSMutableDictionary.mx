@@ -1,6 +1,6 @@
 #import <Foundation/NSDictionary.h>
 
-MIXIN NSCFDictionary
+MIXIN NSMutableDictionary
 {
 
 PIKEFUN object _get_iterator()
@@ -63,8 +63,6 @@ PIKEFUN void `[]=(mixed key, mixed value)
   [ THIS->obj setObject: v forKey: k ];
 
   pop_n_elems(args);
-
-  
 }
 
 

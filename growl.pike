@@ -1,12 +1,12 @@
 import Public.ObjectiveC;
 int i;
 object pool;
-
+/*
 int isKindOfClass_(program p)
 {
   return 1;
 }
-
+*/
 void create()
 {
   Public.ObjectiveC.load_bundle("Growl.framework");

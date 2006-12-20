@@ -1,24 +1,55 @@
+#import <Foundation/NSArray.h>
+
 MIXIN NSArray
 {
 
-  	PIKEFUN object _get_iterator()
-  	{
-		push_text("Public.ObjectiveC.NSArrayIterator");
-		SAFE_APPLY_MASTER("resolv", 1);
+PIKEFUN object _get_iterator()
+{
+	push_text("Public.ObjectiveC.NSArrayIterator");
+	SAFE_APPLY_MASTER("resolv", 1);
 
-		if(Pike_sp[-1].type == T_PROGRAM)
-		{
-			push_object(Pike_fp->current_object);
-			apply_svalue(Pike_sp-2, 1);
-			stack_swap();
-			pop_stack();
-			return;
-		}
-		else
-		{
-			push_int(0);
-		}
-
+	if(Pike_sp[-1].type == T_PROGRAM)
+	{
+		push_object(Pike_fp->current_object);
+		apply_svalue(Pike_sp-2, 1);
+		stack_swap();
+		pop_stack();
+		
+		return;
 	}
+	else
+	{
+		push_int(0);
+	}
+
+}
+
+PIKEFUN mixed `[](int key)
+{
+  id v;
+  id m;
+
+  struct svalue * sv;
+
+  if((unsigned int)key >= [THIS->obj count])
+  {
+    pop_stack();
+    Pike_error("invalid index\n");
+  }  
+
+  v = [THIS->obj objectAtIndex: key];
+
+  pop_stack();
+
+  if(!v)  
+    push_undefined();
+  else
+  {
+    sv = id_to_svalue(v);
+    push_svalue(sv);
+    free_svalue(sv);
+  }
+}
+
 
 }

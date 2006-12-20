@@ -6,4 +6,10 @@ MIXIN NSString
     pop_stack();
     push_text("whee");   
   }
+
+  EXTRA
+  {
+    printf("whee!!!\n");
+  }
 }
+

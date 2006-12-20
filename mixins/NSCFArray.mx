@@ -1,3 +1,5 @@
+#import <Foundation/NSArray.h>
+
 MIXIN NSCFArray
 {
 
@@ -21,4 +23,33 @@ PIKEFUN object _get_iterator()
 	}
 
 }
+
+PIKEFUN mixed `[](int key)
+{
+  id v;
+  id m;
+
+  struct svalue * sv;
+
+  if((unsigned int)key >= [THIS->obj count])
+  {
+    pop_stack();
+    Pike_error("invalid index\n");
+  }  
+
+  v = [THIS->obj objectAtIndex: key];
+
+  pop_stack();
+
+  if(!v)  
+    push_undefined();
+  else
+  {
+    sv = id_to_svalue(v);
+    push_svalue(sv);
+    free_svalue(sv);
+  }
+}
+
+
 }

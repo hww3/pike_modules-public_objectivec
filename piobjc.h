@@ -138,7 +138,7 @@ struct svalue * object_dispatch_method(id obj, SEL select, struct objc_method * 
 char * make_pike_name_from_selector(SEL s);
 char * pike_signature_from_objc_signature(struct objc_method * nssig, int * lenptr);
 struct svalue * id_to_svalue(id obj);
-
+id svalue_to_id(struct svalue * sv);
 
 typedef Ivar (* object_setInstanceVariableProc)(id object, const char *name, void  *value);
 Ivar new_object_setInstanceVariable(id object, const char *name, void *value);
