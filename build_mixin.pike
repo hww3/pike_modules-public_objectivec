@@ -112,6 +112,9 @@ constant precompile_api_version = "2";
 
 #define PC Parser.Pike
 
+array registration_elements = ({});
+
+
 /* Strings declared with MK_STRING. */
 mapping(string:string) strings = ([
   // From stralloc.h:
@@ -2284,12 +2287,26 @@ int main(int argc, array(string) argv)
     return 1;
   }
 
+  write("#include \"piobjc.h\"\n");
+
   foreach(glob("*.mx", get_dir(dir));; string fn)
   {
     string f = combine_path(dir, fn);
     werror("whee, processing %s\n", f);
     doit(f);
   }
+
+  write("\nvoid start_mixins()\n{");
+  write("\nMixinRegistrationCallback c = NULL;\n");
+
+  foreach(registration_elements, string e)
+  {
+    write("c = &_" + e + "_register_mixin;\n");
+    write("add_mixin_callback(\"" + e + "\", c);\n");
+  }
+
+  write("\n}\n\n");
+  write("void stop_mixins() { }\n\n");
   
   return 0;
 
@@ -2364,8 +2381,10 @@ void doit(string file)
   {
     // No INIT, add our own stuff..
 
+    registration_elements += ({ mixin_name });
+
     x+=({
-      sprintf("void _%s_register_overlay(struct mapping * m){\n", mixin_name),
+      sprintf("void _%s_register_mixin(struct mapping * m){\n", mixin_name),
       tmp->addfuncs,
       "}\n",
     });

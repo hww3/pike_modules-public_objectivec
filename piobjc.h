@@ -46,12 +46,12 @@ struct objc_dynamic_class
 #define NEW_METHODWRAPPER() clone_object(MethodWrapper_program, 0);
 
 
-void start_overlay();
-void stop_overlay();
+void start_mixins();
+void stop_mixins();
 
-typedef void(*OverlayRegistrationCallback)(struct mapping *);
+typedef void(*MixinRegistrationCallback)(struct mapping *);
 
-void add_overlay_callback(const char * classname, OverlayRegistrationCallback c);
+void add_mixin_callback(const char * classname, MixinRegistrationCallback c);
 
 typedef char(*pike_objc_char_msgSendv)(id,SEL,unsigned,marg_list);
 typedef unsigned char(*pike_objc_unsigned_char_msgSendv)(id,SEL,unsigned,marg_list);

@@ -12,7 +12,7 @@
 #define THIS_OBJC ((struct _struct *)(Pike_interpreter.frame_pointer->current_storage))
 
 extern id global_autorelease_pool;
-extern struct mapping * global_overlay_dict;
+extern struct mapping * global_mixin_dict;
 extern struct mapping * global_class_cache;
 extern struct mapping * global_classname_cache;
 static char *lfun_getter_type_string = NULL;
@@ -739,11 +739,11 @@ struct program * pike_low_create_objc_dynamic_class(char * classname)
 
   /* next, we need to add all of the class methods. */
 
-  c = simple_mapping_string_lookup(global_overlay_dict, classname);
+  c = simple_mapping_string_lookup(global_mixin_dict, classname);
 
   if(c)
   {
-    OverlayRegistrationCallback rc = c->u.ptr;
+    MixinRegistrationCallback rc = c->u.ptr;
     if(rc)  rc(m);	
   }
 
