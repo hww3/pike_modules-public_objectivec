@@ -236,7 +236,6 @@ Ivar new_object_setInstanceVariable(id object, const char *name, void *value)
   // if we're not a wrapped pike object, we should just go direct to the objective-c object.
   if(![object respondsToSelector: SELUID("__ObjCgetPikeObject")])
   {
-    printf("huh...\n");
  	return (old_object_setInstanceVariable(object, name, value));
   }
 
@@ -328,13 +327,19 @@ Ivar new_object_getInstanceVariable(id object, const char *name, void **value)
   printf("new_object_getInstanceVariable(%s, %s, %s)\n", object->isa->name, [[object description] UTF8String], name);
 
   // if we're a wrapped pike object, the instance variables will be in the pike object itself.
-  if([object respondsToSelector: SELUID("__ObjCgetPikeObject")] == YES)
+  if(![object respondsToSelector: SELUID("__ObjCgetPikeObject")] == YES)
+  {
+    return (old_object_getInstanceVariable(object, name, value));
+  }
+  else
   {
     struct object * pobj;
     struct object * pset;
     Ivar x;
     struct svalue to;
     id rv;
+
+    x = class_getInstanceVariable(object->isa, name);    
     
     // TODO: we assume that all set variables are objects. we should fix this sooner rather than later.
     // TODO: do we need to lock here?
@@ -361,11 +366,8 @@ Ivar new_object_getInstanceVariable(id object, const char *name, void **value)
     *value = rv;
     
     pop_stack(); 
-    x = class_getInstanceVariable(object->isa, name);    
     return x;
   }
-  else  
-    return (old_object_getInstanceVariable(object, name, value));
 }
 
 
