@@ -62,6 +62,9 @@
  */
 -(int)count;
 
+-(BOOL)__ObjCisPikeType;
+-(int)__ObjCgetPikeType;
+
 /*!
  * @method objectAtIndex:
  * @param idx An index

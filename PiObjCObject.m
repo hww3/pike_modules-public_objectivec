@@ -13,7 +13,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * $Id: PiObjCObject.m,v 1.21 2006-12-09 04:38:28 hww3 Exp $
+ * $Id: PiObjCObject.m,v 1.22 2006-12-22 04:26:21 hww3 Exp $
  */
 
 /*
@@ -144,6 +144,16 @@ pop_stack();
 - (BOOL)isProxy
 {
   return YES;	
+}
+
+-(BOOL)__ObjCisPikeType
+{
+  return YES;	
+}
+
+-(int)__ObjCgetPikeType
+{
+  return PIKE_T_OBJECT;
 }
 
 - (void)forwardInvocation:(NSInvocation *)anInvocation

@@ -10,6 +10,10 @@
 #import <Foundation/NSString.h>
 #import <Foundation/NSAutoreleasePool.h>
 #import <Foundation/NSThread.h>
+#import "OC_Mapping.h"
+#import "OC_Array.h"
+#import "PiObjCObject.h"
+
 /*! @decl int index(int pid, int use_main_thread, string bundlePath, string systemPath, string carbonPath)
  *!
  */
@@ -217,51 +221,106 @@ int piobjc_classhandler_callback(const char* className)
     pop_stack();
     return 0;
   }
-
 }
-
-
 
 Ivar new_object_setInstanceVariable(id object, const char *name, void *value)
 {
+  int pike_type = NULL;
+  Ivar x;
+  struct object * pobj;
+  struct svalue * pset;
+  id vts;
+
   printf("new_object_setInstanceVariable(%s, %s, %s)\n", object->isa->name, [[object description] UTF8String], name);
 
-  // if we're a wrapped pike object, the instance variables will be in the pike object itself.
-  if([object respondsToSelector: SELUID("__ObjCgetPikeObject")] == YES)
+  // if we're not a wrapped pike object, we should just go direct to the objective-c object.
+  if(![object respondsToSelector: SELUID("__ObjCgetPikeObject")])
   {
-    struct object * pobj;
-    struct svalue * pset;
-    Ivar x;
-    
-    // TODO: we assume that all set variables are objects. we should fix this sooner rather than later.
-    // TODO: do we need to lock here?
+    printf("huh...\n");
+ 	return (old_object_setInstanceVariable(object, name, value));
+  }
 
-    pobj = [object __ObjCgetPikeObject];
-    
-    if(!pobj)
+  x = class_getInstanceVariable(object->isa, name);
+
+  // here's where we'd handle setting native c types.
+  if(x->ivar_type[0] != '@')
+  {
+    printf("AIEEEE! We don't know how to set non-objects into Pike objects!\n");
+    return NULL;
+  }
+
+  vts = (id)value;
+
+  // if we're a wrapped native object, we should set that directly.
+  if([vts respondsToSelector: SELUID("__ObjCgetPikeType")] == YES)
+  {
+    pike_type = [vts __ObjCgetPikeType];
+
+    if(pike_type == PIKE_T_OBJECT)
     {
-      printf("AAAHHH! no pike object!\n");
-      return NULL;
-    }
 
-	x = class_getInstanceVariable(object->isa, name);
-if(!x) printf("AAAAAAHHHHH!!!\n");
+      pobj = [vts __ObjCgetPikeObject];
+
+      if(!pobj)
+      {
+        printf("AAAHHH! no pike object!\n");
+        return NULL;
+      }
+
+      push_text(name);
+      push_object(pobj);
+      object_set_index(pobj, Pike_sp-1, Pike_sp-2);
+
+      pop_n_elems(1);
+      free_svalue(pset);
+
+      return x;
+    }
+    else if(pike_type == PIKE_T_MAPPING)
+    {
+      struct mapping * map;
+      map = [vts __ObjCgetPikeMapping];
+
+      push_text(name);
+      push_mapping(map);
+
+      object_set_index(pobj, Pike_sp-2, Pike_sp-1);
+
+      pop_n_elems(2);
+
+      return x;
+    }
+    else if(pike_type == PIKE_T_ARRAY)
+    {
+      struct array * arr;
+      arr = [vts __ObjCgetPikeArray];
+
+      push_text(name);
+      push_array(arr);
+
+      object_set_index(pobj, Pike_sp-2, Pike_sp-1);
+
+      pop_n_elems(2);
+
+      return x;
+    }
+    else
+     printf("AIEEE! unable to set the value... we don't know how to handle it!\n"); 
+  }
+  else
+  {
+    pobj = [object __ObjCgetPikeObject];
     push_text(name);
 
     pset = ptr_to_svalue(value, x->ivar_type);
-//    push_object(pset);
-//    printf("applying lfun.\n");
     object_set_index(pobj, Pike_sp-1, pset);
-//    printf("done applying lfun.\n");
 
     pop_n_elems(1);
     free_svalue(pset);
-
-    printf("returning.\n");
-    return x;
   }
-  else
-    return (old_object_setInstanceVariable(object, name, value));
+
+  // finally, if we're a standard objective c object, we might be able to 
+
 }
 
 Ivar new_object_getInstanceVariable(id object, const char *name, void **value)

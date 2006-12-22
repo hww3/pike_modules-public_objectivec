@@ -36,6 +36,17 @@
 	return array;
 }
 
+
+-(BOOL)__ObjCisPikeType
+{
+  return YES;	
+}
+
+-(int)__ObjCgetPikeType
+{
+  return PIKE_T_ARRAY;
+}
+
 -(int)count
 {
     printf("[OC_Array count]\n");	

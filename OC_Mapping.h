@@ -52,6 +52,9 @@
  */
 - (void)dealloc;
 
+- (BOOL)__ObjCisPikeType;
+-(int)__ObjCgetPikeType;
+
 - (struct mapping *)__ObjCgetPikeMapping;
 
 /*!

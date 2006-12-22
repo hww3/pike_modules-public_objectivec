@@ -145,6 +145,16 @@
   return mapping;
 }
 
+-(BOOL)__ObjCisPikeType
+{
+  return YES;	
+}
+
+-(int)__ObjCgetPikeType
+{
+  return PIKE_T_MAPPING;
+}
+
 - (int)count
 { 
   int r;

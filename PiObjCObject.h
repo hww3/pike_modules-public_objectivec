@@ -22,4 +22,6 @@
 - (NSString *)description;
 - (NSString*) _copyDescription;
 - (BOOL) isProxy;
+- (BOOL) __ObjCisPikeType;
+-(int)__ObjCgetPikeType;
 @end
