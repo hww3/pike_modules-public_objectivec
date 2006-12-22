@@ -1,0 +1,12 @@
+#import <AddressBook/ABAddressBook.h>
+
+MIXIN ABAddressBook
+{
+
+
+EXTRA
+{
+   simple_add_constant("kABFirstNameProperty", id_to_svalue(kABFirstNameProperty), 0);
+}
+
+}

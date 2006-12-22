@@ -256,8 +256,8 @@ id unwrap_objc_object(struct object * o)
 		if(is_objcobj)
 		{
 		  struct objc_dynamic_class * s = (struct objc_dynamic_class *)get_storage(o, o->prog);
-		  if(!s) { printf("unwrap_objc_object(): couldn't get storage!\n"); return nil; }
-		  else { printf("unwrap_objc_object(): got the id!\n"); return s->obj; }
+		  if(!s) { /*printf("unwrap_objc_object(): couldn't get storage!\n"); */ return nil; }
+		  else { /*printf("unwrap_objc_object(): got the id!\n");*/ return s->obj; }
 		}
 		else
 		{

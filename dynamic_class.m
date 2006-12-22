@@ -28,7 +28,7 @@ void f_objc_dynamic_create(Class cls, INT32 args)
   struct svalue sval;
   struct pike_string * cname;
   
-printf("dynamic_create: %s()\n", cls->isa->name);
+//printf("dynamic_create: %s()\n", cls->isa->name);
   if(args!=0)
   {
     printf("args: %d\n", args);
@@ -78,7 +78,7 @@ void low_f_call_objc_class_method(ffi_cif* cif, void* resp, void** args, void* u
   m = (struct objc_class_method_desc *)userdata;
   pargs = *((INT32 *)args[0]);
 
-  printf("low_f_call_objc_class_method: %d\n", pargs);
+//  printf("low_f_call_objc_class_method: %d\n", pargs);
 
   f_call_objc_class_method(m, pargs);
 //  stack_dup();
@@ -107,7 +107,7 @@ void low_f_objc_dynamic_create(ffi_cif* cif, void* resp, void** args, void* user
 
 void f_call_objc_class_method(struct objc_class_method_desc * m, INT32 args)
 {
-  printf("calling class method [%s %s]\n", m->class->name, (char *)m->select);
+//  printf("calling class method [%s %s]\n", m->class->name, (char *)m->select);
   f_call_objc_method(args, 0, m->select, m->class);
 }
 
@@ -127,7 +127,7 @@ void f_call_objc_method(INT32 args, int is_instance, SEL select, id obj)
 	
     pool = [global_autorelease_pool getAutoreleasePool];
     
-    printf("select: %s, is_instance: %d\n", (char *) select, is_instance);
+//    printf("select: %s, is_instance: %d\n", (char *) select, is_instance);
     if(is_instance)
       method = class_getInstanceMethod(obj->isa, select);
     else
@@ -143,7 +143,7 @@ void f_call_objc_method(INT32 args, int is_instance, SEL select, id obj)
 
     arguments = method_getNumberOfArguments(method);
 
-    printf("%s(%d args), expecting %d\n", (char * ) select, args, arguments-2);
+//    printf("%s(%d args), expecting %d\n", (char * ) select, args, arguments-2);
 
     if((args) != (arguments-2))
       Pike_error("incorrect number of arguments to method provided.\n");
@@ -161,7 +161,7 @@ void f_call_objc_method(INT32 args, int is_instance, SEL select, id obj)
       sv = Pike_sp-args+(x-2);
 
       method_getArgumentInfo(method, x, (const char **)(&type), &offset);
-printf("argument %d %s\n", x, type);
+// printf("argument %d %s\n", x, type);
       while((*type)&&(*type=='r' || *type =='n' || *type =='N' || *type=='o' || *type=='O' || *type =='V'))
   		type++;
 
@@ -311,7 +311,7 @@ printf("argument %d %s\n", x, type);
         case '#':
         if(Pike_sp[-1].type != T_PROGRAM)
         {
-          printf("got %d\n", Pike_sp[-1].type);
+//          printf("got %d\n", Pike_sp[-1].type);
           Pike_error("expected program as argument of type class\n");
         }
         else
@@ -353,7 +353,7 @@ printf("argument %d %s\n", x, type);
     while((*type)&&(*type=='r' || *type =='n' || *type =='N' || *type=='o' || *type=='O' || *type =='V'))
   		type++;
 
-    printf("SENDING MESSAGE %s WITH RETURN TYPE: %s\n", select, type);
+//    printf("SENDING MESSAGE %s WITH RETURN TYPE: %s\n", select, type);
 
     pop_n_elems(args);
 
@@ -460,11 +460,11 @@ printf("argument %d %s\n", x, type);
         break;
 
       case 'v':
-printf("VOID\n");
+//printf("VOID\n");
         printf("SEL:: %s\n", (char *)select);
         void_dispatch_method(obj,select,method,argumentList);
         push_int(0);
-printf("Pushed zero.\n");
+//printf("Pushed zero.\n");
         break;
 
       case '*':

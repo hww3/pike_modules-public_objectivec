@@ -1,4 +1,4 @@
-MIXIN NSString
+MIXIN NSCFString
 {
 
   PIKEFUN mixed cast(string t)
