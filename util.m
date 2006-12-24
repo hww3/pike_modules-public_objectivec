@@ -293,7 +293,17 @@ SEL selector_from_pikename(struct pike_string * name)
   return select;
 }
 
+//! convert a pointer to a pike svalue based on an objective c type encoding.
+//! objective c objects will be converted to wrapped objects. for conversion
+//! to native pike datatypes such as array and mapping, see low_ptr_to_svalue(). 
 struct svalue * ptr_to_svalue(void * ptr, char * type)
+{
+	return low_ptr_to_svalue(ptr, type, 0);
+}
+
+// TODO: implement native conversions
+// TODO: implement conversion from non-id datatypes
+struct svalue * low_ptr_to_svalue(void * ptr, char * type, int prefer_native)
 {
 	struct svalue * sv;
 	
@@ -312,6 +322,7 @@ struct svalue * ptr_to_svalue(void * ptr, char * type)
 	}
 	
 	return sv;
+	
 }
 
 struct object * wrap_objc_object(id r)
