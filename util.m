@@ -162,10 +162,16 @@ struct svalue * low_id_to_svalue(id obj, int prefer_native)
     return sv;
 }
 
+void * svalue_to_ptr(struct svalue * sval, char * type)
+{
+	return NULL;
+}
+
 struct svalue * id_to_svalue(id obj)
 {
 	return low_id_to_svalue(obj, 0);
 }
+
 
 id svalue_to_id(struct svalue * sv)
 {

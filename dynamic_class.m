@@ -599,10 +599,16 @@ void f_objc_dynamic_getter(char * vn, INT32 args)
 
 void f_objc_dynamic_setter(char * vn, INT32 args)
 {
+  void * var;
+  Ivar vardef;
   printf("f_objc_dynamic_setter(%s)\n", vn);
 
+  vardef = class_getInstanceVariable(THIS->obj->isa, vn);
+  
+  var = svalue_to_ptr(var, vardef->ivar_type);
   pop_n_elems(args);
   
+  old_object_setInstanceVariable(THIS->obj, vn, var);
 }
 
 
