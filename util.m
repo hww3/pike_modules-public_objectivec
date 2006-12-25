@@ -105,7 +105,7 @@ struct svalue * low_id_to_svalue(id obj, int prefer_native)
 			
 		    enc =  NSUTF8StringEncoding;
 		  
-			printf("got a string to convert.\n");
+	//		printf("got a string to convert.\n");
 			str = make_shared_binary_string([obj UTF8String], [obj lengthOfBytesUsingEncoding: enc]);
 
 			ref_push_string(str);
@@ -227,7 +227,7 @@ id svalue_to_id(struct svalue * sv)
 		  		rv = unwrap_objc_object(o);
 		  		if(!rv)
 		  		{
-		    		printf("Whee! We're wrappin' an object for a return value!\n");
+//		    		printf("Whee! We're wrappin' an object for a return value!\n");
 		    	// if we don't have a wrapped object, we should make a pike object wrapper.
 		    		rv = [PiObjCObject newWithPikeObject: o];
 		  		}
@@ -239,7 +239,7 @@ id svalue_to_id(struct svalue * sv)
 		  Pike_error("expected object return value.\n");		
 	}
 
-	printf("returning from svalue_to_id()\n");
+//	printf("returning from svalue_to_id()\n");
 	return rv;	
 }
 
@@ -970,7 +970,7 @@ char * pike_signature_from_objc_signature(struct objc_method * nssig, int * lenp
       case '^':  // pointer
         rettype = tObj;
       sret = CONSTANT_STRLEN(tObj);
-      printf("^\n");
+//      printf("^\n");
         break;
 
       case '?':  // unknown (function ptr)

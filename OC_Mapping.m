@@ -71,10 +71,10 @@
 -(id)nextObject
 {
 	id rv;
-    printf("[OC_MappingEnumerator nextObject]\n");
+//    printf("[OC_MappingEnumerator nextObject]\n");
     if(!valid)
 	{
-	  printf("we're at the end of the enumerator.\n");
+//	  printf("we're at the end of the enumerator.\n");
       return nil;	
 	}
 	
@@ -89,7 +89,7 @@
 	rv = svalue_to_id(Pike_sp-1);
 	pop_stack();
 		
-    printf("forwarding iterator to next object.\n");
+  //  printf("forwarding iterator to next object.\n");
  //   add_ref(iterator);
 	apply_low(iterator, next_id, 0);
 	
@@ -102,7 +102,7 @@
 	}
 	else if(Pike_sp[-1].subtype)
 	{
-		printf("at the end of the iterator.\n");
+//		printf("at the end of the iterator.\n");
 		valid = NO;
 	}	
  //   printf("next value: %d", Pike_sp[-1].u.integer);	
@@ -161,7 +161,7 @@
   ref_push_mapping(mapping);
   f_sizeof(1);
   r = Pike_sp[-1].u.integer;
-  printf("[OC_Mapping count] returns %d\n", r);
+//  printf("[OC_Mapping count] returns %d\n", r);
   pop_stack();
   return r; 
 }
@@ -169,7 +169,7 @@
 - (NSEnumerator*)keyEnumerator
 {
 	OC_MappingEnumerator * e;
-	printf("[OC_Mapping keyEnumerator]\n");
+//	printf("[OC_Mapping keyEnumerator]\n");
 	e = [OC_MappingEnumerator newWithWrappedMapping: self type: 0];
 
 	return e;
@@ -178,7 +178,7 @@
 - (NSEnumerator*)objectEnumerator
 {
 	OC_MappingEnumerator * e;
-	printf("[OC_Mapping objectEnumerator]\n");
+//	printf("[OC_Mapping objectEnumerator]\n");
 	e = [OC_MappingEnumerator newWithWrappedMapping: self type: 1];
 
 	return e;
@@ -189,7 +189,7 @@
 	struct svalue * v;
 	struct svalue * k;
 	
-	printf("[OC_Mapping keyEnumerator]\n");
+//	printf("[OC_Mapping keyEnumerator]\n");
 	k = id_to_svalue(key);
 	v = id_to_svalue(object);
 
@@ -217,7 +217,7 @@
 
     if(!v)
 {
-	printf("missed the entry.\n");
+//	printf("missed the entry.\n");
 		return nil;
 }		
     vid = svalue_to_id(v);	
