@@ -569,7 +569,6 @@ void low_f_objc_dynamic_getter(ffi_cif* cif, void* resp, void** args, void* user
   char * vn;
   vn = (char *)userdata;
   pargs = *((INT32 *)args[0]);
-
   f_objc_dynamic_getter(vn, pargs);
 }
 
@@ -586,20 +585,16 @@ void low_f_objc_dynamic_setter(ffi_cif* cif, void* resp, void** args, void* user
 // TODO: should this give us native types, or just wrappers when the variable type is an object?
 void f_objc_dynamic_getter(char * vn, INT32 args)
 {
-  printf("f_objc_dynamic_getter(%s)\n", vn);
-
   void * var;
   Ivar vardef;
-  struct svalue * sv;
+  struct svalue * sv = NULL;
 
   pop_n_elems(args);
   vardef = old_object_getInstanceVariable(THIS->obj, vn, var);
   
   sv = ptr_to_svalue(var, vardef->ivar_type);
 
-  if(sv)
-    push_svalue(sv);
-  else push_undefined();
+  push_svalue(sv);
 }
 
 void f_objc_dynamic_setter(char * vn, INT32 args)
@@ -732,12 +727,12 @@ struct program * pike_low_create_objc_dynamic_class(char * classname)
       snprintf(sg, vl+8, "`->var_%s", vn);
       snprintf(ss, vl+9, "`->var_%s=", vn);
     
-//      printf("registering %s\n", vn);
+      printf("registering var %s\n", vn);
 
-      quick_add_function((const char *)sg, vl+8, (void *)quick_make_stub(vn, low_f_objc_dynamic_getter), 
+      quick_add_function((const char *)sg, vl+7, (void *)quick_make_stub(vn, low_f_objc_dynamic_getter), 
                  lfun_getter_type_string, 
                  strlen(lfun_getter_type_string), 0, OPT_SIDE_EFFECT|OPT_EXTERNAL_DEPEND);  
-      quick_add_function((const char *)ss, vl+9, (void *)quick_make_stub(vn, low_f_objc_dynamic_setter), 
+      quick_add_function((const char *)ss, vl+8, (void *)quick_make_stub(vn, low_f_objc_dynamic_setter), 
                  lfun_setter_type_string, 
                  strlen(lfun_setter_type_string), 0, OPT_SIDE_EFFECT|OPT_EXTERNAL_DEPEND);  
       free(ss);

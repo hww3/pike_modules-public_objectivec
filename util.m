@@ -312,14 +312,27 @@ struct svalue * low_ptr_to_svalue(void * ptr, char * type, int prefer_native)
 	switch(*type)
 	{
 		case '@':
+		{
+			struct object * o;
+			o = wrap_objc_object((id)ptr);
+            if(!o) goto undefined_val;
+
 			sv->type = T_OBJECT;
 			sv->subtype = 0;
-			sv->u.object = wrap_objc_object((id)ptr);
+			sv->u.object = o;
 			break;
-
+		}
 		default:
 			printf("whee! %s\n", type);
 	}
+
+	return sv;
+	
+	undefined_val:
+	
+		sv->type = T_INT;
+		sv->subtype = 1;
+		sv->u.integer = 0;
 	
 	return sv;
 	
@@ -331,11 +344,11 @@ struct object * wrap_objc_object(id r)
   struct program * prog;
   struct objc_dynamic_class * pc; 
   struct pike_string * ps;
-  if(!r) {printf("wrap_objc_object: no object!\n"); return NULL; }
-  if(!r->isa) printf("wrap_objc_object: no class!\n");
+
+  if(!r || !r->isa) { return NULL; }
   
   /* TODO: Do we need to make these methods in PiObjCObject hidden? */
-  if([r respondsToSelector: SELUID("__ObjCgetPikeObject")])
+  else if([r respondsToSelector: SELUID("__ObjCgetPikeObject")])
   {
 	o = [r __ObjCgetPikeObject];
   }
@@ -363,8 +376,7 @@ struct program * wrap_objc_class(Class r)
   struct program * prog;
   struct objc_dynamic_class * pc; 
   struct pike_string * ps;
-  if(!r) {printf("wrap_objc_class: no object!\n"); return NULL; }
-  if(!r->isa) printf("wrap_objc_class: no class!\n");
+  if(!r || !r->isa)  { return NULL; }
 
   push_text(r->name);
 
