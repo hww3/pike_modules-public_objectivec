@@ -733,7 +733,7 @@ struct program * pike_low_create_objc_dynamic_class(char * classname)
       snprintf(sg, vl+8, "`->var_%s", vn);
       snprintf(ss, vl+9, "`->var_%s=", vn);
     
-      printf("registering var %s\n", vn);
+//      printf("registering var %s\n", vn);
 
       quick_add_function((const char *)sg, vl+7, (void *)quick_make_stub(vn, low_f_objc_dynamic_getter), 
                  lfun_getter_type_string, 

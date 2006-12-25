@@ -21,7 +21,7 @@
 	
 	add_ref(array);
 
-    printf("[OC_Array initWithPikeArray:]\n");	
+//    printf("[OC_Array initWithPikeArray:]\n");	
 	return self;
 }
 
@@ -49,27 +49,27 @@
 
 -(int)count
 {
-    printf("[OC_Array count]\n");	
+//    printf("[OC_Array count]\n");	
 	return array->size;
 }
 
 - (id)objectAtIndex:(int)idx
 {
-	printf("[OC_Array objectAtIndex: %d]\n", idx);	
+//	printf("[OC_Array objectAtIndex: %d]\n", idx);	
     
 	if(idx >= array->size) return nil;
-	printf("[OC_Array objetAtIndex:] converting to id.\n");
+//	printf("[OC_Array objetAtIndex:] converting to id.\n");
 	
 	id x = svalue_to_id(&(ITEM(array)[idx]));
 
-	printf("[OC_Array objetAtIndex:] finished converting to id.\n");
+//	printf("[OC_Array objetAtIndex:] finished converting to id.\n");
     
     return x;
 }
 
 -(void)replaceObjectAtIndex:(int)idx withObject:newValue
 {
-	printf("[OC_Array replaceObjectAtIndex:]\n");	
+//	printf("[OC_Array replaceObjectAtIndex:]\n");	
     
 	array_set_index(array, idx, id_to_svalue(newValue));
 }
