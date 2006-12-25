@@ -1,0 +1,15 @@
+AC_INIT(coredata_config.h.in)
+AC_CONFIG_HEADER(coredata_config.h)
+
+AC_MODULE_INIT()
+
+AC_C_CONST
+
+AC_CHECK_HEADERS(objc/objc-runtime.h)
+AC_CHECK_LIB(objc, class_createInstance)
+
+AC_FUNC_ALLOCA
+
+
+AC_OUTPUT(Makefile)
+

@@ -1,0 +1,6 @@
+#include <piobjc.h>
+
+PIKEFUN void foo()
+{
+  printf("foo!\n");
+}
