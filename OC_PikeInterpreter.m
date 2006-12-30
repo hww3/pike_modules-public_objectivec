@@ -1,5 +1,27 @@
 #import "OC_PikeInterpreter.h"
 #import "piobjc.h"
+#import <Foundation/NSString.h>
+
+static char master_location[MAXPATHLEN*2];
+
+
+static void set_master(const char *file)
+{
+  if (strlen(file) >= MAXPATHLEN*2 ) {
+    fprintf(stderr, "Too long path to master: \"%s\" (limit:%"PRINTPTRDIFFT"d)\n",
+            file, MAXPATHLEN*2 );
+    exit(1);
+  }
+  strcpy(master_location, file);
+}
+
+
+static void set_default_master(void)
+{
+    set_master(getenv("PIKE_MASTER"));  
+}
+
+
 
 @implementation OC_PikeInterpreter
 - (id) init {
@@ -48,7 +70,7 @@
 	struct object *m;
     char ** argv = NULL;
 
-	set_default_master();
+
 	init_pike(argv, [master_location UTF8String]);
 	init_pike_runtime(exit);
 
@@ -111,9 +133,101 @@
     return YES;	
 }
 
+- (struct program *)compileString: (id)code
+{
+	struct program * p = NULL;
+	push_text([code UTF8String]);
+    f_utf8_to_string(1);
+	f_compile(1);
+	if(Pike_sp[-1].type==T_PROGRAM)
+	{
+  	  p = Pike_sp[-1].u.program;
+	  add_ref(p);
+    }
+	pop_n_elems(1);
+	return p;	
+}
+
+- (struct svalue *)evalString: (id)expression
+{
+    int i;
+    struct object * o;
+    struct program * p;
+    struct svalue * s;
+
+	id c = [[NSMutableString alloc] initWithCapacity: 200];
+	[c retain];
+	[c setString: @"mixed foo(){ return("];
+	[c appendString: expression];
+	[c appendString: @");}"];
+
+    p = [self compileString: c];
+
+    [c release];
+
+    if(!p) return NULL;
+ 
+	i=find_identifier("foo", p);
+
+    o = low_clone(p);
+
+    apply_low(o, i, 0);
+
+    s = malloc(sizeof(struct svalue));
+    assign_svalue(s, Pike_sp-1);    
+    if(o)
+      free_object(o);
+    free_program(p);
+    pop_stack();
+
+    return s;
+}
+
 - (BOOL)isStarted
 {
 	return (is_started?YES:NO);
 }
 
 @end /* OC_PikeInterpreter */
+
+/*
+
+	following is a simple example of how to use OC_PikeInterpreter to embed a pike interpreter into your application.
+
+*/
+
+/*
+#import <PikeInterpreter/OC_PikeInterpreter.h>
+#import <Foundation/NSString.h>
+
+int main()
+{
+  id i;
+  struct svalue * sv;
+
+  // required for console mode objective c applications
+  NSAutoreleasePool *innerPool = [[NSAutoreleasePool alloc] init];
+
+  // these 3 lines set up and start the interpreter.
+  i = [OC_PikeInterpreter sharedInterpreter];
+  [i setMaster: @"/usr/local/pike/7.7.30/lib/master.pike"];
+  [i startInterpreter];
+
+  // ok, now that we have things set up, let's use it.
+  // first, an example of calling pike c level apis directly.  
+  f_version(0);
+  printf("%s\n", Pike_sp[-1].u.string->str);
+  pop_stack();
+
+  // next, we'll demonstrate one of the convenience functions available
+  sv = [i evalString: @"1+2"];
+  printf("type: %d, value: %d\n", sv->type, sv->u.integer);
+  free_svalue(sv);
+
+  // finally, we clean up.
+  [i stopInterpreter];
+  [innerPool release];
+  return 0;
+}
+
+*/
