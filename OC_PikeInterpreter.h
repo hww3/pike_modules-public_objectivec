@@ -15,6 +15,7 @@
 - (int)startInterpreter;
 - (BOOL)isStarted;
 - (BOOL)stopInterpreter;
+- (struct program *)compileString: (id)code;
+- (struct svalue *)evalString: (id)expression;
 
-
-@end /* interface OC_MappingEnumerator */
+@end /* interface OC_PikeInterpreter */
