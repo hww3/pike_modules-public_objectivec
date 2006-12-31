@@ -740,7 +740,7 @@ struct svalue * get_func_by_selector(struct object * pobject, SEL aSelector)
   }   
   funname[ind] = '\0';
 
-  printf("get_func_by_selector: %s\n", funname);
+  printf("get_func_by_selector: %s ", funname);
 
   // do we need to do this?
   push_text(funname);
@@ -751,12 +751,15 @@ struct svalue * get_func_by_selector(struct object * pobject, SEL aSelector)
 
   if(sv2->type == PIKE_T_FUNCTION) // jackpot!
   {
+	printf("yes\n");
     if(!sv2->u.efun) { printf("no fun!\n");}
     else
-	    return sv2;
+	  return sv2;
 //    printf("Pike_sp[-1]: <%p> <%D>\n", Pike_sp[-1], &Pike_sp[-1]);
 //    printf("**> fun refs: %d\n\n", Pike_sp[-1].u.efun->refs); 
   }
+
+printf("no\n");
 
   free_svalue(sv2);
   return NULL;

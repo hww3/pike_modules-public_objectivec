@@ -1,9 +1,7 @@
 #import "OC_PikeInterpreter.h"
 #import "piobjc.h"
 #import <Foundation/NSString.h>
-
-static char master_location[MAXPATHLEN*2];
-
+#import <Foundation/NSBundle.h>
 
 static void set_master(const char *file)
 {
@@ -12,7 +10,7 @@ static void set_master(const char *file)
             file, MAXPATHLEN*2 );
     exit(1);
   }
-  strcpy(master_location, file);
+//  strcpy(master_location, file);
 }
 
 
@@ -35,10 +33,10 @@ static void set_default_master(void)
         self = [super init];
         if (self) {
             sharedInstance = [self retain];
-			
+			master_location = NULL;
         }
     }
-	
+
     return self;
 }
 
@@ -69,11 +67,35 @@ static void set_default_master(void)
 	int num = 0;
 	struct object *m;
     char ** argv = NULL;
+	
+	id ml;
+	id this_bundle;
+	this_bundle = [NSBundle bundleForClass: [self class]];
 
+	if(!this_bundle || this_bundle == nil)
+	{
+		NSException * exception = [NSException exceptionWithName:@"Error finding bundle!" reason:@"bundleForClass: returned nil." userInfo: nil];
+		@throw exception;
+	}
+		
+	if(!master_location)
+	{
+ 	  ml = [[NSMutableString alloc] initWithCapacity: 200];
+	  [ml setString: [this_bundle resourcePath]];
+	  [ml appendString: @"/lib/master.pike"];
+
+	  [self setMaster: ml];
+		
+	  [ml release];
+    }
 
 	init_pike(argv, [master_location UTF8String]);
 	init_pike_runtime(exit);
 
+	add_pike_string_constant("__embedded_resource_directory",
+								[[this_bundle resourcePath] UTF8String],
+								strlen([[this_bundle resourcePath] UTF8String]));
+								
 	add_pike_string_constant("__master_cookie",
 	                           [master_location UTF8String], 
 				strlen([master_location UTF8String]));
@@ -193,6 +215,13 @@ static void set_default_master(void)
 /*
 
 	following is a simple example of how to use OC_PikeInterpreter to embed a pike interpreter into your application.
+
+      gcc -o PikeInterpreter OC_PikeInterpreter.o  -framework Cocoa  -Wl,-single_module -compatibility_version 1 \
+        -current_version 1 -install_name /Users/hww3/Library/Frameworks/PikeInterpreter.framework/Versions/A/PikeInterpreter \
+        -dynamiclib -mmacosx-version-min=10.4 -isysroot /Developer/SDKs/MacOSX10.4u.sdk ../../Pike/7.7/build/libpike.dylib
+	  gcc -I /usr/local/pike/7.7.30/include/pike/ -I . -Ilibffi -Ilibffi/include -F PikeInterpreter -c test.m -o test.o
+	  gcc test.o -o test -framework PikeInterpreter -L/Users/hww3/Pike/7.7/build -framework Foundation -lpike -lobjc
+
 
 */
 
