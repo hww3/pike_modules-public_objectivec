@@ -29,7 +29,7 @@ void f_objc_dynamic_create(Class cls, INT32 args)
   struct svalue sval;
   struct pike_string * cname;
   
-//printf("dynamic_create: %s()\n", cls->isa->name);
+printf("dynamic_create: %s()\n", cls->isa->name);
   if(args!=0)
   {
     printf("args: %d\n", args);
@@ -50,8 +50,9 @@ void f_objc_dynamic_create(Class cls, INT32 args)
            for wrapping. In this case, we don't free up the alloced object, and have other odd behavior. */
 
   THIS->obj = [cls alloc];
+  [THIS->obj retain];
   THIS->is_instance = 1;
-  [cls retain];
+
 }
 
 void f_objc_dynamic_instance_method(INT32 args)
@@ -658,6 +659,17 @@ struct program * pike_create_objc_dynamic_class(struct pike_string * classname)
     return c->u.program;  
 }
 
+static void event_handler(int ev) {
+  switch(ev) {
+
+  case PROG_EVENT_INIT: objc_dynamic_class_init(); break;
+  case PROG_EVENT_EXIT: objc_dynamic_class_exit(); break;
+ 
+  default: break;
+  }
+}
+
+
 struct program * pike_low_create_objc_dynamic_class(char * classname)
 {
   char * ncn;
@@ -692,6 +704,7 @@ struct program * pike_low_create_objc_dynamic_class(char * classname)
   }
   
   start_new_program();
+
   add_string_constant("__objc_classname", classname, ID_STATIC);
   
   dclass_storage_offset = ADD_STORAGE(struct objc_dynamic_class);
@@ -765,7 +778,7 @@ struct program * pike_low_create_objc_dynamic_class(char * classname)
     if(rc)  rc(m);	
   }
 
-  while (methodList = class_nextMethodList(isa->isa, &iterator)) 
+  while ((methodList = class_nextMethodList(isa->isa, &iterator))) 
   {
     for (index = 0; index < methodList->method_count; index++) 
     {
@@ -810,7 +823,7 @@ struct program * pike_low_create_objc_dynamic_class(char * classname)
   methodList = 0;
   selector = 0;
 
-  while (methodList = class_nextMethodList(isa, &iterator)) 
+  while ((methodList = class_nextMethodList(isa, &iterator))) 
   {
     for (index = 0; index < methodList->method_count; index++) 
     {
@@ -848,7 +861,7 @@ struct program * pike_low_create_objc_dynamic_class(char * classname)
   }
 
   isa = isa->super_class;
-  while (isa && isa->super_class && isa->super_class != isa)
+  while ((isa && isa->super_class && isa->super_class != isa))
   {
     iterator = 0;
     methodList = 0;
@@ -899,10 +912,13 @@ struct program * pike_low_create_objc_dynamic_class(char * classname)
   
   free_mapping(m);
   /* finally, we add the low level setup callbacks */
-  set_init_callback(objc_dynamic_class_init);
-  set_exit_callback(objc_dynamic_class_exit);
+
+  pike_set_prog_event_callback(event_handler);
+  //set_init_callback(objc_dynamic_class_init);
+  //set_exit_callback(objc_dynamic_class_exit);
 
   dclass = end_program();
-
+//  add_ref(dclass);
   return dclass;
 }
+

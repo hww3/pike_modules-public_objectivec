@@ -82,8 +82,9 @@ struct svalue * object_dispatch_method(id obj, SEL select, struct objc_method * 
 
   o = id_to_svalue(r);
   
-	if(! [(id)r isKindOfClass: [NSAutoreleasePool class]])
-    	r = [(id)r retain];
+// wrap_objc_object() already retains the thing.
+//	if(! [(id)r isKindOfClass: [NSAutoreleasePool class]])
+//    	r = [(id)r retain];
 
   return o;
 }
@@ -363,10 +364,11 @@ struct object * wrap_objc_object(id r)
     ps = make_shared_string(r->isa->name);
     prog = pike_create_objc_dynamic_class(ps);
     if(!prog) return NULL;
-    o = clone_object(prog, 0);
+
+
+    o = low_clone(prog);
     pc = OBJ2_DYNAMIC_OBJECT(o);
     pc->obj = (id)r;
-
   // we need to retain the object, because the dynamic_class object 
   // will free it when the object is destroyed.
     [r retain];
@@ -759,7 +761,7 @@ struct svalue * get_func_by_selector(struct object * pobject, SEL aSelector)
 //    printf("**> fun refs: %d\n\n", Pike_sp[-1].u.efun->refs); 
   }
 
-printf("no\n");
+  printf("no\n");
 
   free_svalue(sv2);
   return NULL;
