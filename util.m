@@ -298,7 +298,9 @@ SEL selector_from_pikename(struct pike_string * name)
     }  
     selectorName[ind] = '\0';
     select = sel_registerName(selectorName);
-  
+
+  free(selectorName);  
+
   return select;
 }
 

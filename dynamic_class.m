@@ -29,7 +29,7 @@ void f_objc_dynamic_create(Class cls, INT32 args)
   struct svalue sval;
   struct pike_string * cname;
   
-printf("dynamic_create: %s()\n", cls->isa->name);
+//printf("dynamic_create: %s()\n", cls->isa->name);
   if(args!=0)
   {
     printf("args: %d\n", args);
@@ -62,7 +62,7 @@ void f_objc_dynamic_instance_method(INT32 args)
   id obj;
   struct svalue sval;
   struct objc_object_holder_struct * pobj;
-  SEL select;
+  SEL select = NULL;
 
   name = ID_FROM_INT(Pike_fp->current_object->prog, Pike_fp->fun)->name;
   prog = Pike_fp->current_object->prog;
@@ -71,8 +71,8 @@ void f_objc_dynamic_instance_method(INT32 args)
   select = selector_from_pikename(name);
 
   f_call_objc_method(args, 1, select, obj);
-  if(select)
-    free(select);
+//  if(select)
+//     free(select);
 }
 
 void low_f_call_objc_class_method(ffi_cif* cif, void* resp, void** args, void* userdata)
@@ -131,7 +131,7 @@ void f_call_objc_method(INT32 args, int is_instance, SEL select, id obj)
 	
     pool = [global_autorelease_pool getAutoreleasePool];
     
-//    printf("select: %s, is_instance: %d\n", (char *) select, is_instance);
+    //printf("select: %s, is_instance: %d\n", (char *) select, is_instance);
     if(is_instance)
       method = class_getInstanceMethod(obj->isa, select);
     else
@@ -147,7 +147,7 @@ void f_call_objc_method(INT32 args, int is_instance, SEL select, id obj)
 
     arguments = method_getNumberOfArguments(method);
 
-//    printf("%s(%d args), expecting %d\n", (char * ) select, args, arguments-2);
+    //printf("%s(%d args), expecting %d\n", (char * ) select, args, arguments-2);
 
     if((args) != (arguments-2))
       Pike_error("incorrect number of arguments to method provided.\n");
@@ -165,7 +165,7 @@ void f_call_objc_method(INT32 args, int is_instance, SEL select, id obj)
       sv = Pike_sp-args+(x-2);
 
       method_getArgumentInfo(method, x, (const char **)(&type), &offset);
-// printf("argument %d %s\n", x, type);
+      //printf("argument %d %s\n", x, type);
       while((*type)&&(*type=='r' || *type =='n' || *type =='N' || *type=='o' || *type=='O' || *type =='V'))
   		type++;
 
@@ -357,7 +357,7 @@ void f_call_objc_method(INT32 args, int is_instance, SEL select, id obj)
     while((*type)&&(*type=='r' || *type =='n' || *type =='N' || *type=='o' || *type=='O' || *type =='V'))
   		type++;
 
-//    printf("SENDING MESSAGE %s WITH RETURN TYPE: %s\n", select, type);
+    //printf("SENDING MESSAGE %s WITH RETURN TYPE: %s\n", select, type);
 
     pop_n_elems(args);
 
@@ -372,6 +372,7 @@ void f_call_objc_method(INT32 args, int is_instance, SEL select, id obj)
   	  THREADS_DISALLOW();
 //printf("PUSHING INT: %d\n", *(INT_TYPE *)result);
           push_int(*(INT_TYPE *)result);
+		free(result);
           break;
 
        case 'C':
@@ -380,6 +381,7 @@ void f_call_objc_method(INT32 args, int is_instance, SEL select, id obj)
   	 *(INT_TYPE *)result =     (INT_TYPE)((pike_objc_unsigned_char_msgSendv)objc_msgSendv)(obj,select,method_getSizeOfArguments(method),argumentList);
   	 THREADS_DISALLOW();
          push_int(*(INT_TYPE *)result);
+		free(result);
          break;
 
        case 'i':
@@ -388,6 +390,7 @@ void f_call_objc_method(INT32 args, int is_instance, SEL select, id obj)
   	 *(INT_TYPE *)result =      (INT_TYPE)((pike_objc_int_msgSendv)objc_msgSendv)(obj,select,method_getSizeOfArguments(method),argumentList);
   	 THREADS_DISALLOW();
         push_int(*(INT_TYPE *)result);
+		free(result);
         break;
       // TODO: fix the casting... should we support auto objectize for bignums?
 
@@ -397,6 +400,7 @@ void f_call_objc_method(INT32 args, int is_instance, SEL select, id obj)
         *(INT_TYPE *)result =     (INT_TYPE)((pike_objc_long_msgSendv)objc_msgSendv)(obj,select,method_getSizeOfArguments(method),argumentList);
         THREADS_DISALLOW();
         push_int(*(INT_TYPE *)result);
+		free(result);
         break;
 
       case 'L':
@@ -405,6 +409,7 @@ void f_call_objc_method(INT32 args, int is_instance, SEL select, id obj)
   	*(INT_TYPE *)result = (INT_TYPE)((pike_objc_unsigned_long_msgSendv)objc_msgSendv)(obj,select,method_getSizeOfArguments(method),argumentList);
         THREADS_DISALLOW();
         push_int(*(INT_TYPE *)result);
+		free(result);
         break;
 
       case 'I':
@@ -413,6 +418,7 @@ void f_call_objc_method(INT32 args, int is_instance, SEL select, id obj)
         *(INT_TYPE *)result = (INT_TYPE)((pike_objc_unsigned_int_msgSendv)objc_msgSendv)(obj,select,method_getSizeOfArguments(method),argumentList);
         THREADS_DISALLOW();
         push_int(*(INT_TYPE *)result);
+		free(result);
         break;
 
       case 'd':
@@ -421,6 +427,7 @@ void f_call_objc_method(INT32 args, int is_instance, SEL select, id obj)
         *(FLOAT_TYPE *)result = (FLOAT_TYPE)((pike_objc_double_msgSendv)objc_msgSendv)(obj,select,method_getSizeOfArguments(method),argumentList);
         THREADS_DISALLOW();
         push_float(*(FLOAT_TYPE *)result);
+		free(result);
         break;
 
       case 'f':
@@ -429,6 +436,7 @@ void f_call_objc_method(INT32 args, int is_instance, SEL select, id obj)
         *(FLOAT_TYPE *)result =  (FLOAT_TYPE)((pike_objc_float_msgSendv)objc_msgSendv)(obj,select,method_getSizeOfArguments(method),argumentList);
         THREADS_DISALLOW();
         push_float(*(FLOAT_TYPE *)result);
+		free(result);
         break;
 
       case 'q':
@@ -437,6 +445,7 @@ void f_call_objc_method(INT32 args, int is_instance, SEL select, id obj)
         *(FLOAT_TYPE *)result = (FLOAT_TYPE)((pike_objc_long_long_msgSendv)objc_msgSendv)(obj,select,method_getSizeOfArguments(method),argumentList);
         THREADS_DISALLOW();
         push_float(*(FLOAT_TYPE *)result);
+		free(result);
         break;
 
       case 'Q':
@@ -445,6 +454,7 @@ void f_call_objc_method(INT32 args, int is_instance, SEL select, id obj)
         *(FLOAT_TYPE *)result =     (FLOAT_TYPE)((pike_objc_unsigned_long_long_msgSendv)objc_msgSendv)(obj,select,method_getSizeOfArguments(method),argumentList);
         THREADS_DISALLOW();
         push_float(*(FLOAT_TYPE *)result);
+		free(result);
         break;
 
       case 's':
@@ -453,6 +463,7 @@ void f_call_objc_method(INT32 args, int is_instance, SEL select, id obj)
         *(INT_TYPE *)result =     (INT_TYPE)((pike_objc_short_msgSendv)objc_msgSendv)(obj,select,method_getSizeOfArguments(method),argumentList);
         THREADS_DISALLOW();
         push_int(*(INT_TYPE *)result);
+		free(result);
         break;
 
       case 'S':
@@ -461,6 +472,7 @@ void f_call_objc_method(INT32 args, int is_instance, SEL select, id obj)
         *(INT_TYPE *)result =     (INT_TYPE)((pike_objc_unsigned_short_msgSendv)objc_msgSendv)(obj,select,method_getSizeOfArguments(method),argumentList);
         THREADS_DISALLOW();
         push_int(*(INT_TYPE *)result);
+		free(result);
         break;
 
       case 'v':
@@ -477,6 +489,7 @@ void f_call_objc_method(INT32 args, int is_instance, SEL select, id obj)
         result = (char *)objc_msgSendv(obj,select,method_getSizeOfArguments(method),argumentList);
         THREADS_DISALLOW();
         push_text(result);
+		free(result);
         break;
 
       case '@':
@@ -488,7 +501,8 @@ void f_call_objc_method(INT32 args, int is_instance, SEL select, id obj)
           if(o)
           {
             push_svalue(o);
-			if(o) free(o);
+//			printf("o: %p\n", o);
+			free(o);
           }
 		  else
 		  {
@@ -497,6 +511,7 @@ void f_call_objc_method(INT32 args, int is_instance, SEL select, id obj)
         }
         break;
 
+// TODO: do we need to look for memory leaks here?
       case '#':
         {
           struct object * o;

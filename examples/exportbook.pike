@@ -8,13 +8,13 @@ array fields = ({
 
 int main()
 {
-  sleep(100); return 0;
 
-/*
   object book = Cocoa.ABAddressBook.sharedAddressBook();
+
   do {
 
   object p = book->people();
+
   foreach(p;; object person)
   {
     array row = ({});
@@ -28,10 +28,8 @@ int main()
     write((row*",") + "\n");
   }
 gc();
-  } while(0);
+  } while(1);
 
-sleep(200);
   return 0;
-*/
 }
 

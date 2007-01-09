@@ -48,6 +48,7 @@ PIKEFUN mixed `[](int key)
     sv = id_to_svalue(v);
     push_svalue(sv);
     free_svalue(sv);
+	free(sv);
   }
 }
 
