@@ -13,7 +13,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * $Id: PiObjCObject.m,v 1.22 2006-12-22 04:26:21 hww3 Exp $
+ * $Id: PiObjCObject.m,v 1.23 2007-01-09 03:00:29 hww3 Exp $
  */
 
 /*
@@ -395,6 +395,7 @@ void dispatch_pike_method(struct object * pobject, SEL sel, NSInvocation * anInv
     piobjc_set_return_value(sig, anInvocation, &Pike_sp[-1]);
     printf(" done.\n");
     free_svalue(c);
+    free(c);
   }
   else
   {
@@ -444,6 +445,7 @@ void dispatch_pike_method(struct object * pobject, SEL sel, NSInvocation * anInv
 */
         encoding = (char *)get_signature_for_func(func, aSelector);
         free_svalue(func);
+		free(func);
       }
     }
     else
@@ -458,6 +460,7 @@ void dispatch_pike_method(struct object * pobject, SEL sel, NSInvocation * anInv
       {
         encoding = (char *)get_signature_for_func(func, aSelector);
         free_svalue(func);
+		free(func);
       }
       
       /* Restore */
@@ -484,6 +487,7 @@ void dispatch_pike_method(struct object * pobject, SEL sel, NSInvocation * anInv
       {
         encoding = (char *)get_signature_for_func(func, aSelector);
         free_svalue(func);
+		free(func);
       }
       
       cleanup_interpret();      /* Must be done before EXIT_THREAD_STATE */
@@ -526,7 +530,7 @@ void dispatch_pike_method(struct object * pobject, SEL sel, NSInvocation * anInv
 
   func = get_func_by_selector(pobject, aSelector);
 
-  if(func) { /*printf("YES (1)\n"); */ free_svalue(func); return YES;}
+  if(func) { /*printf("YES (1)\n"); */ free_svalue(func); free(func); return YES;}
   else if(has_objc_method(self, aSelector)) { /*printf("YES (2)\n");*/ return YES;}
   else { /*printf("NO\n");*/  return NO; }
 }

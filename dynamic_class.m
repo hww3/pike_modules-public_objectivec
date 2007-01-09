@@ -71,6 +71,8 @@ void f_objc_dynamic_instance_method(INT32 args)
   select = selector_from_pikename(name);
 
   f_call_objc_method(args, 1, select, obj);
+  if(select)
+    free(select);
 }
 
 void low_f_call_objc_class_method(ffi_cif* cif, void* resp, void** args, void* userdata)
@@ -262,7 +264,7 @@ void f_call_objc_method(INT32 args, int is_instance, SEL select, id obj)
             // if we don't have a wrapped object, we should make a pike object wrapper.
             // if(!wrapper)
             // seems that PiObjCObject newWithPikeObject does unwrapping. 
-            add_ref(o);
+//            add_ref(o);
 //            add_ref(o->prog);
     	    wrapper = [PiObjCObject newWithPikeObject: o];
             marg_setValue(argumentList, offset, id, wrapper);
@@ -486,6 +488,7 @@ void f_call_objc_method(INT32 args, int is_instance, SEL select, id obj)
           if(o)
           {
             push_svalue(o);
+			if(o) free(o);
           }
 		  else
 		  {
@@ -596,6 +599,8 @@ void f_objc_dynamic_getter(char * vn, INT32 args)
   sv = ptr_to_svalue(var, vardef->ivar_type);
 
   push_svalue(sv);
+
+  free(sv);
 }
 
 void f_objc_dynamic_setter(char * vn, INT32 args)
@@ -759,7 +764,7 @@ struct program * pike_low_create_objc_dynamic_class(char * classname)
     
       push_text(vn);
       // add_ref(Pike_sp[-1].u.string);
-
+//	  free(vn);
       push_int(1);
       mapping_string_insert(m, Pike_sp[-2].u.string, Pike_sp-1);
       pop_n_elems(2);
@@ -807,7 +812,6 @@ struct program * pike_low_create_objc_dynamic_class(char * classname)
       push_int(1);
       mapping_string_insert(m, Pike_sp[-2].u.string, Pike_sp-1);
       pop_n_elems(2);
-
       free(pikename);
     }
     }
@@ -854,8 +858,8 @@ struct program * pike_low_create_objc_dynamic_class(char * classname)
          mapping_string_insert(m, Pike_sp[-2].u.string, Pike_sp-1);
          pop_n_elems(2);
 
-//        free(pikename);
-//        free(psig);
+        free(pikename);
+        free(psig);
       }
     }
   }
@@ -900,8 +904,8 @@ struct program * pike_low_create_objc_dynamic_class(char * classname)
            mapping_string_insert(m, Pike_sp[-2].u.string, Pike_sp-1);
            pop_n_elems(2);
 
-//          free(pikename);
-//          free(psig);
+          free(pikename);
+          free(psig);
         }
       }
     }

@@ -1,5 +1,4 @@
 import Public.ObjectiveC;
-
 array fields = ({
   Cocoa.ABAddressBook.kABLastNameProperty,
   Cocoa.ABAddressBook.kABFirstNameProperty,
@@ -7,15 +6,15 @@ array fields = ({
 });
 
 
-
 int main()
 {
-  object book = Cocoa.ABAddressBook.sharedAddressBook();
+  sleep(100); return 0;
 
+/*
+  object book = Cocoa.ABAddressBook.sharedAddressBook();
   do {
 
   object p = book->people();
-
   foreach(p;; object person)
   {
     array row = ({});
@@ -29,7 +28,10 @@ int main()
     write((row*",") + "\n");
   }
 gc();
-  } while(1);
+  } while(0);
+
+sleep(200);
   return 0;
+*/
 }
 

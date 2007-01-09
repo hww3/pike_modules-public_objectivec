@@ -1,5 +1,4 @@
 #import "OC_PikeInterpreter.h"
-#import "piobjc.h"
 #import <Foundation/NSString.h>
 #import <Foundation/NSBundle.h>
 

@@ -111,12 +111,14 @@ void add_mixin_callback(const char * classname, MixinRegistrationCallback c)
 EXTRA
 {
   id init_pool;
-
+  id p;
+ 
       if (![NSThread isMultiThreaded]) {
+	p = [[OC_NSAutoreleasePoolCollector alloc] init];
 //	    printf("going Multi-threaded for cocoa.\n");
         [NSThread detachNewThreadSelector:@selector(targetForBecomingMultiThreaded:)
-            toTarget:[[OC_NSAutoreleasePoolCollector alloc] init] withObject:nil];
-
+            toTarget:p withObject:nil];
+	[p release];
       }
 
   init_pool = [[NSAutoreleasePool alloc] init];

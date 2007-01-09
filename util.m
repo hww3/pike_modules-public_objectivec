@@ -103,13 +103,15 @@ struct svalue * low_id_to_svalue(id obj, int prefer_native)
 		{
 			NSStringEncoding enc;		  
 			struct pike_string * str;
+			char * u8s;
 			
 		    enc =  NSUTF8StringEncoding;
 		  
 	//		printf("got a string to convert.\n");
-			str = make_shared_binary_string([obj UTF8String], [obj lengthOfBytesUsingEncoding: enc]);
-
-			ref_push_string(str);
+			u8s = [obj UTF8String];
+			str = make_shared_binary_string(u8s, [obj lengthOfBytesUsingEncoding: enc]);
+			free(u8s);
+//			ref_push_string(str);
 			f_utf8_to_string(1);
 			
 			sv->type = T_STRING;
@@ -126,7 +128,7 @@ struct svalue * low_id_to_svalue(id obj, int prefer_native)
 		struct array * a;
 		
 		a = [obj __ObjCgetPikeArray];
-        add_ref(a);
+        // add_ref(a);
 		sv->type = T_ARRAY;
 		sv->subtype = 0;
 		sv->u.array = a;
@@ -137,7 +139,7 @@ struct svalue * low_id_to_svalue(id obj, int prefer_native)
 		struct mapping * m;
 		
 		m = [obj __ObjCgetPikeMapping];
-        add_ref(m);
+        // add_ref(m);
 		sv->type = T_MAPPING;
 		sv->subtype = 0;
 		sv->u.mapping = m;
@@ -147,7 +149,7 @@ struct svalue * low_id_to_svalue(id obj, int prefer_native)
 
     if(o)
     {
-	    add_ref(o);
+//	    add_ref(o);
 		sv->type = T_OBJECT;
 		sv->subtype = 0;
 		sv->u.object = o;
@@ -195,8 +197,8 @@ id svalue_to_id(struct svalue * sv)
 			  NSStringEncoding enc;
 			  enc =  NSUTF8StringEncoding;
 			  push_svalue(sv);
-			  add_ref(sv->u.string);
-			  add_ref(sv->u.string);
+//			  add_ref(sv->u.string);
+//			  add_ref(sv->u.string);
 			  f_string_to_utf8(1);
 			  sv = &Pike_sp[-1];
 			  rv = [[NSString alloc] initWithBytes: sv->u.string->str length: sv->u.string->len encoding: enc];
@@ -207,14 +209,14 @@ id svalue_to_id(struct svalue * sv)
 			break;
 
 		case T_ARRAY:
-			add_ref(sv->u.array);
+			// add_ref(sv->u.array);
 			rv = [OC_Array newWithPikeArray: sv->u.array];
 			[rv autorelease];
 		
 			break;
 			
 		case T_MAPPING:
-			add_ref(sv->u.mapping);
+			//add_ref(sv->u.mapping);
 			rv = [OC_Mapping newWithPikeMapping: sv->u.mapping];
 			[rv autorelease];
 		
@@ -223,7 +225,7 @@ id svalue_to_id(struct svalue * sv)
 		case T_OBJECT:
 	    	{
 		  		struct object * o;
-		  		add_ref(sv->u.object);
+		  		//add_ref(sv->u.object);
 		  		o = sv->u.object;
 		  		rv = unwrap_objc_object(o);
 		  		if(!rv)
@@ -369,8 +371,9 @@ struct object * wrap_objc_object(id r)
     o = low_clone(prog);
     pc = OBJ2_DYNAMIC_OBJECT(o);
     pc->obj = (id)r;
-  // we need to retain the object, because the dynamic_class object 
+  // we need to  the object, because the dynamic_class object 
   // will free it when the object is destroyed.
+  if(! [(id)r isKindOfClass: [NSAutoreleasePool class]])
     [r retain];
 
     pc->is_instance = 1;
@@ -562,6 +565,7 @@ int push_objc_types(NSMethodSignature* sig, NSInvocation* invocation)
            sval = id_to_svalue(cobj);
 		        args_pushed++;
             push_svalue(sval);
+			free(sval);
 //           free(buf);
 	       break;
 	     case '#':
@@ -764,6 +768,7 @@ struct svalue * get_func_by_selector(struct object * pobject, SEL aSelector)
   printf("no\n");
 
   free_svalue(sv2);
+  free(sv2);
   return NULL;
 
 }
@@ -1114,84 +1119,4 @@ char * pike_signature_from_objc_signature(struct objc_method * nssig, int * lenp
 
   *lenptr = spsig;
   return psigo;
-}
-
-
-void foo(char * type)
-{
-    switch(*type)
-    {
-      case 'c': // char
-        break;
-
-      case 'i': // int
-        break;
-
-      case 's': // short
-        break;
-
-      case 'l': // long
-        break;
-
-      case 'q': // long long
-        break;
-
-      case 'C': // unsigned char
-        break;
-
-      case 'I': // unsigned int
-        break;
-
-      case 'S': // unsigned short
-        break;
-
-      case 'L': // unsigned long
-        break;
-
-      case 'Q': // unsigned long long
-        break;
-
-      case 'f': // float
-        break;
-
-      case 'd': // double
-        break;
-
-      case 'B': // bool
-        break;
-
-      case 'v': // void
-        break;
-
-      case '*': // char *
-        break;
-
-      case '@': // object
-        break;
-
-      case '#': // class
-        break;
-
-      case ':': // SEL
-        break;
-
-      case '[': // array
-        break;
-
-      case '{': // struct
-        break;
-
-      case '(': // union
-        break;
-
-      case 'b':  // bit field
-        break;
-
-      case '^':  // pointer
-        break;
-
-      case '?':  // unknown (function ptr)
-        break;
-    }
-
 }
