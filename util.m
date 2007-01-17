@@ -81,7 +81,8 @@ struct svalue * object_dispatch_method(id obj, SEL select, struct objc_method * 
   THREADS_DISALLOW();
 
   o = id_to_svalue(r);
-  
+  if(o && o->u.object)
+     printf("o': %d\n", o->u.object->refs);
 // wrap_objc_object() already retains the thing.
 //	if(! [(id)r isKindOfClass: [NSAutoreleasePool class]])
 //    	r = [(id)r retain];
@@ -145,11 +146,13 @@ struct svalue * low_id_to_svalue(id obj, int prefer_native)
 		sv->u.mapping = m;
 	}
 
-	o = wrap_objc_object(obj);
+	else 
+	  o = wrap_objc_object(obj);
 
     if(o)
     {
 //	    add_ref(o);
+//	printf("o'': %d\n",o->refs);
 		sv->type = T_OBJECT;
 		sv->subtype = 0;
 		sv->u.object = o;

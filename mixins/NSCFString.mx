@@ -3,13 +3,11 @@ MIXIN NSCFString
 
   PIKEFUN mixed cast(string t)
   {
+	char * str;
     pop_stack();
-    push_text([THIS->obj UTF8String]);   
+    str = [THIS->obj UTF8String];
+    push_text(str);   
   }
 
-  EXTRA
-  {
-//    printf("whee!!!\n");
-  }
 }
 

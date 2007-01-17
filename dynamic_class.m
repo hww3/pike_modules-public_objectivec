@@ -71,8 +71,6 @@ void f_objc_dynamic_instance_method(INT32 args)
   select = selector_from_pikename(name);
 
   f_call_objc_method(args, 1, select, obj);
-//  if(select)
-//     free(select);
 }
 
 void low_f_call_objc_class_method(ffi_cif* cif, void* resp, void** args, void* userdata)
@@ -82,13 +80,7 @@ void low_f_call_objc_class_method(ffi_cif* cif, void* resp, void** args, void* u
   m = (struct objc_class_method_desc *)userdata;
   pargs = *((INT32 *)args[0]);
 
-//  printf("low_f_call_objc_class_method: %d\n", pargs);
-
   f_call_objc_class_method(m, pargs);
-//  stack_dup();
-//  push_text(">> RETURNING FROM CLASS METHOD: %O\n");
-//  stack_swap();
-//  f_werror(2);
 }
 
 void low_f_objc_dynamic_class_sprintf(ffi_cif* cif, void* resp, void** args, void* userdata)
@@ -260,12 +252,7 @@ void f_call_objc_method(INT32 args, int is_instance, SEL select, id obj)
           if(sv->type==T_OBJECT)
           {
             struct object * o = sv->u.object;
-            // wrapper = unwrap_objc_object(o);
-            // if we don't have a wrapped object, we should make a pike object wrapper.
-            // if(!wrapper)
-            // seems that PiObjCObject newWithPikeObject does unwrapping. 
-//            add_ref(o);
-//            add_ref(o->prog);
+
     	    wrapper = [PiObjCObject newWithPikeObject: o];
             marg_setValue(argumentList, offset, id, wrapper);
   		    }
@@ -500,8 +487,10 @@ void f_call_objc_method(INT32 args, int is_instance, SEL select, id obj)
 
           if(o)
           {
-            push_svalue(o);
-//			printf("o: %p\n", o);
+			if(o->type == T_OBJECT && o->u.object)
+				push_object(o->u.object);
+  		    else 
+    		    push_svalue(o);
 			free(o);
           }
 		  else
@@ -574,12 +563,6 @@ void f_objc_dynamic_class_sprintf(Class cls, INT32 args)
   {
   }
   
-    sprintf(desc, "%s(%u)", cls->name, hash);
-
-
-    push_text(desc);
-    free(desc);
-
 }
 
 void low_f_objc_dynamic_getter(ffi_cif* cif, void* resp, void** args, void* userdata)
@@ -640,18 +623,24 @@ void objc_dynamic_class_init()
 
 void objc_dynamic_class_exit()
 {
+	printf("exiting: %s %p\n", THIS->obj->isa->name, Pike_fp->current_object);
  if(THIS->obj) [THIS->obj release];
 }
 
 int find_dynamic_program_in_cache(struct program * prog)
 {
+  int rv = 0;
   struct svalue * c = NULL;
+
   ref_push_program(prog);
   c = low_mapping_lookup(global_classname_cache, Pike_sp-1);	
   pop_stack();
 
-  if(c != NULL) return 1;
-  else return 0;
+  if(c && c->type == T_STRING) printf("type: %s\n", c->u.string->str);
+  if(c != NULL) { rv = 1; }
+  else rv = 0;
+  free_svalue(c);
+  return rv;
 }
 
 struct program * pike_create_objc_dynamic_class(struct pike_string * classname)
@@ -666,8 +655,9 @@ struct program * pike_create_objc_dynamic_class(struct pike_string * classname)
   {
     p = pike_low_create_objc_dynamic_class(classname->str);
     if(!p) return 0;
+
     ref_push_program(p);
-    //add_ref(classname);
+    add_ref(classname);
     mapping_string_insert(global_class_cache, classname, Pike_sp-1);
     push_string(classname);
     low_mapping_insert(global_classname_cache, Pike_sp-2, Pike_sp-1, 1);

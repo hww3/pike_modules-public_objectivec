@@ -10,7 +10,7 @@ PIKEFUN object _get_iterator()
 
 	if(Pike_sp[-1].type == T_PROGRAM)
 	{
-		push_object(Pike_fp->current_object);
+		ref_push_object(Pike_fp->current_object);
 		apply_svalue(Pike_sp-2, 1);
 		stack_swap();
 		pop_stack();
