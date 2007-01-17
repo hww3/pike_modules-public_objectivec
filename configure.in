@@ -10,6 +10,6 @@ AC_CHECK_LIB(objc, class_createInstance)
 
 AC_FUNC_ALLOCA
 
-
+AC_CONFIG_SUBDIRS(libffi)
 AC_OUTPUT(Makefile)
 
