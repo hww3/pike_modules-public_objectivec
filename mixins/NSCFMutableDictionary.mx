@@ -1,0 +1,75 @@
+#import <Foundation/NSDictionary.h>
+
+MIXIN NSCFMutableDictionary
+{
+
+PIKEFUN object _get_iterator()
+{
+	push_text("Public.ObjectiveC.NSDictionaryIterator");
+	SAFE_APPLY_MASTER("resolv", 1);
+
+	if(Pike_sp[-1].type == T_PROGRAM)
+	{
+		ref_push_object(Pike_fp->current_object);
+		apply_svalue(Pike_sp-2, 1);
+		stack_swap();
+		pop_stack();
+		
+		return;
+	}
+	else
+	{
+		push_int(0);
+	}
+
+}
+
+PIKEFUN mixed `[](mixed key)
+{
+  id k;
+  id v;
+  id m;
+
+  struct svalue * sv;
+
+  if(key->type == T_STRING)
+     printf("`[](%s)", key->u.string->str);
+
+  k = svalue_to_id(key);
+  
+  v = [THIS->obj objectForKey: k];
+
+  pop_stack();
+
+  if(!v)  
+    push_undefined();
+  else
+  {
+    sv = id_to_svalue(v);
+    push_svalue(sv);
+    free_svalue(sv);
+  }
+}
+
+
+PIKEFUN void `[]=(mixed key, mixed value)
+{
+  id k;
+  id v;
+  id m;
+
+  struct svalue * sv;
+
+  if(key->type == T_STRING)
+     printf("`[]=(%s)", key->u.string->str);
+
+  k = svalue_to_id(key);  
+  v = svalue_to_id(value);
+
+  [ THIS->obj setObject: v ForKey: k ];
+
+  pop_n_elems(args);
+ 
+}
+
+}

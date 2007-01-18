@@ -29,7 +29,7 @@ int main()
 //    person = 0;
   }
 //p=0;
-} while(0);
+} while(1);
 //book = 0;
 sleep(60);
   return 0;

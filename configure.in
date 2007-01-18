@@ -9,6 +9,16 @@ AC_CHECK_HEADERS(objc/objc-runtime.h)
 AC_CHECK_LIB(objc, class_createInstance)
 
 AC_FUNC_ALLOCA
+AC_MSG_CHECKING(processor architecture)
+if test `uname -p` = "i386" ; then
+OC_ARCH="x86"
+fi
+
+if test `uname -p` = "powerpc" ; then
+OC_ARCH="powerpc"
+fi
+AC_MSG_RESULT($OC_ARCH)
+AC_SUBST(OC_ARCH)
 
 AC_CONFIG_SUBDIRS(libffi)
 AC_OUTPUT(Makefile)

@@ -625,6 +625,8 @@ void objc_dynamic_class_exit()
 {
 	printf("exiting: %s %p\n", THIS->obj->isa->name, Pike_fp->current_object);
  if(THIS->obj) [THIS->obj release];
+ if(THIS->obj) [THIS->obj release];
+
 }
 
 int find_dynamic_program_in_cache(struct program * prog)

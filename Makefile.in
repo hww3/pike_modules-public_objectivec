@@ -1,16 +1,19 @@
-# $Id: Makefile.in,v 1.29 2007-01-09 03:00:29 hww3 Exp $
+# $Id: Makefile.in,v 1.30 2007-01-18 01:14:50 hww3 Exp $
 @make_variables@
 VPATH=@srcdir@:@srcdir@/../..:../..
-OBJS=ObjC.o dynamic_class.o util.o OC_Array.o OC_Mapping.o AppKit.o PiObjCObject.o objc_inject.o mach_override.o method_dispatch.o libffi/src/types.o libffi/src/prep_cif.o libffi/src/powerpc/ffi_darwin.o libffi/src/powerpc/darwin_closure.o libffi/src/powerpc/darwin.o _mixins.o 
+FFIOBJS=libffi/src/types.o libffi/src/prep_cif.o libffi/src/@OC_ARCH@/ffi_darwin.o libffi/src/@OC_ARCH@/darwin_closure.o libffi/src/@OC_ARCH@/darwin.o
+OBJS=ObjC.o dynamic_class.o util.o OC_Array.o OC_Mapping.o AppKit.o PiObjCObject.o objc_inject.o mach_override.o method_dispatch.o $(FFIOBJS)  _mixins.o 
 MODDIR=Public.pmod/
 MODNAME=ObjectiveC
 MODULE_PMOD_IN=module.pmod.in
+MODULE_CLEAN_EXTRA=$(FFIOBJS)
 AUTODOC_SRC_IN=objectivec.cmod
 MODULE_LDFLAGS=@LDFLAGS@ @LIBS@ -framework AddressBook -framework AppKit
 MODULE_CPPFLAGS=-Ilibffi -Ilibffi/include
 MODULE_CFLAGS=-fobjc-exceptions
 CONFIG_HEADERS=@CONFIG_HEADERS@
 MODULE_INSTALL=foobar
+
 
 override:  compile0
         @:
@@ -19,6 +22,49 @@ foobar:
 	echo "hey!"
 
 @dynamic_module_makefile@
+
+.SUFFIXES: .S
+
+.S.o:
+	@echo "Compiling `echo '$<' | sed -e 's|^$(PIKE_SRC_DIR)/||'`" ; \
+	rm -f $@.fail >/dev/null 2>&1; \
+	if $(CC) $(PREFLAGS) $(CFLAGS) -c $< -o $@ ; then : ; else \
+	  status=$$?; \
+	  if test x"yes" = xyes ; then \
+	    echo "WARNING: Compiler failure! Trying without optimization!" >&2;\
+	    echo "$(CC) $(PREFLAGS) $(CFLAGS) -c $< -o $@" >$@.fail ;\
+	    if NO_ULIMIT=yes $(CC) $(PREFLAGS) $(NOOPTFLAGS) -c $< -o $@ ; then : ; else \
+	      status=$$?; \
+	      echo "Compilation command was:" >&2;\
+	     echo "$(CC) $(PREFLAGS) $(NOOPTFLAGS) -c $< -o $@" >&2 ;\
+	     exit $$status; \
+	    fi; \
+	  else \
+	    echo "Compilation command was:" >&2;\
+	    echo "$(CC) $(PREFLAGS) $(CFLAGS) -c $< -o $@" >&2 ;\
+	    exit $$status; \
+	  fi; \
+	fi
+
+	@echo "Compiling `echo '$<' | sed -e 's|^$(PIKE_SRC_DIR)/||'`" ; \
+	rm -f $@.fail >/dev/null 2>&1; \
+	if $(CC) $(PREFLAGS) $(CFLAGS) -c $< -o $@ ; then : ; else \
+	  status=$$?; \
+	  if test x"yes" = xyes ; then \
+	    echo "WARNING: Compiler failure! Trying without optimization!" >&2;\
+	    echo "$(CC) $(PREFLAGS) $(CFLAGS) -c $< -o $@" >$@.fail ;\
+	    if NO_ULIMIT=yes $(CC) $(PREFLAGS) $(NOOPTFLAGS) -c $< -o $@ ; then : ; else \
+	      status=$$?; \
+	      echo "Compilation command was:" >&2;\
+	      echo "$(CC) $(PREFLAGS) $(NOOPTFLAGS) -c $< -o $@" >&2 ;\
+	      exit $$status; \
+	    fi; \
+	  else \
+	    echo "Compilation command was:" >&2;\
+	    echo "$(CC) $(PREFLAGS) $(CFLAGS) -c $< -o $@" >&2 ;\
+	    exit $$status; \
+	  fi; \
+	fi
 
 compile0:
 	$(RUNPIKE) $(SRCDIR)/build_mixin.pike $(SRCDIR)/mixins > _mixins.m
