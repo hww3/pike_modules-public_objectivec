@@ -16,6 +16,7 @@
 #include "threads.h"
 #include "version.h"
 #include "operators.h"
+#include "backend.h"
 #import <Foundation/NSAutoreleasePool.h>
 #import "OC_NSAutoreleasePoolCollector.h"
 

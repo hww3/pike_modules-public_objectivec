@@ -13,7 +13,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * $Id: AppKit.mmod,v 1.5 2006-11-27 04:23:57 hww3 Exp $
+ * $Id: AppKit.mmod,v 1.6 2007-01-20 00:05:02 hww3 Exp $
  */
 
 /*
@@ -63,13 +63,18 @@
 
 /*! @class AppKit
  */
- 
+ #import <Foundation/NSDate.h>
+ #import <Foundation/NSRunLoop.h>
+ #import <AppKit/NSApplication.h>
+ #import <Foundation/NSBundle.h>
+ #import <Foundation/NSString.h>
+
  #define _GNU_SOURCE
  #define THIS_IS_APPKIT 1
 #include "libffi/include/ffi.h"
  #include "piobjc.h"
  static char ** argv;
- 
+
  PIKECLASS AppKit
  {
    PIKEVAR object foo;
@@ -122,3 +127,4 @@
  {
    EXIT
  }
+

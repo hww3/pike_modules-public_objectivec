@@ -21,6 +21,12 @@
 object_setInstanceVariableProc old_object_setInstanceVariable;
 object_getInstanceVariableProc old_object_getInstanceVariable;
 
+static int backend_callback_set = 0;
+static struct callback *backend_cb;
+static void backend_callback(struct callback *_cb,
+                             void *arg,
+                             void *post_select);
+
 id global_autorelease_pool;
 struct mapping * global_class_cache;
 struct mapping * global_classname_cache;
@@ -44,6 +50,43 @@ PIKEFUN int inject(int pid, int use_main_thread, string bundlePath, string syste
   return;
 }
 #endif
+
+PIKEFUN int add_backend_runloop()
+{
+  	backend_cb = (void *)add_backend_callback( backend_callback, 0, 0);
+    backend_callback_set = 1;
+}
+
+PIKEFUN int remove_backend_runloop()
+{
+    if(backend_callback_set)
+    {
+    	remove_callback( backend_callback );
+        backend_callback_set = 0;
+    }
+}
+
+
+static void backend_callback(struct callback *_cb,
+                             void *arg,
+                             void *post_select)
+{
+  if( !post_select )
+  {
+    struct timeval timeout = current_time;
+    timeout.tv_usec += 20000;
+    if(timeout.tv_usec > 1000000)
+    {
+      timeout.tv_usec-=1000000;
+      timeout.tv_sec+=1;
+    }
+    if (my_timercmp (&timeout, <, &next_timeout))
+      next_timeout = timeout;
+  } else
+  {
+    [[NSRunLoop currentRunLoop] runUntilDate: [NSDate date]];
+  }
+}
 
 PIKEFUN void purge_autorelease_pool()
 {

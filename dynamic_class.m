@@ -638,10 +638,11 @@ int find_dynamic_program_in_cache(struct program * prog)
   c = low_mapping_lookup(global_classname_cache, Pike_sp-1);	
   pop_stack();
 
-  if(c && c->type == T_STRING) printf("type: %s\n", c->u.string->str);
+//  if(c && c->type == T_STRING) printf("type: %s\n", c->u.string->str);
   if(c != NULL) { rv = 1; }
   else rv = 0;
-  free_svalue(c);
+  if(c)
+    free_svalue(c);
   return rv;
 }
 
