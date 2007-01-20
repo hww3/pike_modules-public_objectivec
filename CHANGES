@@ -2,4 +2,12 @@ Version History
 
 Version 0.1
 
+- added add_backend_runloop() and remove_backend_runloop() to enable/disable the default NSRunLoop 
+  to cycle when running in the Backend.
+- added _isa() to dynamically generated classes, which should return the string name of the class.
+- added Public.ObjectiveC.nil, which can be passed to Objective-C classes when you want to pass
+  a nil value as an argument expecting an id (passing 0 or UNDEFINED will actually result in the
+  integer value being converted to an NSNumber, which isn't usually the desired result).
+- Public.ObjectiveC.purge_autorelease_pool() can be used to purge and recreate the global default
+  NSAutoreleasePool object.
 - First alpha release
