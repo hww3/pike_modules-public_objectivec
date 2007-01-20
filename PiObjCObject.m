@@ -13,7 +13,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * $Id: PiObjCObject.m,v 1.23 2007-01-09 03:00:29 hww3 Exp $
+ * $Id: PiObjCObject.m,v 1.24 2007-01-20 06:02:26 hww3 Exp $
  */
 
 /*
@@ -86,14 +86,15 @@ void dispatch_pike_method(struct object * pobject, SEL sel, NSInvocation * anInv
   instance = (id)unwrap_objc_object(obj);
   if(instance == NULL) 
   {
-//  	printf("Whoo hoo, we have a native pike object!\n");
-/*
+	printf("Whoo hoo, we have a native pike object!\n");
+
 push_text("Whoo hoo, we have a native pike object: %O\n");
 ref_push_object(obj);
+f_indices(1);
 f_sprintf(2);
 printf("%s", Pike_sp[-1].u.string->str);
 pop_stack();
-*/
+
     instance = [[self alloc] initWithPikeObject:obj];
     [instance autorelease];
   }        
@@ -423,7 +424,7 @@ void dispatch_pike_method(struct object * pobject, SEL sel, NSInvocation * anInv
 // however, would be a lot of work, and i'm not up for that right now.
 - (NSMethodSignature *) methodSignatureForSelector: (SEL)aSelector
 {
-  char * encoding;
+  char * encoding = NULL;
   struct svalue * func;
   struct thread_state *state;
   printf("PiObjCObject.methodSignatureForSelector: %s\n", (char *)aSelector);
@@ -439,10 +440,6 @@ void dispatch_pike_method(struct object * pobject, SEL sel, NSInvocation * anInv
       func = get_func_by_selector(pobject, aSelector);
       if(func)
       {
-/*        if(strcmp(aSelector, "applicationShouldTerminate:") == 0)
-           encoding = strdup("i@:");
-        else encoding = strdup("@@:");
-*/
         encoding = (char *)get_signature_for_func(func, aSelector);
         free_svalue(func);
 		free(func);

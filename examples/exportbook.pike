@@ -10,13 +10,11 @@ int main()
 {
 
   object book = Cocoa.ABAddressBook.sharedAddressBook();
+int qq = 0;
   do{
   object p = book->people();
-//  int count = p->count();
   foreach(p;; object person)
-//  for(int i = 0; i < count; i++)
   {
-//    object person = p->objectAtIndex_(i);
     array row = ({});
     foreach(fields;; object f)
     {
@@ -26,12 +24,10 @@ int main()
        else row += ({(string)fv});
     }
     write((row*",") + "\n");
-//    person = 0;
   }
-//p=0;
-} while(1);
-//book = 0;
-sleep(60);
+  purge_autorelease_pool();
+  qq++;
+} while(qq<1000);
   return 0;
 }
 

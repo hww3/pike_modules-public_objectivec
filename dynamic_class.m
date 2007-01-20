@@ -92,6 +92,15 @@ void low_f_objc_dynamic_class_sprintf(ffi_cif* cif, void* resp, void** args, voi
   f_objc_dynamic_class_sprintf(m, pargs);
 }
 
+void low_f_objc_dynamic_class_isa(ffi_cif* cif, void* resp, void** args, void* userdata)
+{
+  INT32 pargs;
+  Class m = (Class)userdata;
+  pargs = *((INT32 *)args[0]);
+
+  f_objc_dynamic_class_isa(m, pargs);
+}
+
 void low_f_objc_dynamic_create(ffi_cif* cif, void* resp, void** args, void* userdata)
 {
   INT32 pargs;
@@ -253,9 +262,13 @@ void f_call_objc_method(INT32 args, int is_instance, SEL select, id obj)
           {
             struct object * o = sv->u.object;
 
-    	    wrapper = [PiObjCObject newWithPikeObject: o];
-            marg_setValue(argumentList, offset, id, wrapper);
-  		    }
+			if(isNSNil(sv)) marg_setValue(argumentList,offset,int,nil);
+			else
+            {
+      	      wrapper = [PiObjCObject newWithPikeObject: o];
+              marg_setValue(argumentList, offset, id, wrapper);
+			}
+  		  } 
 		  else if(sv->type == T_ARRAY)
 		  {
 			id rv;
@@ -555,14 +568,16 @@ void f_objc_dynamic_class_sprintf(Class cls, INT32 args)
       Pike_error("unable to allocate string.\n");
 
     pop_n_elems(args);
-   
-@try{
-// hash = [THIS->obj hash];
-  }
-  @catch (NSException * e)
-  {
-  }
-  
+}
+
+void f_objc_dynamic_class_isa(Class cls, INT32 args)
+{
+    pop_n_elems(args);
+
+	if(cls)
+      push_text(cls->name);	
+	else 
+		push_text("GAH!()");
 }
 
 void low_f_objc_dynamic_getter(ffi_cif* cif, void* resp, void** args, void* userdata)
@@ -623,10 +638,12 @@ void objc_dynamic_class_init()
 
 void objc_dynamic_class_exit()
 {
-	printf("exiting: %s %p\n", THIS->obj->isa->name, Pike_fp->current_object);
- if(THIS->obj) [THIS->obj release];
- if(THIS->obj) [THIS->obj release];
-
+//	printf("exiting: %s %p\n", THIS->obj->isa->name, Pike_fp->current_object);
+// printf("id refs: %p %d %s %s\n", THIS->obj, [THIS->obj retainCount], THIS->obj->isa->name, [[THIS->obj description] UTF8String]);
+ if(THIS->obj) {	//printf("[release %p %s]\n", THIS->obj, THIS->obj->isa->name);
+  //  [THIS->obj release];
+    [THIS->obj release]; 
+  }
 }
 
 int find_dynamic_program_in_cache(struct program * prog)
@@ -828,6 +845,7 @@ struct program * pike_low_create_objc_dynamic_class(char * classname)
   /* todo we should work more on the optimizations. */
   ADD_FUNCTION("create", (void *)make_static_stub(isa, low_f_objc_dynamic_create), tFunc(tNone,tVoid), 0);  
   ADD_FUNCTION("_sprintf", (void *)make_static_stub(isa, low_f_objc_dynamic_class_sprintf), tFunc(tAnd(tInt,tMixed),tVoid), 0);  
+  ADD_FUNCTION("__isa", (void *)make_static_stub(isa, low_f_objc_dynamic_class_isa), tFunc(tAnd(tVoid,tMixed),tVoid), 0);  
 
   /* then, we add the instance methods. */
 
@@ -930,7 +948,12 @@ struct program * pike_low_create_objc_dynamic_class(char * classname)
   //set_exit_callback(objc_dynamic_class_exit);
 
   dclass = end_program();
-//  add_ref(dclass);
   return dclass;
+  if(dclass && strlen(classname))
+  {
+	printf("adding constant %s\n", classname);
+    add_program_constant(strdup(classname),dclass,0);
+  }
+//  add_ref(dclass);
 }
 

@@ -20,6 +20,7 @@
  static struct pike_type *a_markers[10], *b_markers[10];
  static struct svalue get_signature_for_func_sval;
  static int got_signature_for_func_func = 0;
+ static struct program * nsnil_prog = NULL;
 
 @implementation OC_NSAutoreleasePoolCollector
 -(void)newAutoreleasePool
@@ -82,7 +83,7 @@ struct svalue * object_dispatch_method(id obj, SEL select, struct objc_method * 
 
   o = id_to_svalue(r);
   if(o && o->u.object)
-     printf("o': %d\n", o->u.object->refs);
+//     printf("o': %d\n", o->u.object->refs);
 // wrap_objc_object() already retains the thing.
 //	if(! [(id)r isKindOfClass: [NSAutoreleasePool class]])
 //    	r = [(id)r retain];
@@ -379,8 +380,11 @@ struct object * wrap_objc_object(id r)
   // we need to  the object, because the dynamic_class object 
   // will free it when the object is destroyed.
   if(! [(id)r isKindOfClass: [NSAutoreleasePool class]])
+  {
+ //   if([(id)r isKindOfClass: [NSString class]])
+ // 	  printf("[retain %p %s]\n", r, [r cString]);
     [r retain];
-
+  }
     pc->is_instance = 1;
   }
 
@@ -802,6 +806,30 @@ char * make_pike_name_from_selector(SEL s)
   return pikename;
 }
 
+BOOL isNSNil(struct svalue * sv)
+{
+	if(sv->type != T_OBJECT) return 0;
+	if(!nsnil_prog) 
+	{
+	  push_text("Public.ObjectiveC.nil");
+	  SAFE_APPLY_MASTER("resolv", 1);
+	
+	  if(Pike_sp[-1].type != T_OBJECT)
+      {
+		printf("aiee! unable to find the pike nil placeholder!\n");
+		pop_stack();
+	    return 0;
+	  }
+	
+	  nsnil_prog = Pike_sp[-1].u.object->prog;
+      add_ref(nsnil_prog);		
+      pop_stack();
+	}
+	
+	if(nsnil_prog && sv->u.object->prog == nsnil_prog) return 1;
+	else return 0;
+}
+
 BOOL has_objc_method(id obj, SEL aSelector)
 {
 	void *iterator = 0;
@@ -832,6 +860,7 @@ char * pike_signature_from_objc_signature(struct objc_method * nssig, int * lenp
   char * type;
   int sret;
   int x;
+  int i;
   int sargs;
   int cpos;
   int now;
@@ -1107,13 +1136,18 @@ char * pike_signature_from_objc_signature(struct objc_method * nssig, int * lenp
 
   }
 
-  spsig = CONSTANT_STRLEN("\004\021\020" tMix) + sret;
+  spsig = CONSTANT_STRLEN("\004\021\020") + (CONSTANT_STRLEN(tMix)*(argcount-2)) + sret;
 //printf("allocated %d bytes for signature.\n", spsig);
   psig = malloc(spsig);
   psigo = psig;
   now = 0;
+
   psig[now++] = '\004';
-  psig[now++] = '\373';
+
+  for(i = 0; i < (argcount-2); i++)
+    psig[now++] = '\373';
+
+
   psig[now++] = '\021';
   psig[now++] = '\020';
   
