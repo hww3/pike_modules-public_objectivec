@@ -287,7 +287,9 @@ Ivar new_object_setInstanceVariable(id object, const char *name, void *value)
   x = class_getInstanceVariable(object->isa, name);
 
   // here's where we'd handle setting native c types.
-  if(x->ivar_type[0] != '@')
+  if(!x) return NULL;
+
+  if(x && x->ivar_type[0] != '@')
   {
     printf("AIEEEE! We don't know how to set non-objects into Pike objects!\n");
     return NULL;
