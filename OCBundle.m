@@ -35,7 +35,7 @@ static void _piobjc_bundle_load()
 	mainPath = [NSString stringWithCString: bundleLoc];
 	mainPath = [mainPath stringByAppendingString: @"/../../Resources/"];
 	mainPath = [mainPath stringByStandardizingPath];
-    NSLog(mainPath);
+    	NSLog(mainPath);
 
 
 	if (mainPath == NULL) {
@@ -54,7 +54,20 @@ static void _piobjc_bundle_load()
 	push_text([mainPath UTF8String]);
 	f_utf8_to_string(1);
 	SAFE_APPLY_MASTER("add_program_path", 1);
-    pop_stack();
+    	pop_stack();
 
+	// now, let's initialize the objective c bridge.
+	// looking up the module should be enough to do it.	
+	push_text("Public.ObjectiveC");
+
+	SAFE_APPLY_MASTER("resolv", 1);
+	if(Pike_sp[-1].type != T_OBJECT)
+	{
+	  // ok, we couldn't load the module. what should we do?
+	  // for now, we we'll just complain. the classes won't work, though.
+	  NSLog(@"Unable to enable the Objective-C Bridge!\n");
+	}
+
+	pop_stack();
 }
 
