@@ -11,17 +11,16 @@ static void __attribute__ ((constructor)) _piobjc_bundle_load(void);
 
 static const char *bundlePath() {
     int i;
-    const struct mach_header *myHeader = _dyld_get_image_header_containing_address(&bundlePath);
+    const struct mach_header *header = _dyld_get_image_header_containing_address(&bundlePath);
     int count = _dyld_image_count();
     for (i = 0; i < count; i++) {
-        if (_dyld_get_image_header(i) == myHeader) {
+        if (_dyld_get_image_header(i) == header) {
             return _dyld_get_image_name(i);
         }
     }
     abort();
     return NULL;
 }
-
 
 static void _piobjc_bundle_load()
 {
@@ -31,43 +30,31 @@ static void _piobjc_bundle_load()
 	BOOL res = NO;
         char * bundleLoc;
 
-        bundleLoc = (char *)bundlePath();
-    printf("bundle loaded from %s!\n", bundleLoc);
-	
-    NSLog(@"Loading prefpane %(MAINFILE)s %(BUNDLE)s from");
-/*
-	bundle = [NSBundle bundleForClass:self];
+    bundleLoc = (char *)bundlePath();
 
-	mainPath = [bundle pathForResource:@"%(MAINFILE)s" ofType:@"pike"];
+	mainPath = [NSString stringWithCString: bundleLoc];
+	mainPath = [mainPath stringByAppendingString: @"/../../Resources/"];
+	mainPath = [mainPath stringByStandardizingPath];
+    NSLog(mainPath);
+
 
 	if (mainPath == NULL) {
 		[NSException raise:NSInternalInconsistencyException 
 			format:@"Bundle %%@ does not contain a %(MAINFILE)s file",
 			bundle];
 	}
-*/
+
 	pi = [OCPikeInterpreter sharedInterpreter];
 
 	if (![pi isStarted]) {
 		[pi startInterpreter];
 	}
 
-/*
-	push_text([mainPath cString]);
-	SAFE_APPLY_MASTER("compile_file", 1 );
-	
-	if(Pike_sp[-1].type != T_PROGRAM)
-	{
-		[NSException raise:NSInternalInconsistencyException 
-			format:@"Bundle %%@ does not contain a valid %(MAINFILE)s file",
-			bundle];		
-	}
-	
-	res = CreateClassDefinition("%(MAINFILE)s", 
-	        "NSObject", Pike_sp[-1].u.program);
-	
-	pop_stack();
-*/	
-    
+
+	push_text([mainPath UTF8String]);
+	f_utf8_to_string(1);
+	SAFE_APPLY_MASTER("add_program_path", 1);
+    pop_stack();
+
 }
 
