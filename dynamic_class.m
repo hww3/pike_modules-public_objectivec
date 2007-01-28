@@ -484,12 +484,14 @@ void f_call_objc_method(INT32 args, int is_instance, SEL select, id obj)
         break;
 
       case '*':
-        THREADS_ALLOW();
-        result = (char *) malloc(sizeof(char *)); 
+		{
+			char * result;
+	        THREADS_ALLOW();
         result = (char *)objc_msgSendv(obj,select,method_getSizeOfArguments(method),argumentList);
         THREADS_DISALLOW();
         push_text(result);
-		free(result);
+//		free(result);
+		}
         break;
 
       case '@':

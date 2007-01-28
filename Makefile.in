@@ -1,4 +1,4 @@
-# $Id: Makefile.in,v 1.30 2007-01-18 01:14:50 hww3 Exp $
+# $Id: Makefile.in,v 1.31 2007-01-28 17:45:27 hww3 Exp $
 @make_variables@
 VPATH=@srcdir@:@srcdir@/../..:../..
 FFIOBJS=libffi/src/types.o libffi/src/prep_cif.o libffi/src/@OC_ARCH@/ffi_darwin.o libffi/src/@OC_ARCH@/darwin_closure.o libffi/src/@OC_ARCH@/darwin.o
@@ -12,14 +12,15 @@ MODULE_LDFLAGS=@LDFLAGS@ @LIBS@ -framework AddressBook -framework AppKit
 MODULE_CPPFLAGS=-Ilibffi -Ilibffi/include
 MODULE_CFLAGS=-fobjc-exceptions
 CONFIG_HEADERS=@CONFIG_HEADERS@
-MODULE_INSTALL=foobar
+MODULE_INSTALL=install_frameworks
 
 
 override:  compile0
         @:
 
-foobar:
-	echo "hey!"
+install_frameworks:
+	echo "Installing Frameworks"
+	for mod in frameworks/*; do test "frameworks/CVS" != "$$mod" && cd $$mod && pike -x module install && cd $(FULL_SRC_DIR); done;
 
 @dynamic_module_makefile@
 
