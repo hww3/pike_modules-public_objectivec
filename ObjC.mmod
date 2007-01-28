@@ -246,7 +246,7 @@ int piobjc_classhandler_callback(const char* className)
   printf("piobjc_classhandler_callback(%s)\n", className);
   push_text(className);
 
-  if(Pike_fp->pc &&
+  if(Pike_fp && Pike_fp->pc &&
       (file = low_get_line(Pike_fp->pc, Pike_fp->context.prog, &lineno))) {
      push_string(file);
    }else{
