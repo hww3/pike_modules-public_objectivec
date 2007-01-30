@@ -16,9 +16,9 @@
 #include "libffi/include/ffi.h"
 #include "piobjc.h"
 
-extern void low_init_pike_object(ffi_cif* cif, void* resp, void** args, void* userdata);
+extern void low_create_pike_object(ffi_cif* cif, void* resp, void** args, void* userdata);
 
-void * make_init_stub(struct program * prog)
+void * make_create_stub(struct program * prog)
 {
   static ffi_cif* init_cif = NULL;
   ffi_closure * closure = NULL;
@@ -26,7 +26,7 @@ void * make_init_stub(struct program * prog)
   ffi_type** cl_arg_types;
   ffi_type* cl_ret_type;
   const char* rettype;
-  void (*disp)(ffi_cif*,void*,void**,void*) = low_init_pike_object;
+  void (*disp)(ffi_cif*,void*,void**,void*) = low_create_pike_object;
 
   // since Objective-C classes cannot be un-registered, we just add a reference and forget about it.
   // technically this is not a leak, i think.

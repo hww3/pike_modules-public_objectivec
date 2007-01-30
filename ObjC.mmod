@@ -28,6 +28,7 @@ static void backend_callback(struct callback *_cb,
                              void *post_select);
 
 id global_autorelease_pool;
+struct mapping * global_proxy_cache;
 struct mapping * global_class_cache;
 struct mapping * global_classname_cache;
 struct mapping * global_mixin_dict;
@@ -185,6 +186,7 @@ INIT
   [THIS->pool newAutoreleasePool];
 
  global_class_cache = allocate_mapping(10);
+ global_proxy_cache = allocate_mapping(10);
  global_classname_cache = allocate_mapping(10);
  global_mixin_dict = allocate_mapping(10);
  add_ref(global_class_cache);
@@ -199,6 +201,7 @@ EXIT
 {
   pike_exit_piobjc_appkit();
   stop_mixins();
+  free_mapping(global_proxy_cache);
   free_mapping(global_class_cache);
   free_mapping(global_classname_cache);
   free_mapping(global_mixin_dict);
@@ -276,18 +279,23 @@ Ivar new_object_setInstanceVariable(id object, const char *name, void *value)
   struct svalue * pset;
   id vts;
 
-  printf("new_object_setInstanceVariable(%s, %s, %s)\n", object->isa->name, [[object description] UTF8String], name);
+  printf("new_object_setInstanceVariable(%s:%s)->%s = %s)\n", object->isa->name, [[object description] UTF8String], name, [[((id)value) description ] UTF8String]	);
 
   // if we're not a wrapped pike object, we should just go direct to the objective-c object.
   if(![object respondsToSelector: SELUID("__ObjCgetPikeObject")])
   {
+	printf("setting the object on a standard Objective-C object.\n");
  	return (old_object_setInstanceVariable(object, name, value));
   }
 
   x = class_getInstanceVariable(object->isa, name);
 
   // here's where we'd handle setting native c types.
-  if(!x) return NULL;
+  if(!x) 
+  { 
+	printf("no variable!\n");
+	return NULL;
+  }
 
   if(x && x->ivar_type[0] != '@')
   {
@@ -355,6 +363,8 @@ Ivar new_object_setInstanceVariable(id object, const char *name, void *value)
   }
   else
   {
+	id desc;
+	printf("setting a ptr in a pike object.\n");
     pobj = [object __ObjCgetPikeObject];
     push_text(name);
 
@@ -363,6 +373,13 @@ Ivar new_object_setInstanceVariable(id object, const char *name, void *value)
 
     pop_n_elems(1);
     free_svalue(pset);
+
+	push_text("%O");
+	ref_push_object(pobj);
+	f_sprintf(2);
+	desc = [NSString stringWithUTF8String: Pike_sp[-1].u.string->str];
+	pop_stack();
+	NSLog(desc);
   }
 
   // finally, if we're a standard objective c object, we might be able to 
@@ -456,6 +473,7 @@ BOOL CreateClassDefinition( const char * name,
     struct objc_class * new_class;
     struct objc_class * root_class;
 	struct objc_method_list ** emptyMethodLists;
+	struct svalue * ptr;
  
     // Ensure that the superclass exists and that someone
     // hasn't already implemented a class with the same name
@@ -540,9 +558,25 @@ BOOL CreateClassDefinition( const char * name,
     // Finally, register the class with the runtime.
     objc_addClass( new_class ); 
 
-    RegisterDynamicMethod("init", name, (IMP)make_init_stub(prog), "@4@4:4");
+ //   RegisterDynamicMethod("init", name, (IMP)make_create_stub(prog), "@4@4:4");
+    RegisterDynamicMethod("__create", name, (IMP)make_create_stub(prog), "@4@4:4");
     RegisterDynamicMethod("__ObjCgetPikeObject", name, (IMP)get_pike_object, "@4@4:4");
-    
+
+	ptr = malloc(sizeof(struct svalue));
+	if(!ptr)
+		Pike_error("objc_addclass: unable to allocate memory.\n");
+
+	ptr->type = T_SVALUE_PTR;
+	ptr->subtype = 0;
+	ptr->u.ptr = new_class;
+	
+	ref_push_program(prog);
+    mapping_insert(global_proxy_cache, Pike_sp-1, ptr);
+    pop_stack();
+    free_svalue(ptr);
+	free(ptr);
+    // TODO: do we need to free ptr?
+
     return YES;
 
 }

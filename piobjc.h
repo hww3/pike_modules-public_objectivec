@@ -117,14 +117,14 @@ unsigned pike_objc_type_size(char** typeptr);
 BOOL CreateClassDefinition( const char * name, 
         const char * superclassName, struct program * prog );
 void * make_stub(struct program * prog);
-id init_pike_object(struct program * prog, id obj, SEL sel);
+id create_pike_object(struct program * prog, id obj, SEL sel);
 BOOL RegisterDynamicMethod( const char * dynamicMethodName, const char * className, IMP method, char * methodTypes );
 BOOL RegisterInstanceVariables(Class cls, struct program * prog);
 
 id get_objc_object(id obj, SEL sel);
 struct object * get_pike_object(id obj, SEL sel);
 
-void low_init_pike_object(ffi_cif* cif, void* resp, void** args, void* userdata);
+void low_create_pike_object(ffi_cif* cif, void* resp, void** args, void* userdata);
 void _convert(id obj, SEL sel);
 void instantiate_pike_native_class(struct program * prog, id obj, SEL sel);
 struct program * pike_create_objc_dynamic_class(struct pike_string * classname);
@@ -151,3 +151,4 @@ object_setInstanceVariableProc old_object_setInstanceVariable;
 object_getInstanceVariableProc old_object_getInstanceVariable;
 
 int piobjc_classhandler_callback(const char* className);
+Class get_objc_proxy_class(struct program * prog);

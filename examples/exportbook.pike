@@ -27,7 +27,8 @@ int qq = 0;
   }
   purge_autorelease_pool();
   qq++;
-} while(qq<1000);
+} while(qq<1);
+sleep(30);
   return 0;
 }
 

@@ -13,7 +13,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * $Id: PiObjCObject.m,v 1.25 2007-01-20 06:03:54 hww3 Exp $
+ * $Id: PiObjCObject.m,v 1.26 2007-01-30 02:41:25 hww3 Exp $
  */
 
 /*
@@ -102,17 +102,12 @@ pop_stack();
   return instance;
 }
 
--(id)init
-{
-	// printf("[PiObjCObject init]\n");
-	return @"foo!";
-}
-
 - (id)initWithPikeObject:(struct object *)obj
 {
   printf("PiObjCObject.initWithPikeObject\n");
   pobject = obj;
   add_ref(obj);
+  pinstantiated = YES;
 //  [self retain];
   return self;
 }
@@ -125,6 +120,19 @@ pop_stack();
   return [super retain];
 }
 
++ (id) allocWithZone:(id) zone
+{
+	id me;
+	NSLog(@"[allocWithZone: called]\n");
+	me = [super allocWithZone: zone];
+	return [me __create];
+}
+
+- (id) __create
+{
+	NSLog(@"[__create called]\n");
+	return self;
+}
 
 /*- (id)release
 {
@@ -203,7 +211,6 @@ pop_stack();
 	  return;
   }
 
-
   if((state = thread_state_for_id(th_self()))!=NULL) 
   {
     /* This is a pike thread.  Do we have the interpreter lock? */
@@ -261,13 +268,13 @@ pop_stack();
 struct object * get_pike_object(id obj, SEL sel)
 {
   void * i;
-  // printf("get_pike_object()\n");
+  printf("get_pike_object()\n");
   old_object_getInstanceVariable(obj, "pobject", &i);
   
   return (struct object *)i;
 }
 
-void low_init_pike_object(ffi_cif* cif, void* resp, void** args, void* userdata)
+void low_create_pike_object(ffi_cif* cif, void* resp, void** args, void* userdata)
 {
   SEL sel;
   id obj;
@@ -278,17 +285,18 @@ void low_init_pike_object(ffi_cif* cif, void* resp, void** args, void* userdata)
   obj = *(id*)args[0];
   sel = *(SEL*)args[1];
   
-  printf("low_init_pike_object()\n");
-  rv = init_pike_object(prog, obj, sel);
+  printf("low_create_pike_object()\n");
+  rv = create_pike_object(prog, obj, sel);
 
   *(id*) resp = rv;
 }
 
-// [obj init] is the designated initializer, so we equate init with create(). 
-id init_pike_object(struct program  * prog, id obj, SEL sel)
+
+// we call create() on the object once alloc has completed.
+id create_pike_object(struct program  * prog, id obj, SEL sel)
 {
   struct thread_state *state;
-printf("init_pike_object()\n");
+printf("create_pike_object()\n");
 
     if(!prog || !obj || !sel)
     {
@@ -351,6 +359,7 @@ printf("init_pike_object()\n");
 	else
 	{
 	  printf("[PIKE PROGRAM init]: no program!\n");
+	  return nil;
 	}
 }
 
@@ -418,6 +427,7 @@ void dispatch_pike_method(struct object * pobject, SEL sel, NSInvocation * anInv
   printf("getPikeObject()\n");
 	return pobject;
 }
+
 
 // we use a really, really lame method for calculating the number of arguments
 // to a method: we count the number of colons. it's ugly, and it would be 
@@ -509,6 +519,7 @@ void dispatch_pike_method(struct object * pobject, SEL sel, NSInvocation * anInv
   else
   {
     [NSException raise:NSInvalidArgumentException format:@"no such selector: %s", (char *)aSelector];	
+	return nil;
   }
 
 }
@@ -524,7 +535,12 @@ void dispatch_pike_method(struct object * pobject, SEL sel, NSInvocation * anInv
 - (BOOL) respondsToSelector:(SEL) aSelector
 {
   struct svalue * func;
-//  printf("respondsToSelector: %s? ", (char*) aSelector);
+  printf("PiObjCObject.respondsToSelector: %s? ", (char*) aSelector);
+
+  if(aSelector == @selector(__ObjCgetPikeObject))
+  {
+	return YES;
+  }
 
   func = get_func_by_selector(pobject, aSelector);
 
@@ -535,7 +551,13 @@ void dispatch_pike_method(struct object * pobject, SEL sel, NSInvocation * anInv
 
 - (NSString *)description
 {
-  return @"Foo";	
+	id desc;
+	push_text("%O");
+	ref_push_object(pobject);
+	f_sprintf(2);
+	desc = [NSString stringWithUTF8String: Pike_sp[-1].u.string->str];
+	pop_stack();
+  return desc;	
 }
 
 @end 

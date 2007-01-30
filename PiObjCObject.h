@@ -5,6 +5,8 @@
 @interface PiObjCObject : NSProxy
 {
 	struct object * pobject;
+	struct program * pprogram;
+	bool pinstantiated;
 }
 
 + (id)newWithPikeObject:(struct object *) obj;
@@ -15,8 +17,11 @@
 /* plus an initialization method */
 - (id)initWithPikeObject:(struct object *)obj;
 - (struct object *) getPikeObject;
-- (id)init;
+//- (id)init;
 - (struct object *)__ObjCgetPikeObject;
++(id)alloc;
++(id)allocWithZone:(id) zone;
+
 /* some other housekeeping methods */
 - (void)dealloc;
 - (NSString *)description;

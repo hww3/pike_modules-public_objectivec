@@ -17,6 +17,7 @@
 
 /* this code is from pyobjc-1.4. */
 
+extern struct mapping * global_proxy_cache;
  static struct pike_type *a_markers[10], *b_markers[10];
  static struct svalue get_signature_for_func_sval;
  static int got_signature_for_func_func = 0;
@@ -25,7 +26,7 @@
 @implementation OC_NSAutoreleasePoolCollector
 -(void)newAutoreleasePool
 {
-        release_pool = [[NSAutoreleasePool alloc] init];
+  release_pool = [[NSAutoreleasePool alloc] init];
 }
 
 -(id)init
@@ -57,8 +58,6 @@
 -(void)targetForBecomingMultiThreaded:(id)sender
 {
     [sender self];
-//printf("hello from another thread.\n");
-  
 }
 
 @end
@@ -80,14 +79,31 @@ struct svalue * object_dispatch_method(id obj, SEL select, struct objc_method * 
   THREADS_ALLOW();
   r = objc_msgSendv(obj,select,method_getSizeOfArguments(method),argumentList);
   THREADS_DISALLOW();
-
+  if(r == obj)
+  {
+	printf("%s returns same out as in.\n", select);
+	o = malloc(sizeof(struct svalue));
+	if(!o) Pike_error("object_dispatch_method: unable to allocate memory.\n");
+	o->type = T_OBJECT;
+	o->subtype = 0;
+	o->u.object = Pike_fp->current_object;
+  }
+  else
+  {
   o = id_to_svalue(r);
-  if(o && o->u.object)
-//     printf("o': %d\n", o->u.object->refs);
-// wrap_objc_object() already retains the thing.
-//	if(! [(id)r isKindOfClass: [NSAutoreleasePool class]])
-//    	r = [(id)r retain];
-
+  }
+  if(!(o && o->u.object))
+	o = NULL;
+  else
+{
+	/*
+push_text("Whoo hoo, we have a native pike object: %O\n");
+ref_push_object(o->u.object);
+f_sprintf(2);
+printf("%s", Pike_sp[-1].u.string->str);
+pop_stack();
+*/
+}
   return o;
 }
 
@@ -95,6 +111,8 @@ struct svalue * low_id_to_svalue(id obj, int prefer_native)
 {
 	struct svalue * sv;
 	struct object * o;
+	
+	if(!obj) {/*printf("low_id_to_svalue(): no object to convert!\n");*/ return NULL;}
 	
 	sv = malloc(sizeof(struct svalue));
 	
@@ -234,9 +252,11 @@ id svalue_to_id(struct svalue * sv)
 		  		rv = unwrap_objc_object(o);
 		  		if(!rv)
 		  		{
+					Class cls;
 //		    		printf("Whee! We're wrappin' an object for a return value!\n");
 		    	// if we don't have a wrapped object, we should make a pike object wrapper.
-		    		rv = [PiObjCObject newWithPikeObject: o];
+					cls = get_objc_proxy_class(o->prog);
+		    		rv = [cls newWithPikeObject: o];
 		  		}
 			}
 			break;
@@ -250,6 +270,51 @@ id svalue_to_id(struct svalue * sv)
 	return rv;	
 }
 
+id objcify_pike_object(struct object * o)
+{
+	Class cls;
+	id proxy;
+	
+	cls = get_objc_proxy_class(o->prog);
+	
+	proxy = [cls newWithPikeObject: o];
+	
+	return proxy;
+}
+
+Class get_objc_proxy_class(struct program * prog)
+{
+	struct svalue * c = NULL;
+    Class cls;
+
+//    printf("*** get_objc_proxy_class()\n");*/
+	ref_push_program(prog);
+	c = low_mapping_lookup(global_proxy_cache, Pike_sp-1);	
+	pop_stack();
+
+	if(c) 
+	{ 
+		cls = (Class)(c->u.ptr);
+	    free_svalue(c);
+		return cls;
+	}
+	else
+	{
+		char * name;
+		int i;
+		name = malloc(sizeof(char) * 15);
+		i = (int)random();
+		snprintf(name, 14, "PiProxy%05d", i);
+		add_piobjcclass(name, prog);
+		free(name);
+	}
+
+	cls = get_objc_proxy_class(prog);
+
+	return cls;
+}
+
+
 // ok, here's the algorithm we should use for unwrapping
 //
 // if the top level program does not have c methods, we know it's a pike object, and there's nothing to unwrap.
@@ -258,7 +323,7 @@ id svalue_to_id(struct svalue * sv)
 id unwrap_objc_object(struct object * o)
 {
 	int is_objcobj = 0;
-	if(o->prog->flags & !PROGRAM_HAS_C_METHODS)
+	if(o && o->prog->flags & !PROGRAM_HAS_C_METHODS)
 	{
 		printf("unwrap_objc_object(): can't unwrap a pure pike object.\n");
 		return 0;

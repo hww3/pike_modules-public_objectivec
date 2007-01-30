@@ -29,7 +29,7 @@ void f_objc_dynamic_create(Class cls, INT32 args)
   struct svalue sval;
   struct pike_string * cname;
   
-//printf("dynamic_create: %s()\n", cls->isa->name);
+printf("dynamic_create: %s()\n", cls->isa->name);
   if(args!=0)
   {
     printf("args: %d\n", args);
@@ -50,9 +50,9 @@ void f_objc_dynamic_create(Class cls, INT32 args)
            for wrapping. In this case, we don't free up the alloced object, and have other odd behavior. */
 
   THIS->obj = [cls alloc];
-  [THIS->obj retain];
+// [THIS->obj retain];
   THIS->is_instance = 1;
-
+printf("finished creating object.\n");
 }
 
 void f_objc_dynamic_instance_method(INT32 args)
@@ -265,7 +265,9 @@ void f_call_objc_method(INT32 args, int is_instance, SEL select, id obj)
 			if(isNSNil(sv)) marg_setValue(argumentList,offset,int,nil);
 			else
             {
-      	      wrapper = [PiObjCObject newWithPikeObject: o];
+			  Class cls;
+			  cls = get_objc_proxy_class(o->prog);
+      	      wrapper = [cls newWithPikeObject: o];
               marg_setValue(argumentList, offset, id, wrapper);
 			}
   		  } 
@@ -357,13 +359,12 @@ void f_call_objc_method(INT32 args, int is_instance, SEL select, id obj)
     while((*type)&&(*type=='r' || *type =='n' || *type =='N' || *type=='o' || *type=='O' || *type =='V'))
   		type++;
 
-    //printf("SENDING MESSAGE %s WITH RETURN TYPE: %s\n", select, type);
+//    printf("SENDING MESSAGE %s WITH RETURN TYPE: %s\n", select, type);
 
     pop_n_elems(args);
 
     @try
     {
-
       switch(*type){
         case 'c':
   	  THREADS_ALLOW();
@@ -657,7 +658,6 @@ int find_dynamic_program_in_cache(struct program * prog)
   c = low_mapping_lookup(global_classname_cache, Pike_sp-1);	
   pop_stack();
 
-//  if(c && c->type == T_STRING) printf("type: %s\n", c->u.string->str);
   if(c != NULL) { rv = 1; }
   else rv = 0;
   if(c)
