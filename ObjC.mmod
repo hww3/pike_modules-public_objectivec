@@ -35,16 +35,23 @@ struct mapping * global_mixin_dict;
 
 CVAR OC_NSAutoreleasePoolCollector * pool;
 
+/*! @decl void create()
+ *!
+ */
 PIKEFUN void create()
 {
 }
 
 #if defined(MAC_OS_X_VERSION_10_3) && defined(__ppc__)
+
+/*! @decl int inject(int pid, int use_main_thread, string bundlePath, string systemPath, string carbonPath)
+ *!
+ */
 PIKEFUN int inject(int pid, int use_main_thread, string bundlePath, string systemPath, string carbonPath)
 {
   int r;
 
-//  r = objc_inject(pid, use_main_thread, bundlePath->str, systemPath->str, carbonPath->str);
+  r = objc_inject(pid, use_main_thread, bundlePath->str, systemPath->str, carbonPath->str);
 
   pop_n_elems(args);
   push_int(r);
@@ -52,12 +59,18 @@ PIKEFUN int inject(int pid, int use_main_thread, string bundlePath, string syste
 }
 #endif
 
+/*! @decl void add_backend_runloop()
+ *!
+ */
 PIKEFUN int add_backend_runloop()
 {
   	backend_cb = (void *)add_backend_callback( backend_callback, 0, 0);
     backend_callback_set = 1;
 }
 
+/*! @decl int remove_backend_runloop()
+ *!
+ */
 PIKEFUN int remove_backend_runloop()
 {
     if(backend_callback_set)
@@ -89,12 +102,18 @@ static void backend_callback(struct callback *_cb,
   }
 }
 
+/*! @decl void create()
+ *!
+ */
 PIKEFUN void purge_autorelease_pool()
 {
 	[global_autorelease_pool purgeAndNew];
 	return;
 }
 
+/*! @decl program get_dynamic_class(string classname)
+ *!
+ */
 PIKEFUN program get_dynamic_class(string classname)
 {
    struct program * prog;
@@ -109,6 +128,9 @@ PIKEFUN program get_dynamic_class(string classname)
       push_int(0);
 }
 
+/*! @decl list_classes()
+ *!
+ */
 PIKEFUN array list_classes()
 {
   Class * list = NULL;
@@ -207,6 +229,9 @@ EXIT
   free_mapping(global_mixin_dict);
 }
 
+/*! @decl void new_class(string name, program p)
+ *!
+ */
 PIKEFUN void new_class(string name, program p)
 {
    add_piobjcclass(name->str, p);
@@ -444,6 +469,9 @@ void add_piobjcclass(char * name, struct program * prog)
     Pike_error("Error occurred while registering the Objective-C bridge class\n");
 }
 
+/*! @decl  int low_load_bundle(string bundle_path)
+ *!
+ */
 PIKEFUN int low_load_bundle(string bundle_path)
 {
  NSBundle* bundle = nil;
