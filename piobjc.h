@@ -152,3 +152,4 @@ object_getInstanceVariableProc old_object_getInstanceVariable;
 
 int piobjc_classhandler_callback(const char* className);
 Class get_objc_proxy_class(struct program * prog);
+struct program * wrap_objc_class(Class r);
