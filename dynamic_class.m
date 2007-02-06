@@ -112,7 +112,7 @@ void low_f_objc_dynamic_create(ffi_cif* cif, void* resp, void** args, void* user
 
 void f_call_objc_class_method(struct objc_class_method_desc * m, INT32 args)
 {
-//  printf("calling class method [%s %s]\n", m->class->name, (char *)m->select);
+ // printf("calling class method [%s %s]\n", m->class->name, (char *)m->select);
   f_call_objc_method(args, 0, m->select, m->class);
 }
 
@@ -132,7 +132,7 @@ void f_call_objc_method(INT32 args, int is_instance, SEL select, id obj)
 	
     pool = [global_autorelease_pool getAutoreleasePool];
     
-    //printf("select: %s, is_instance: %d\n", (char *) select, is_instance);
+   printf("class: %s, select: %s, is_instance: %d\n", obj->isa->name, (char *) select, is_instance);
     if(is_instance)
       method = class_getInstanceMethod(obj->isa, select);
     else
@@ -318,7 +318,7 @@ void f_call_objc_method(INT32 args, int is_instance, SEL select, id obj)
         if(Pike_sp[-1].type != T_PROGRAM)
         {
 //          printf("got %d\n", Pike_sp[-1].type);
-          Pike_error("expected program as argument of type class\n");
+          Pike_error("expected program as argument.\n");
         }
         else
         {
@@ -737,7 +737,7 @@ struct program * pike_low_create_objc_dynamic_class(char * classname)
   
   start_new_program();
 
-  add_string_constant("__objc_classname", classname, ID_STATIC);
+  add_string_constant("__objc_classname", classname, ID_PUBLIC);
   
   dclass_storage_offset = ADD_STORAGE(struct objc_dynamic_class);
 

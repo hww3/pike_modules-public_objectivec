@@ -13,7 +13,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * $Id: PiObjCObject.m,v 1.26 2007-01-30 02:41:25 hww3 Exp $
+ * $Id: PiObjCObject.m,v 1.27 2007-02-06 01:52:22 hww3 Exp $
  */
 
 /*
@@ -153,7 +153,7 @@ pop_stack();
 
 - (BOOL)isProxy
 {
-  return YES;	
+  return NO;	
 }
 
 -(BOOL)__ObjCisPikeType
@@ -366,19 +366,18 @@ printf("create_pike_object()\n");
 void instantiate_pike_native_class(struct program * prog, id obj, SEL sel)
 {
   struct object * pobject;
- printf("creating a clone of the program.\n");	
+// printf("creating a clone of the program.\n");	
   pobject = clone_object(prog, 0);	
 			
 //	pobject = Pike_sp[-1].u.object;
 //  add_ref(pobject);
   add_ref(prog);
-printf("setting the object's instance variable\n");
+//printf("setting the object's instance variable\n");
 
 //	object_setInstanceVariable(obj, "pobject",  pobject);
 	old_object_setInstanceVariable(obj, "pobject",  pobject);
-printf("done\n");
+//printf("done\n");
 }
-
 
 void dispatch_pike_method(struct object * pobject, SEL sel, NSInvocation * anInvocation)
 {

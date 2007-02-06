@@ -2,7 +2,7 @@
 #import <Foundation/NSInvocation.h>
 #import <Foundation/NSMethodSignature.h>
 
-@interface PiObjCObject : NSProxy
+@interface PiObjCObject : NSObject
 {
 	struct object * pobject;
 	struct program * pprogram;

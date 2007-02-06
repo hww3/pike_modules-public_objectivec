@@ -636,6 +636,8 @@ int push_objc_types(NSMethodSignature* sig, NSInvocation* invocation)
              Pike_error("unable to allocate memory.\n");
            [invocation getArgument: &buf atIndex: arg];
            cobj = (id)buf;
+printf("arg %d: %p\n", arg, cobj->isa);
+NSLog([cobj description]);
            sval = id_to_svalue(cobj);
 		        args_pushed++;
             push_svalue(sval);

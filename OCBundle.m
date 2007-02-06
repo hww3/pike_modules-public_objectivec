@@ -71,3 +71,13 @@ static void _piobjc_bundle_load()
 	pop_stack();
 }
 
+int main(int argc, char** argv)
+{
+	int rv;
+	
+	
+	_piobjc_bundle_load();
+
+	
+	return rv;
+}

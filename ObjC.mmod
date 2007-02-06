@@ -80,11 +80,65 @@ PIKEFUN int remove_backend_runloop()
     }
 }
 
+/*! @decl string get_signature_for_class_method(string class, string method)
+ *!
+ */
+PIKEFUN string get_signature_for_class_method(string class, string method)
+{
+   Class cls;
+   Method mthd;
+   SEL sel;
+
+   cls = objc_getClass(class->str);
+
+   if(!cls)
+	Pike_error("no class found.\n");
+
+   sel = sel_registerName(method->str);
+ 
+   mthd = class_getClassMethod(cls, sel);
+
+   if(!mthd)
+     Pike_error("no class method found.\n");
+
+  pop_n_elems(args);
+
+  push_text(mthd->method_types);
+
+}
+
+/*! @decl string get_signature_for_instance_method(string class, string method)
+ *!
+ */
+PIKEFUN string get_signature_for_instance_method(string class, string method)
+{
+   Class cls;
+   Method mthd;
+   SEL sel;
+
+   cls = objc_getClass(class->str);
+
+   if(!cls)
+	Pike_error("no class found.\n");
+
+   sel = sel_registerName(method->str);
+ 
+   mthd = class_getInstanceMethod(cls, sel);
+
+   if(!mthd)
+     Pike_error("no instance method found.\n");
+
+  pop_n_elems(args);
+
+  push_text(mthd->method_types);
+
+}
 
 static void backend_callback(struct callback *_cb,
                              void *arg,
                              void *post_select)
 {
+//printf("backend_callback()\n");
   if( !post_select )
   {
     struct timeval timeout = current_time;
@@ -98,7 +152,9 @@ static void backend_callback(struct callback *_cb,
       next_timeout = timeout;
   } else
   {
+//printf("[NSRunLoop runUntilDate:] ");
     [[NSRunLoop currentRunLoop] runUntilDate: [NSDate date]];
+//printf("done\n");
   }
 }
 
@@ -139,7 +195,7 @@ PIKEFUN array list_classes()
 
   buflen = objc_getClassList(NULL, 0);
 
-  printf("have %d registered classes\n", buflen);
+//  printf("have %d registered classes\n", buflen);
 
   list = malloc(buflen * sizeof(Class));
 
@@ -505,6 +561,7 @@ BOOL CreateClassDefinition( const char * name,
 	struct objc_method_list ** emptyMethodLists;
 	struct svalue * ptr;
  
+printf("CreateClassDefinition(%s, %s)\n", name, superclassName);
     // Ensure that the superclass exists and that someone
     // hasn't already implemented a class with the same name
     //

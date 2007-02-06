@@ -49,13 +49,13 @@
 
 -(int)count
 {
-//    printf("[OC_Array count]\n");	
+    printf("[OC_Array count]\n");	
 	return array->size;
 }
 
 - (id)objectAtIndex:(int)idx
 {
-//	printf("[OC_Array objectAtIndex: %d]\n", idx);	
+	printf("[OC_Array objectAtIndex: %d]\n", idx);	
     
 	if(idx >= array->size) return nil;
 //	printf("[OC_Array objetAtIndex:] converting to id.\n");

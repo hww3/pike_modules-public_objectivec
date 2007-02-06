@@ -13,7 +13,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * $Id: AppKit.mmod,v 1.6 2007-01-20 00:05:02 hww3 Exp $
+ * $Id: AppKit.mmod,v 1.7 2007-02-06 01:52:22 hww3 Exp $
  */
 
 /*
@@ -78,6 +78,16 @@
  PIKECLASS AppKit
  {
    PIKEVAR object foo;
+
+   PIKEFUN void NSRegisterServicesProvider(object provider, string name)
+   {
+	  id p, n;
+	  n = [NSString stringWithUTF8String: name->str];
+	  p = svalue_to_id(Pike_sp-2);
+
+	  NSRegisterServicesProvider(p, n);
+	  pop_n_elems(args);
+   }
 
    PIKEFUN void NSBeep()
    {
