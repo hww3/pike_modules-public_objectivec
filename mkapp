@@ -62,12 +62,23 @@ return 0;
 
 EOF
 
+echo "building stub..."
+
 gcc -arch i386 -arch ppc -F /Users/hww3/Pike/7.7/build/Frameworks/ -c "${APPNAME}.m" -o "${APPNAME}.o"
 gcc -arch i386 -arch ppc "${APPNAME}.o" -o "${APPNAME}" -F/Users/hww3/Pike/7.7/build/Frameworks/ -framework Pike -framework Foundation
 
 if [ -d "./${APPNAME}.app" ] ;
 then
-  mv "${APPNAME}" "${APPNAME}.app/Contents/MacOS"
+else
+  echo "creating app bundle..."
+  mkdir -p "${APPNAME}.app/Contents/MacOS"
+  mkdir -p "${APPNAME}.app/Contents/Resources"
+  mkdir -p "${APPNAME}.app/Contents/Frameworks"
+
+// need to create files:
+// PkgInfo Info.plist version.plist
 fi
+
+mv "${APPNAME}" "${APPNAME}.app/Contents/MacOS"
 
 rm "${APPNAME}.m" "${APPNAME}.o"
