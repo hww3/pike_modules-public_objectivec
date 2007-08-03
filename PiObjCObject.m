@@ -13,7 +13,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * $Id: PiObjCObject.m,v 1.27 2007-02-06 01:52:22 hww3 Exp $
+ * $Id: PiObjCObject.m,v 1.28 2007-08-03 01:32:32 hww3 Exp $
  */
 
 /*
@@ -295,20 +295,20 @@ void low_create_pike_object(ffi_cif* cif, void* resp, void** args, void* userdat
 // we call create() on the object once alloc has completed.
 id create_pike_object(struct program  * prog, id obj, SEL sel)
 {
-  struct thread_state *state;
-printf("create_pike_object()\n");
+    struct thread_state *state;
+    printf("create_pike_object()\n");
 
     if(!prog || !obj || !sel)
     {
 	   printf("AIEEEEE!\n");
-}
+    }
 
 	if(prog)
 	{
       if((state = thread_state_for_id(th_self()))!=NULL)
       {
         /* This is a pike thread.  Do we have the interpreter lock? */
-        if(!state->swapped)
+        if(1 || !state->swapped)
         {
           /* Yes.  Go for it... */
           instantiate_pike_native_class(prog, obj, sel);
@@ -318,6 +318,7 @@ printf("create_pike_object()\n");
           /* Nope, let's get it... */
           mt_lock_interpreter();
           SWAP_IN_THREAD(state);
+
           instantiate_pike_native_class(prog, obj, sel);
 
           /* Restore */
@@ -511,16 +512,35 @@ void dispatch_pike_method(struct object * pobject, SEL sel, NSInvocation * anInv
 
   if(encoding)
   {
+	id sig;
     printf("encoding: %s\n", encoding);
-    return [NSMethodSignature signatureWithObjCTypes:encoding];
+    sig = [NSMethodSignature signatureWithObjCTypes:encoding];
     free(encoding);
+    return sig;
   }  
-  else
+
+  if(aSelector == @selector(respondsToSelector:))
   {
-    [NSException raise:NSInvalidArgumentException format:@"no such selector: %s", (char *)aSelector];	
-	return nil;
+    return [NSMethodSignature signatureWithObjCTypes:"c@::"];
   }
 
+  if(aSelector == @selector(methodDescriptionForSelector:))
+  {
+    return [NSMethodSignature signatureWithObjCTypes:"^{objc_method_description=:*}@::"];
+  }
+
+  if(aSelector == @selector(__ObjCgetPikeObject))
+  {
+//	char * enc;
+//	enc = @encode(struct object *);
+	
+    return [NSMethodSignature signatureWithObjCTypes: "@@:"];
+  }
+
+
+//  [NSException raise:NSInvalidArgumentException format:@"no such selector: %s", (char *)aSelector];	
+//  return [super methodSignatureForSelector: aSelector];
+//  return nil;
 }
 
 // see also getPikeObject... we probably want to make this hidden.

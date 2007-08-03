@@ -1,0 +1,73 @@
+#!/bin/sh
+
+
+echo making app for $1
+
+APPNAME=$1
+
+cat << EOF > ${APPNAME}.m
+
+#import <Pike/OCPikeInterpreter.h>
+#import <Foundation/NSString.h>
+#import <Foundation/NSAutoreleasePool.h>
+
+int main(int argc, char** argv) { 
+struct object * m;
+id i; 
+struct svalue * sv;
+
+// required for console mode objective c applications 
+NSAutoreleasePool *innerPool = [[NSAutoreleasePool alloc] init];
+
+// these 2 lines set up and start the interpreter. 
+i = [OCPikeInterpreter sharedInterpreter]; 
+[i startInterpreter];
+
+// ok, now that we have things set up, let's use it. 
+// first, an example of calling pike c level apis directly. 
+f_version(0); 
+printf("%s\n", Pike_sp[-1].u.string->str); 
+pop_stack();
+ m = load_pike_master();
+
+ push_text("../Resources/");
+ f_cd(1);
+
+  
+ push_text(argv[0]);
+ apply(m, "dirname", 1);
+  f_cd(1);
+  push_text("../Resources");
+  apply(m, "cd", 1);
+  f_getcwd(0);
+
+ printf("%s\n", Pike_sp[-1].u.string->str); 
+
+ apply(m, "add_program_path", 1); 
+
+// push_text(argv[0]);
+ push_text("$APPNAME");
+ push_text("$APPNAME.pike");
+ f_aggregate(2);
+ pike_push_env();
+
+ apply(m, "_main", 2); 
+
+// finally, we clean up. 
+[i stopInterpreter]; 
+[innerPool release]; 
+return 0; 
+}
+
+
+EOF
+
+gcc -F /Users/hww3/Pike/7.7/build/Frameworks/ -c "${APPNAME}.m" -o "${APPNAME}.o"
+gcc "${APPNAME}.o" -o "${APPNAME}" -F/Users/hww3/Pike/7.7/build/Frameworks/ -framework Pike -framework Foundation
+
+if [ -d "./${APPNAME}.app" ] ;
+then
+  mv "${APPNAME}" "${APPNAME}.app/Contents/MacOS"
+fi
+
+rm "${APPNAME}.m" "${APPNAME}.o"

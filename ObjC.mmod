@@ -134,6 +134,7 @@ PIKEFUN string get_signature_for_instance_method(string class, string method)
 
 }
 
+/*
 static void backend_callback(struct callback *_cb,
                              void *arg,
                              void *post_select)
@@ -157,6 +158,33 @@ static void backend_callback(struct callback *_cb,
 //printf("done\n");
   }
 }
+*/
+
+
+
+static void backend_callback(struct callback *_cb,
+                             void *arg,
+                             void *backend)
+{
+  if(backend)
+  {
+    struct timeval timeout = current_time;
+    timeout.tv_usec += 20000;
+    if(timeout.tv_usec > 1000000)
+    {
+      timeout.tv_usec-=1000000;
+      timeout.tv_sec+=1;
+    }
+    backend_lower_timeout(backend, &timeout);
+  } else
+  {
+    [[NSRunLoop currentRunLoop] runUntilDate: [NSDate date]];
+  }
+}
+
+
+
+
 
 /*! @decl void create()
  *!
@@ -648,6 +676,9 @@ printf("CreateClassDefinition(%s, %s)\n", name, superclassName);
  //   RegisterDynamicMethod("init", name, (IMP)make_create_stub(prog), "@4@4:4");
     RegisterDynamicMethod("__create", name, (IMP)make_create_stub(prog), "@4@4:4");
     RegisterDynamicMethod("__ObjCgetPikeObject", name, (IMP)get_pike_object, "@4@4:4");
+    RegisterDynamicMethod("__whee", name, (IMP)get_pike_object, "@4@4:4");
+
+
 
 	ptr = malloc(sizeof(struct svalue));
 	if(!ptr)

@@ -339,7 +339,12 @@ id unwrap_objc_object(struct object * o)
 		}
 		else
 		{
-			printf("unwrap_objc_object(): didn't find an objc class for the object\n");
+			push_text("unwrap_objc_object(): didn't find an objc class for the object: %O\n");
+			ref_push_object(o);
+			f_sprintf(2);
+			printf("%s", Pike_sp[-1].u.string->str);
+			pop_stack();
+
 		}
 		return 0;
 	}

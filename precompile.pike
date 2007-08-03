@@ -2,7 +2,7 @@
 
 #define FUNC_OVERLOAD
 
-// #define PRECOMPILE_OVERLOAD_DEBUG
+#define PRECOMPILE_OVERLOAD_DEBUG
 
 constant precompile_api_version = "2";
 
@@ -112,9 +112,6 @@ constant precompile_api_version = "2";
 
 #define PC Parser.Pike
 
-array registration_elements = ({});
-
-
 /* Strings declared with MK_STRING. */
 mapping(string:string) strings = ([
   // From stralloc.h:
@@ -174,7 +171,6 @@ int last_str_id = 0;
 array(string) stradd = ({});
 int last_svalue_id = 0;
 mapping(string:string) svalues = ([]);
-string mixin_name = "";
 
 string parse_string(string str)
 {
@@ -1293,7 +1289,7 @@ array generate_overload_func_for(array(FuncData) d,
   int best_method_value;
 
   array(mapping(string:array(FuncData))) y;
-  if(min_args)
+  if(min_args>=0)
   {
     y=allocate(min(min_args,16), ([]));
     for(int a=0;a<sizeof(y);a++)
@@ -1399,6 +1395,7 @@ array generate_overload_func_for(array(FuncData) d,
 			    indent,
 			    best_method,argbase)) });
 
+werror("Y: %O, BEST METHOD: %O\n", y, best_method);
     mapping m=y[best_method];
     mapping m2=m+([]);
     foreach(indices(m), string type)
@@ -1496,7 +1493,7 @@ class ParseBlock
 	    e++;
 	    break;
 	  }
-	case "MIXIN":
+	case "PIKECLASS":
 	  {
 	    int p;
 	    for(p=e+1;p<sizeof(x);p++)
@@ -1510,18 +1507,19 @@ class ParseBlock
 	    string lname = mkname(base, name);
 	    mapping attributes=parse_attributes(proto[1..]);
 
-		mixin_name = name;
-
 	    ParseBlock subclass = ParseBlock(body[1..sizeof(body)-2],
 					     mkname(base, name));
 	    string program_var = mkname(base, name, "program");
 
-	    string define = make_unique_name("mixin", base, name, "defined");
+	    string define = make_unique_name("class", base, name, "defined");
 
 	    ret+=DEFINE(define);
 	    // FIXME: The struct program variable should probably default
 	    //        to being static.
 	    //	/grubba 2004-10-23
+	    ret+=({sprintf("struct program *%s=NULL;\n"
+			   "static int %s_fun_num=-1;\n",
+			   program_var, program_var)});
 	    ret+=subclass->declarations;
 	    ret+=subclass->code;
 
@@ -1530,12 +1528,12 @@ class ParseBlock
 		    ({
 		      IFDEF("PROG_"+upper_case(lname)+"_ID",
 			    ({
-//			      PC.Token(sprintf("  START_NEW_PROGRAM_ID(%s);\n",
-//					       upper_case(lname)),
-//				       proto[0]->line),
+			      PC.Token(sprintf("  START_NEW_PROGRAM_ID(%s);\n",
+					       upper_case(lname)),
+				       proto[0]->line),
 			      "#else\n",
-//			      PC.Token("  start_new_program();\n",
-//				       proto[0]->line),
+			      PC.Token("  start_new_program();\n",
+				       proto[0]->line),
 			    })),
 		      IFDEF("tObjImpl_"+upper_case(lname),
 			    0,
@@ -1547,16 +1545,27 @@ class ParseBlock
 		      PC.Token(sprintf("  Pike_compiler->new_program->flags |= %s;\n",
 				     attributes->program_flags),
 			       proto[1]->line):"",
-//		      PC.Token(sprintf("  %s=end_program();\n",program_var),
-//			       proto[0]->line),
-//		      PC.Token(sprintf("  %s_fun_num=add_program_constant(%O,%s,%s);\n",
-//				       program_var,
-//				       name,
-//				       program_var,
-//				       attributes->flags || "0"),
-//			       proto[0]->line),
+		      PC.Token(sprintf("  %s=end_program();\n",program_var),
+			       proto[0]->line),
+		      PC.Token(sprintf("  %s_fun_num=add_program_constant(%O,%s,%s);\n",
+				       program_var,
+				       name,
+				       program_var,
+				       attributes->flags || "0"),
+			       proto[0]->line),
 		    })
 		    );
+	    exitfuncs+=
+	      IFDEF(define,
+		    subclass->exitfuncs+
+		    ({
+		      sprintf("  if(%s) {\n", program_var),
+		      PC.Token(sprintf("    free_program(%s);\n", program_var),
+			       proto[0]->line),
+		      sprintf("    %s=0;\n"
+			      "  }\n",
+			      program_var),
+		    }));
 	    e = p;
 	    break;
 	  }
@@ -1805,7 +1814,7 @@ class ParseBlock
 
 	string funcname=mkname("f",base,name);
 	string define=make_unique_name("f",base,name,"defined");
-//	string func_num=mkname("f", base,name,"fun_num");
+	string func_num=mkname("f", base,name,"fun_num");
 
 //    werror("FIX RETURN: %O\n",body);
     
@@ -1817,13 +1826,12 @@ class ParseBlock
 	  sprintf("#define %s\n", define),
 	});
 
-/*
 	if (!attributes->efun) {
 	  ret += ({
 	    sprintf("ptrdiff_t %s = 0;\n", func_num),
 	  });
 	}
-*/
+
 	// werror("%O %O\n",proto,args);
 	int last_argument_repeats;
 	if(sizeof(args_tmp) && 
@@ -1998,8 +2006,7 @@ class ParseBlock
 	      ret+=({
 		PC.Token(sprintf("if(Pike_sp[%d%s].type != PIKE_T_STRING || Pike_sp[%d%s].ustring -> width)",
 				 argnum,check_argbase,
-				 argnum,check_argbase
-				 ),arg->line())
+				 argnum,check_argbase),arg->line())
 	      });
 	    } else {
 
@@ -2148,7 +2155,7 @@ class ParseBlock
 	    name=common_name;
 	    funcname=mkname("f",base,common_name);
 	    define=make_unique_name("f",base,common_name,"defined");
-//	    func_num=mkname(base,funcname,"fun_num");
+	    func_num=mkname(base,funcname,"fun_num");
 	    array(string) defines=({});
 	  
 	    type=PikeType(PC.Token("|"), tmp->type);
@@ -2168,7 +2175,7 @@ class ParseBlock
 	     */
 	    ret+=IFDEF(tmp->define, ({
 	      sprintf("#define %s\n",define),
-	     /* sprintf("ptrdiff_t %s = 0;\n", func_num), */
+	      sprintf("ptrdiff_t %s = 0;\n", func_num),
 	      sprintf("void %s(INT32 args) ",funcname),
 	      "{\n",
 	    })+out+({
@@ -2203,16 +2210,10 @@ class ParseBlock
 	    }));
 	} else {
 	  addfuncs+=IFDEF(define, ({
-//	    PC.Token(sprintf("  %s =\n", func_num)),
-	    PC.Token(
-		sprintf("    push_text(%O);\n"
-		        "    push_int(1);\n"
-		        "    mapping_string_insert(m, Pike_sp[-2].u.string, Pike_sp-1);\n"
-				"    pop_n_elems(2);\n"
-				"    ADD_FUNCTION2(%O, %s, %s, %s, %s);\n",
+	    PC.Token(sprintf("  %s =\n", func_num)),
+	    PC.Token(sprintf("    ADD_FUNCTION2(%O, %s, %s, %s, %s);\n",
 			     attributes->name || name,
-			     attributes->name || name,
-		         funcname,
+			     funcname,
 			     type->output_c_type(),
 			     attributes->flags || "0" ,
 			     attributes->optflags ||
@@ -2254,14 +2255,14 @@ array(PC.Token) convert_comments(array(PC.Token) tokens)
   return new;
 }
 
-array(PC.Token) allocate_strings(array(PC.Token|array(PC.Token)) tokens)
+array(PC.Token) allocate_strings(array(PC.Token) tokens)
 {
   int i = -1;
 
   while ((i = search(tokens, PC.Token("MK_STRING"), i+1)) != -1) {
     // werror("MK_STRING found: %O\n", tokens[i..i+10]);
     if (arrayp(tokens[i+1]) && (sizeof(tokens[i+1]) == 3)) {
-      tokens[i] = PC.Token(allocate_string((string)tokens[i+1]->text[1]));
+      tokens[i] = PC.Token(allocate_string((string)tokens[i+1][1]));
       tokens = tokens[..i] + tokens[i+2..];
     }
   }
@@ -2277,48 +2278,10 @@ array(PC.Token) allocate_strings(array(PC.Token|array(PC.Token)) tokens)
 
 int main(int argc, array(string) argv)
 {
-  string dir = argv[1];
-
-  object stat = file_stat(dir);
-
-  if(!stat || !stat->isdir) 
-  {
-    werror("directory %s does not exist, or is not a directory.\n", dir);
-    return 1;
-  }
-
-  write("#include \"piobjc.h\"\n");
-  write("#define THIS ((struct objc_dynamic_class *)(Pike_interpreter.frame_pointer->current_storage))\n");
-
-  foreach(glob("*.mx", get_dir(dir));; string fn)
-  {
-    string f = combine_path(dir, fn);
-    werror("whee, processing %s\n", f);
-    doit(f);
-  }
-
-  write("\nvoid start_mixins()\n{");
-  write("\nMixinRegistrationCallback c = NULL;\n");
-
-  foreach(registration_elements, string e)
-  {
-    write("c = &_" + e + "_register_mixin;\n");
-    write("add_mixin_callback(\"" + e + "\", c);\n");
-  }
-
-  write("\n}\n\n");
-  write("void stop_mixins() { }\n\n");
-  
-  return 0;
-
-}
-
-
-void doit(string file)
-{
   mixed x;
 
-  x=Stdio.read_file(file)-"\r";
+  string file = argv[1];
+  x=Stdio.read_file(file);
   x=PC.split(x);
   x=PC.tokenize(x,file);
   x = convert_comments(x);
@@ -2326,11 +2289,11 @@ void doit(string file)
   x=PC.group(x);
 
   x = ({
-    sprintf("/* Generated from %O by build_mixin.pike\n"
+    sprintf("/* Generated from %O by precompile.pike\n"
 	    " *\n"
 	    " * Do NOT edit this file.\n"
 	    " */\n",
-	    file),
+	    argv[1]),
   }) + DEFINE("PRECOMPILE_API_VERSION", (string)precompile_api_version) + ({
     "\n\n",
   }) + x;
@@ -2382,10 +2345,8 @@ void doit(string file)
   {
     // No INIT, add our own stuff..
 
-    registration_elements += ({ mixin_name });
-
     x+=({
-      sprintf("void _%s_register_mixin(struct mapping * m){\n", mixin_name),
+      "PIKE_MODULE_INIT {\n",
       tmp->addfuncs,
       "}\n",
     });
@@ -2395,14 +2356,13 @@ void doit(string file)
   if(equal(x, tmp->code))
   {
     // No EXIT, add our own stuff..
-/*
+
     x+=({
       "PIKE_MODULE_EXIT {\n",
       tmp->exitfuncs,
       "}\n",
     });
 
-*/
     if (!need_init) {
       werror("Warning: INIT without EXIT. Added PIKE_MODULE_EXIT.\n");
     }
