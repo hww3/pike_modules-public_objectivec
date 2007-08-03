@@ -62,8 +62,8 @@ return 0;
 
 EOF
 
-gcc -F /Users/hww3/Pike/7.7/build/Frameworks/ -c "${APPNAME}.m" -o "${APPNAME}.o"
-gcc "${APPNAME}.o" -o "${APPNAME}" -F/Users/hww3/Pike/7.7/build/Frameworks/ -framework Pike -framework Foundation
+gcc -arch i386 -arch ppc -F /Users/hww3/Pike/7.7/build/Frameworks/ -c "${APPNAME}.m" -o "${APPNAME}.o"
+gcc -arch i386 -arch ppc "${APPNAME}.o" -o "${APPNAME}" -F/Users/hww3/Pike/7.7/build/Frameworks/ -framework Pike -framework Foundation
 
 if [ -d "./${APPNAME}.app" ] ;
 then
