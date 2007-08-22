@@ -13,7 +13,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * $Id: PiObjCObject.m,v 1.28 2007-08-03 01:32:32 hww3 Exp $
+ * $Id: PiObjCObject.m,v 1.29 2007-08-22 02:13:02 hww3 Exp $
  */
 
 /*
@@ -76,6 +76,7 @@
 #import  <Foundation/NSString.h>
 #import "PiObjCObject.h"
 
+extern int async_error_mode;
 void dispatch_pike_method(struct object * pobject, SEL sel, NSInvocation * anInvocation);
 
 @implementation PiObjCObject
@@ -380,6 +381,71 @@ void instantiate_pike_native_class(struct program * prog, id obj, SEL sel)
 //printf("done\n");
 }
 
+#define LOW_SVALUE_STACK_MARGIN 20
+#define SVALUE_STACK_MARGIN (100 + LOW_SVALUE_STACK_MARGIN)
+#define C_STACK_MARGIN (20000 + LOW_C_STACK_MARGIN)
+#define LOW_C_STACK_MARGIN 500
+
+PMOD_EXPORT void piobjc_call_handle_error(void)
+{
+  dmalloc_touch_svalue(&throw_value);
+printf("piobjc_call_handle_error()\n");
+  if (Pike_interpreter.svalue_stack_margin > LOW_SVALUE_STACK_MARGIN) {
+    int old_t_flag = Pike_interpreter.trace_level;
+    Pike_interpreter.trace_level = 0;
+    Pike_interpreter.svalue_stack_margin = LOW_SVALUE_STACK_MARGIN;
+    Pike_interpreter.c_stack_margin = LOW_C_STACK_MARGIN;
+
+    if (get_master()) {         /* May return NULL at odd times. */
+      ONERROR tmp; 
+      SET_ONERROR(tmp,exit_on_error,"cocoa_gui_error_handler failure!");
+      push_text("Public.ObjectiveC.cocoa_gui_error_handler");
+      APPLY_MASTER("resolv", 1);
+      UNSET_ONERROR(tmp);
+
+      *(Pike_sp++) = throw_value;
+      dmalloc_touch_svalue(Pike_sp-1);
+      throw_value.type=T_INT;
+
+      apply_svalue(Pike_sp-2, 1);
+
+    }
+    else {
+      dynamic_buffer save_buf;
+      char *s;
+      fprintf (stderr, "There's no master to handle the error. Dumping it raw:\n");
+      init_buf(&save_buf);
+      safe_describe_svalue (Pike_sp - 1, 0, 0);
+      s=simple_free_buf(&save_buf);
+      fprintf(stderr,"%s\n",s);
+      free(s);
+      if (Pike_sp[-1].type == PIKE_T_OBJECT && Pike_sp[-1].u.object->prog) {
+        int fun = find_identifier("backtrace", Pike_sp[-1].u.object->prog);
+        if (fun != -1) {
+          fprintf(stderr, "Attempting to extract the backtrace.\n");
+          safe_apply_low2(Pike_sp[-1].u.object, fun, 0, 0);
+          init_buf(&save_buf);
+          safe_describe_svalue(Pike_sp - 1, 0, 0);
+          pop_stack();
+          s=simple_free_buf(&save_buf);
+          fprintf(stderr,"%s\n",s);
+          free(s);
+        }
+      }
+    }
+
+    pop_stack();
+    Pike_interpreter.svalue_stack_margin = SVALUE_STACK_MARGIN;
+    Pike_interpreter.c_stack_margin = C_STACK_MARGIN;
+    Pike_interpreter.trace_level = old_t_flag;
+  }
+
+  else {
+    free_svalue(&throw_value);
+	    throw_value.type=T_INT;
+	  }
+	}
+
 void dispatch_pike_method(struct object * pobject, SEL sel, NSInvocation * anInvocation)
 {
   int args;
@@ -387,6 +453,8 @@ void dispatch_pike_method(struct object * pobject, SEL sel, NSInvocation * anInv
   struct svalue func;
   id sig;
   int x;
+  JMP_BUF recovery;
+
   printf("dispatch_pike_method(%s)\n", sel);
   c = get_func_by_selector(pobject, sel);
   if(c) // jackpot!
@@ -398,13 +466,36 @@ void dispatch_pike_method(struct object * pobject, SEL sel, NSInvocation * anInv
 
     args = push_objc_types(sig, anInvocation);
     // printf("making the call.\n");
-    apply_svalue(c, args);
-    printf("done making the call.\n");
 
-    // now, we should deal with the return value.
-    printf("Dealing with the return value for call to %s...", (char *) sel);
-    piobjc_set_return_value(sig, anInvocation, &Pike_sp[-1]);
-    printf(" done.\n");
+    if(async_error_mode)
+    {
+	  free_svalue(& throw_value);
+	  throw_value.type=T_INT;
+	  if(SETJMP_SP(recovery, args))
+	  {
+	      piobjc_call_handle_error();
+	      push_int(0);
+	  }else{
+	      apply_svalue (c, args);
+	      printf("Dealing with the return value for call to %s...", (char *) sel);
+	      piobjc_set_return_value(sig, anInvocation, &Pike_sp[-1]);
+	      printf(" done.\n");
+
+	      printf("done making the call.\n");
+	  }
+	  UNSETJMP(recovery);
+    }
+    else
+    {
+       apply_svalue (c, args);
+      // now, we should deal with the return value.
+      printf("Dealing with the return value for call to %s...", (char *) sel);
+      piobjc_set_return_value(sig, anInvocation, &Pike_sp[-1]);
+      printf(" done.\n");
+
+      printf("done making the call.\n");
+    }
+
     free_svalue(c);
     free(c);
   }

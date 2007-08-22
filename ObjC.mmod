@@ -32,7 +32,7 @@ struct mapping * global_proxy_cache;
 struct mapping * global_class_cache;
 struct mapping * global_classname_cache;
 struct mapping * global_mixin_dict;
-
+int async_error_mode = 0;
 CVAR OC_NSAutoreleasePoolCollector * pool;
 
 /*! @decl void create()
@@ -368,15 +368,16 @@ int piobjc_classhandler_callback(const char* className)
   }
 
   SAFE_APPLY_MASTER("low_cast_to_program", 2 );
-
   if(Pike_sp[-1].type == T_PROGRAM)
   {
+printf("got the program\n");
     add_piobjcclass(className, Pike_sp[-1].u.program);
     pop_stack();
     return 1;
   }
   else
   {
+printf("got nothing\n");
     pop_stack();
     return 0;
   }

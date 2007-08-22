@@ -13,7 +13,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * $Id: AppKit.mmod,v 1.7 2007-02-06 01:52:22 hww3 Exp $
+ * $Id: AppKit.mmod,v 1.8 2007-08-22 02:13:01 hww3 Exp $
  */
 
 /*
@@ -74,6 +74,7 @@
 #include "libffi/include/ffi.h"
  #include "piobjc.h"
  static char ** argv;
+ extern int async_error_mode;
 
  PIKECLASS AppKit
  {
@@ -98,23 +99,30 @@
    {
      NSApplicationLoad();
    }
+
+   PIKEFUN int NSRunAlertPanel(string title, string msg, string defaultButton, string alternateButton, string otherButton)
+   {
+// TODO: utf8 encode the arguments.
+
+	 id t = [NSString stringWithUTF8String: title->str];
+	 id m = [NSString stringWithUTF8String: msg->str];
+	 id d = [NSString stringWithUTF8String: defaultButton->str];
+	 id a = [NSString stringWithUTF8String: alternateButton->str];
+	 id o = [NSString stringWithUTF8String: otherButton->str];
+
+     pop_n_elems(args);
+      
+	 push_int(NSRunAlertPanel(t, m, d, a, o));
+   }
    
    PIKEFUN int NSApplicationMain(int argc, array xargv)
    {
       char ** args;
       int c;
-/*
-      args = calloc(argc, sizeof(char*));
-
-      for(c = 0; c < argc; c++)
-      {
-        args[c] = malloc(ITEM(xargv)[c].u.string->len);
-        memcpy(args[c], ITEM(xargv)[c].u.string->str, ITEM(xargv)[c].u.string->len);
-      }
-
-//printf("ARG0: %s\n", args[0]);
-*/
+	  async_error_mode = 1;
       c = NSApplicationMain(argc, argv);
+printf("\n\n\n*** NSApplicationMain() returns %d\n\n\n", c);
+      async_error_mode = 0;
       RETURN(c);      
    }
    

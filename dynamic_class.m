@@ -79,7 +79,7 @@ void low_f_call_objc_class_method(ffi_cif* cif, void* resp, void** args, void* u
   struct objc_class_method_desc * m;
   m = (struct objc_class_method_desc *)userdata;
   pargs = *((INT32 *)args[0]);
-
+  printf("low_f_call_objc_class_method()\n");
   f_call_objc_class_method(m, pargs);
 }
 
@@ -112,12 +112,13 @@ void low_f_objc_dynamic_create(ffi_cif* cif, void* resp, void** args, void* user
 
 void f_call_objc_class_method(struct objc_class_method_desc * m, INT32 args)
 {
- // printf("calling class method [%s %s]\n", m->class->name, (char *)m->select);
+  printf("calling class method [%s %s]\n", m->class->name, (char *)m->select);
   f_call_objc_method(args, 0, m->select, m->class);
 }
 
 void f_call_objc_method(INT32 args, int is_instance, SEL select, id obj)
 {
+
     struct objc_method * method;
     int arguments, x;
     id wrapper;
@@ -131,7 +132,7 @@ void f_call_objc_method(INT32 args, int is_instance, SEL select, id obj)
 	int num_float_arguments = 0;
 	
     pool = [global_autorelease_pool getAutoreleasePool];
-    
+printf("\ncall\n");    
    printf("class: %s, select: %s, is_instance: %d\n", obj->isa->name, (char *) select, is_instance);
     if(is_instance)
       method = class_getInstanceMethod(obj->isa, select);
