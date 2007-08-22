@@ -2,6 +2,10 @@ inherit Public.___ObjectiveC;
 object pool;
 object Cocoa;
 
+class NSNil {};
+
+object nil = NSNil();
+
 array bundle_locations = ({
  
   "/System/Library/Frameworks",
@@ -24,6 +28,15 @@ static void create()
   Cocoa = ClassFinder();
 
   ::create();
+}
+
+int cocoa_gui_error_handler(object|array trace)
+{
+	werror("cocoa_gui_error_handler\n");
+   	int x = AppKit()->NSRunAlertPanel("An Exception has Occurred", describe_backtrace(trace), "Continue", "Abort", "");	
+    werror("x: " + x + "\n");
+    if(!x) Cocoa.NSApplication.sharedApplication()->stop_(this);
+    return x;
 }
 
 string get_signature_for_func(function f, string selector, int numargs)
@@ -173,3 +186,56 @@ class NSArrayIterator(object arr)
 		return this;
 	}
 }
+/*
+class NSDictionaryIterator(object dict)
+{
+	inherit Iterator;
+	
+	int current_index = 0;
+
+	int(0..1) first()
+	{
+	  current_index = 0;	
+	}
+	
+	mixed index()
+	{
+		if(!dict->count())
+			return UNDEFINED;
+		else return current_index;
+	}
+	
+	int next()
+	{
+		if(dict->count() <= (current_index +1))
+		  return 0;
+		else current_index ++;
+		
+		return 1;
+		
+	}
+	
+	mixed value()
+	{
+		return dict->objectForKey_(current_index);
+	}
+	
+	static int `!()
+	{
+	  return 0;
+	}
+	
+	static Iterator `+=(int steps)
+	{
+		if((arr->count() <= (current_index + steps)) || (current_index + steps < 0))
+		{
+			return 0;
+		}
+		else
+		{
+			current_index += steps;
+		}
+		return this;
+	}
+}
+*/
