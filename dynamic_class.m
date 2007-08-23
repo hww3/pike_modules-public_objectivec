@@ -188,15 +188,23 @@ printf("\ncall\n");
         case 'd':
            if(sv->type!=T_FLOAT)
              Pike_error("Type mismatch for method argument.");
+#if defined(powerpc) || defined(__POWERPC__) 
+         ((double *)argumentList)[num_float_arguments] = (double)(sv->u.float_number);
+         num_float_arguments ++;
+#else
            marg_setValue(argumentList,offset,double , (double)sv->u.float_number);
+#endif
   	 break;
 
         case 'f':
            if(sv->type!=T_FLOAT)
              Pike_error("Type mismatch for method argument.");
-           ((double *)argumentList)[num_float_arguments] = (double)(sv->u.float_number);
+#if	defined(powerpc) || defined(__POWERPC__) 
+           ((float *)argumentList)[num_float_arguments] = (float)(sv->u.float_number);
            num_float_arguments ++;
+#else
            marg_setValue(argumentList,offset,float , (float)sv->u.float_number);
+#endif
   	 break;
 
         case 'i': 
