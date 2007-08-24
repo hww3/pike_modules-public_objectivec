@@ -1,7 +1,8 @@
-# $Id: Makefile.in,v 1.32 2007-01-31 01:22:30 hww3 Exp $
+# $Id: Makefile.in,v 1.33 2007-08-24 19:31:29 hww3 Exp $
 @make_variables@
 VPATH=@srcdir@:@srcdir@/../..:../..
-FFIOBJS=libffi/src/types.o libffi/src/prep_cif.o libffi/src/@OC_ARCH@/ffi_darwin.o libffi/src/@OC_ARCH@/darwin_closure.o libffi/src/@OC_ARCH@/darwin.o
+FFIOBJS=libffi/src/types.o libffi/src/prep_cif.o libffi/src/@OC_ARCH@/ffi_darwin.o libffi/src/@OC_ARCH@/darwin.o
+#FFIOBJS=libffi/src/types.o libffi/src/prep_cif.o libffi/src/@OC_ARCH@/ffi_darwin.o libffi/src/@OC_ARCH@/darwin_closure.o libffi/src/@OC_ARCH@/darwin.o
 OBJS=ObjC.o dynamic_class.o util.o OC_Array.o OC_Mapping.o Foundation.o AppKit.o PiObjCObject.o objc_inject.o mach_override.o method_dispatch.o $(FFIOBJS)  _mixins.o 
 MODDIR=Public.pmod/
 MODNAME=ObjectiveC
@@ -11,7 +12,6 @@ AUTODOC_SRC_IN=objectivec.cmod
 MODULE_LDFLAGS=@LDFLAGS@ @LIBS@ -framework AddressBook -framework AppKit
 MODULE_CPPFLAGS=-Ilibffi -Ilibffi/include
 MODULE_CFLAGS=-fobjc-exceptions
-CONFIG_HEADERS=@CONFIG_HEADERS@
 MODULE_INSTALL=install_frameworks
 
 
@@ -20,7 +20,7 @@ override:  compile0
 
 install_frameworks:
 	echo "Installing Frameworks"
-	for mod in frameworks/*; do test "frameworks/CVS" != "$$mod" && cd $$mod && pike -x module install && cd $(FULL_SRC_DIR); done;
+	for mod in frameworks/*; do test "frameworks/CVS" != "$$mod" && cd $$mod && $(RUNPIKE) -x module install && cd $(FULL_SRC_DIR); done;
 
 @dynamic_module_makefile@
 
@@ -70,6 +70,6 @@ install_frameworks:
 compile0:
 	$(RUNPIKE) $(SRCDIR)/build_mixin.pike $(SRCDIR)/mixins > _mixins.m
 	$(MAKE) all
-	for mod in frameworks/*; do test "frameworks/CVS" != "$$mod" && cd $$mod && pike -x module && cd $(FULL_SRC_DIR); done;
+	for mod in frameworks/*; do test "frameworks/CVS" != "$$mod" && cd $$mod && $(RUNPIKE) -x module && cd $(FULL_SRC_DIR); done;
 
 @dependencies@
