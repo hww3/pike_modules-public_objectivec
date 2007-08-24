@@ -14,6 +14,8 @@
 #import "OC_Array.h"
 #import "PiObjCObject.h"
 
+#include <CoreFoundation/CoreFoundation.h>
+
 /*! @decl int index(int pid, int use_main_thread, string bundlePath, string systemPath, string carbonPath)
  *!
  */
@@ -21,11 +23,13 @@
 object_setInstanceVariableProc old_object_setInstanceVariable;
 object_getInstanceVariableProc old_object_getInstanceVariable;
 
+static CFRunLoopTimerRef		gTimerRef;
 static int backend_callback_set = 0;
 static struct callback *backend_cb;
 static void backend_callback(struct callback *_cb,
                              void *arg,
                              void *post_select);
+static void run_backend_from_runloop(CFRunLoopTimerRef timerRef, void *info);
 
 id global_autorelease_pool;
 struct mapping * global_proxy_cache;
@@ -183,8 +187,77 @@ static void backend_callback(struct callback *_cb,
 }
 
 
+//
+// add a callback to the default runloop to run the pike backend.
+//
 
+PIKEFUN void remove_backend_from_runloop()
+{
+  if(!gTimerRef)
+  {
+    Pike_error("no backend registered!\n");
+  }
 
+  CFRunLoopTimerInvalidate(gTimerRef);
+  CFRelease(gTimerRef);
+  gTimerRef = NULL;
+}
+
+// should we allow multiple backends to be registered?
+PIKEFUN void add_backend_to_runloop(object backend, float delay)
+{
+   struct GenericBackend_struct * gb;
+   CFRunLoopTimerContext *context;
+
+#if 0
+   gb = get_storage(backend, Backend_program);
+
+   if(gTimerRef) 
+   {
+	 Pike_error("a backend is already registered!\n");
+   }
+
+   if(!gb) 
+   {
+     pop_n_elems(args);
+     Pike_error("backend argument must be a Pike.Backend object.\n");
+   }
+
+    context = malloc(sizeof(CFRunLoopTimerContext));
+	if(!context)
+	{
+      pop_n_elems(args);
+      Pike_error("unable to allocate timer context.\n");	
+	}
+
+	context->info = gb;
+#endif	
+	gTimerRef = CFRunLoopTimerCreate(NULL, CFAbsoluteTimeGetCurrent(),
+                                    delay, 0, 0,
+                                    run_backend_from_runloop, NULL);
+    CFRunLoopAddTimer(CFRunLoopGetCurrent(), gTimerRef, kCFRunLoopDefaultMode);
+    
+   pop_n_elems(args);
+}
+
+static void run_backend_from_runloop(CFRunLoopTimerRef timerRef, void *info)
+{
+  struct timeval timeout;
+
+    timeout.tv_sec = 0;
+    timeout.tv_usec = 0;
+ //printf("run_backend_from_runloop\n");
+
+    push_text("Pike.DefaultBackend");
+    SAFE_APPLY_MASTER("resolv", 1);
+
+    push_float(0.0);
+    apply_svalue(Pike_sp-2, 1);
+//printf("done running backend.\n");
+
+//  gb_low_backend_once(info, &timeout);
+
+}
 
 /*! @decl void create()
  *!
