@@ -842,7 +842,7 @@ struct program * pike_low_create_objc_dynamic_class(char * classname)
       desc->class = isa;
       desc->select = selector; 
 
-      add_function_constant((char *)pikename, (void *)make_static_stub(desc, low_f_call_objc_class_method), "function(mixed...:mixed)", 0);
+      add_function_constant((char *)pikename, (void *)make_static_stub(desc, low_f_call_objc_class_method), "function(mixed...:mixed)", OPT_SIDE_EFFECT);
       push_text(selector);
     //  add_ref(Pike_sp[-1].u.string);
       push_int(1);
