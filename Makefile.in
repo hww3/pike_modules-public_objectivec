@@ -1,4 +1,4 @@
-# $Id: Makefile.in,v 1.33 2007-08-24 19:31:29 hww3 Exp $
+# $Id: Makefile.in,v 1.34 2007-08-24 19:45:00 hww3 Exp $
 @make_variables@
 VPATH=@srcdir@:@srcdir@/../..:../..
 FFIOBJS=libffi/src/types.o libffi/src/prep_cif.o libffi/src/@OC_ARCH@/ffi_darwin.o libffi/src/@OC_ARCH@/darwin.o
@@ -20,7 +20,7 @@ override:  compile0
 
 install_frameworks:
 	echo "Installing Frameworks"
-	for mod in frameworks/*; do test "frameworks/CVS" != "$$mod" && cd $$mod && $(RUNPIKE) -x module install && cd $(FULL_SRC_DIR); done;
+	for mod in frameworks/*; do (test "frameworks/CVS" != "$$mod" && cd $$mod && $(RUNPIKE) -x module install) && cd $(FULL_SRC_DIR); done;
 
 @dynamic_module_makefile@
 
@@ -70,6 +70,6 @@ install_frameworks:
 compile0:
 	$(RUNPIKE) $(SRCDIR)/build_mixin.pike $(SRCDIR)/mixins > _mixins.m
 	$(MAKE) all
-	for mod in frameworks/*; do test "frameworks/CVS" != "$$mod" && cd $$mod && $(RUNPIKE) -x module && cd $(FULL_SRC_DIR); done;
+	for mod in frameworks/*; do (test "frameworks/CVS" != "$$mod" && cd $$mod && $(RUNPIKE) -x module); cd $(FULL_SRC_DIR); done;
 
 @dependencies@
