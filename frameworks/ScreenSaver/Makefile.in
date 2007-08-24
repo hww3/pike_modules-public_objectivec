@@ -1,4 +1,4 @@
-# $Id: Makefile.in,v 1.1 2007-01-28 17:45:27 hww3 Exp $
+# $Id: Makefile.in,v 1.2 2007-08-24 19:32:26 hww3 Exp $
 @make_variables@
 VPATH=@srcdir@:@srcdir@/../..:../..
 OBJS=_mixins.o ScreenSaver.o
@@ -8,8 +8,6 @@ MODNAME=ScreenSaver
 MODULE_LDFLAGS=@LDFLAGS@ @LIBS@ -framework ScreenSaver
 MODULE_CPPFLAGS=-I../../libffi -I../../libffi/include -I../../
 MODULE_CFLAGS=-fobjc-exceptions
-CONFIG_HEADERS=@CONFIG_HEADERS@
-#MODULE_INSTALL=foobar
 
 
 override:  compile0

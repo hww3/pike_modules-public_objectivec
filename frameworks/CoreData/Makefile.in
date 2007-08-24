@@ -1,4 +1,4 @@
-# $Id: Makefile.in,v 1.1 2006-12-25 03:53:59 hww3 Exp $
+# $Id: Makefile.in,v 1.2 2007-08-24 19:32:26 hww3 Exp $
 @make_variables@
 VPATH=@srcdir@:@srcdir@/../..:../..
 OBJS=CoreData.o _mixins.o
@@ -9,7 +9,6 @@ AUTODOC_SRC_IN=
 MODULE_LDFLAGS=@LDFLAGS@ @LIBS@ -framework CoreData
 MODULE_CPPFLAGS=-I../../ -I../../libffi -I../../libffi/include
 MODULE_CFLAGS=-fobjc-exceptions
-CONFIG_HEADERS=@CONFIG_HEADERS@
 
 override:  compile0
         @:
