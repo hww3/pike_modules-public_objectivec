@@ -66,4 +66,15 @@ PIKEFUN void `[]=(mixed key, mixed value)
 }
 
 
+PIKEFUN int _sizeof()
+{
+   int s;
+
+   s = [THIS->obj count];
+
+   push_int(s);
+}
+
+
+
 }
