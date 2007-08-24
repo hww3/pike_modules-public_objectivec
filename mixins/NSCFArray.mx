@@ -24,7 +24,7 @@ PIKEFUN object _get_iterator()
 
 }
 
-/*
+
 PIKEFUN mixed `[](int key)
 {
   id v;
@@ -52,6 +52,14 @@ PIKEFUN mixed `[](int key)
 	free(sv);
   }
 }
-*/
+
+PIKEFUN int _sizeof()
+{
+   int s;
+
+   s = [THIS->obj count];
+
+   push_int(s);
+}
 
 }
