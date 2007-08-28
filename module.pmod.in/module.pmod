@@ -39,6 +39,12 @@ int cocoa_gui_error_handler(object|array trace)
     return x;
 }
 
+int register_new_dynamic_program(string programname, program p)
+{
+//  master()->programs["Cocoa." + programname] = p;
+  return 0;
+}
+
 string get_signature_for_func(function f, string selector, int numargs)
 {
   string osig = "";

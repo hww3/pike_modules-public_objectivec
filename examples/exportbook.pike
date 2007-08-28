@@ -5,25 +5,25 @@ array fields = ({
   Cocoa.ABAddressBook.kABEmailProperty
 });
 
+    array row = ({});
 
 int main()
 {
 
   object book = Cocoa.ABAddressBook.sharedAddressBook();
 int qq = 0;
+mixed e;
   do{
   object p = book->people();
   foreach(p;; object person)
   {
-    array row = ({});
+row = ({});
     foreach(fields;; object f)
     {
        object fv = person->valueForKey_(f);
-       if(object_program(fv) == Cocoa.ABMultiValue)       
-         row += ({(string)fv->valueAtIndex_(0) });  
-       else row += ({(string)fv});
+       describe_value(fv);
     }
-    write((row*",") + "\n");
+//    write((row*",") + "\n");
   }
   purge_autorelease_pool();
   qq++;
@@ -31,3 +31,18 @@ int qq = 0;
   return 0;
 }
 
+void describe_value(object fv)
+{
+  mixed e;
+  if(object_program(fv) == Cocoa.ABMultiValue)       
+    describe_value(fv->valueAtIndex_(0));  
+  else 
+  {
+    e = catch {
+      row += ({(string )fv});
+    };
+    if(e){werror("error casting %O, %O to string.\n",  
+fv?fv->__objc_classname:"",
+fv?sort(indices(fv)):fv); exit(1);}
+  }
+}

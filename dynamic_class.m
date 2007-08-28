@@ -29,7 +29,8 @@ void f_objc_dynamic_create(Class cls, INT32 args)
   struct svalue sval;
   struct pike_string * cname;
   
-printf("dynamic_create: %s()\n", cls->isa->name);
+// printf("dynamic_create: %s()\n", cls->isa->name);
+
   if(args!=0)
   {
     printf("args: %d\n", args);
@@ -52,7 +53,7 @@ printf("dynamic_create: %s()\n", cls->isa->name);
   THIS->obj = [cls alloc];
 // [THIS->obj retain];
   THIS->is_instance = 1;
-printf("finished creating object.\n");
+// printf("finished creating object.\n");
 }
 
 void f_objc_dynamic_instance_method(INT32 args)
@@ -79,7 +80,7 @@ void low_f_call_objc_class_method(ffi_cif* cif, void* resp, void** args, void* u
   struct objc_class_method_desc * m;
   m = (struct objc_class_method_desc *)userdata;
   pargs = *((INT32 *)args[0]);
-  printf("low_f_call_objc_class_method()\n");
+//  printf("low_f_call_objc_class_method()\n");
   f_call_objc_class_method(m, pargs);
 }
 
@@ -132,7 +133,7 @@ void f_call_objc_method(INT32 args, int is_instance, SEL select, id obj)
 	int num_float_arguments = 0;
 	
     pool = [global_autorelease_pool getAutoreleasePool];
-printf("\ncall\n");    
+// printf("\ncall\n");    
    printf("class: %s, select: %s, is_instance: %d\n", obj->isa->name, (char *) select, is_instance);
     if(is_instance)
       method = class_getInstanceMethod(obj->isa, select);
@@ -678,7 +679,7 @@ struct program * pike_create_objc_dynamic_class(struct pike_string * classname)
 {
   struct svalue * c = NULL;
   struct program * p;
-  
+
   /* first, we look up the requested name to see if it's been cached. */
   c = low_mapping_string_lookup(global_class_cache, classname);
 
@@ -688,16 +689,19 @@ struct program * pike_create_objc_dynamic_class(struct pike_string * classname)
     if(!p) return 0;
 
     ref_push_program(p);
-    add_ref(classname);
-    mapping_string_insert(global_class_cache, classname, Pike_sp-1);
+//    add_ref(classname);
     push_string(classname);
+    low_mapping_insert(global_class_cache, Pike_sp-1, Pike_sp-2, 1);
     low_mapping_insert(global_classname_cache, Pike_sp-2, Pike_sp-1, 1);
     pop_stack();
     pop_stack();
     return p;
   }
-  else 
+  else
+  {
+    printf("Found %s in cache.\n", classname->str);
     return c->u.program;  
+  }
 }
 
 static void event_handler(int ev) {
@@ -743,6 +747,8 @@ struct program * pike_low_create_objc_dynamic_class(char * classname)
     printf("Objective-C class %s does not exist.\n", classname);
     return 0;
   }
+
+  printf("CREATING DYNAMIC CLASS %s\n", classname);
   
   start_new_program();
 
@@ -959,12 +965,24 @@ struct program * pike_low_create_objc_dynamic_class(char * classname)
   //set_exit_callback(objc_dynamic_class_exit);
 
   dclass = end_program();
-  return dclass;
+  
   if(dclass && strlen(classname))
   {
-	printf("adding constant %s\n", classname);
-    add_program_constant(strdup(classname),dclass,0);
+      //printf("adding constant %s\n", classname);
+      push_text("Public.ObjectiveC.register_new_dynamic_program");
+      APPLY_MASTER("resolv", 1);
+      if(Pike_sp[-1].type != T_FUNCTION)
+      {
+        pop_stack();
+        Pike_error("unable to find Public.ObjectiveC.register_new_dynamic_program.\n");
+      }
+      push_text(classname);
+      ref_push_program(dclass);
+      apply_svalue(Pike_sp-3, 2);
+      pop_stack();
   }
+
+  return dclass;
 //  add_ref(dclass);
 }
 

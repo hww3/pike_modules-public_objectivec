@@ -439,8 +439,10 @@ struct object * wrap_objc_object(id r)
   }
   else 
   {
-    ps = make_shared_string(r->isa->name);
-    prog = pike_create_objc_dynamic_class(ps);
+    push_text(r->isa->name);
+    f_utf8_to_string(1);
+    prog = pike_create_objc_dynamic_class(Pike_sp[-1].u.string);
+    pop_stack();
     if(!prog) return NULL;
 
 
