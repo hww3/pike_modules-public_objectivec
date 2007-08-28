@@ -732,14 +732,13 @@ printf("piobjc_set_return_value()\n");
 			[invocation setReturnValue: &val];
 		}
   	    break;
-      // class
-      case '#':
-//        break;
-      // selector 
       case 'v': 
         // void return value!
         break;
+      case '#':
       case ':':
+      // class
+      // selector 
       default:
       printf("ERROR: don't know how to set a return value of encoding %s\n", type);
         break;
@@ -835,10 +834,10 @@ struct svalue * get_func_by_selector(struct object * pobject, SEL aSelector)
 
   // do we need to do this?
   push_text(funname);
+  free(funname);
 
   object_index_no_free(sv2, pobject, Pike_sp-1);
   pop_stack();
-  free(funname);
 
   if(sv2->type == PIKE_T_FUNCTION) // jackpot!
   {

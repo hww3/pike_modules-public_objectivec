@@ -13,7 +13,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * $Id: PiObjCObject.m,v 1.29 2007-08-22 02:13:02 hww3 Exp $
+ * $Id: PiObjCObject.m,v 1.30 2007-08-28 16:03:57 hww3 Exp $
  */
 
 /*
@@ -479,6 +479,7 @@ void dispatch_pike_method(struct object * pobject, SEL sel, NSInvocation * anInv
 	      apply_svalue (c, args);
 	      printf("Dealing with the return value for call to %s...", (char *) sel);
 	      piobjc_set_return_value(sig, anInvocation, &Pike_sp[-1]);
+	      pop_stack();
 	      printf(" done.\n");
 
 	      printf("done making the call.\n");
@@ -491,6 +492,7 @@ void dispatch_pike_method(struct object * pobject, SEL sel, NSInvocation * anInv
       // now, we should deal with the return value.
       printf("Dealing with the return value for call to %s...", (char *) sel);
       piobjc_set_return_value(sig, anInvocation, &Pike_sp[-1]);
+      pop_stack();
       printf(" done.\n");
 
       printf("done making the call.\n");
