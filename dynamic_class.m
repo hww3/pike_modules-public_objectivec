@@ -1,4 +1,3 @@
-
 #import <Foundation/NSString.h>
 #import "PiObjCObject.h"
 #include "libffi/include/ffi.h"
@@ -735,7 +734,7 @@ static void event_handler(int ev) {
 struct program * pike_low_create_objc_dynamic_class(char * classname)
 {
   char * ncn;
-  struct program * dclass;
+  struct program * dclass = NULL;
   static ptrdiff_t dclass_storage_offset;
   int num = -1;
   int ivarnum = 0;
@@ -983,10 +982,13 @@ struct program * pike_low_create_objc_dynamic_class(char * classname)
 
   dclass = end_program();
 
-  return dclass;
-
-  if(get_master() && dclass && strlen(classname))
+  if(dclass && strlen(classname))
   {
+
+    //add_program_constant(classname, dclass, 0);
+
+    if(get_master())
+    {
       push_text("Public.ObjectiveC.register_new_dynamic_program");
       APPLY_MASTER("resolv", 1);
       if(Pike_sp[-1].type != T_FUNCTION)
@@ -999,8 +1001,8 @@ struct program * pike_low_create_objc_dynamic_class(char * classname)
       ref_push_program(dclass);
       apply_svalue(Pike_sp-3, 2);
       pop_stack();
+    }
   }
-
   return dclass;
 }
 
