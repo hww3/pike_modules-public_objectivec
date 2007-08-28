@@ -23,11 +23,12 @@ row = ({});
        object fv = person->valueForKey_(f);
        describe_value(fv);
     }
-//    write((row*",") + "\n");
+    write((row*",") + "\n");
   }
   purge_autorelease_pool();
   qq++;
-} while(qq<1000);
+} while(qq<100);
+sleep(100);
   return 0;
 }
 
@@ -41,8 +42,10 @@ void describe_value(object fv)
     e = catch {
       row += ({(string )fv});
     };
-    if(e){werror("error casting %O, %O to string.\n",  
-fv?fv->__objc_classname:"",
-fv?sort(indices(fv)):fv); exit(1);}
+    if(e){
+//werror("error casting %O, %O to string.\n",  
+//fv?fv->__objc_classname:"",
+//fv?sort(indices(fv)):fv); 
+exit(1);}
   }
 }

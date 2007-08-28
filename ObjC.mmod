@@ -259,7 +259,7 @@ static void run_backend_from_runloop(CFRunLoopTimerRef timerRef, void *info)
 
 }
 
-/*! @decl void create()
+/*! @decl void purge_autorelease_pool()
  *!
  */
 PIKEFUN void purge_autorelease_pool()
@@ -279,6 +279,7 @@ PIKEFUN program get_dynamic_class(string classname)
    
    pop_stack();
    
+
    if(prog)
       ref_push_program(prog);
    else
@@ -327,8 +328,10 @@ void add_mixin_callback(const char * classname, MixinRegistrationCallback c)
    s.subtype = 4711;
    s.u.ptr = c;   
 
+   add_ref(str);
+
    mapping_string_insert(global_mixin_dict, str, &s);
-   free_string(str);
+   //free_string(str);
 }
 
 EXTRA
@@ -443,14 +446,14 @@ int piobjc_classhandler_callback(const char* className)
   SAFE_APPLY_MASTER("low_cast_to_program", 2 );
   if(Pike_sp[-1].type == T_PROGRAM)
   {
-printf("got the program\n");
+//printf("got the program\n");
     add_piobjcclass(className, Pike_sp[-1].u.program);
     pop_stack();
     return 1;
   }
   else
   {
-printf("got nothing\n");
+//printf("got nothing\n");
     pop_stack();
     return 0;
   }
@@ -464,12 +467,12 @@ Ivar new_object_setInstanceVariable(id object, const char *name, void *value)
   struct svalue * pset;
   id vts;
 
-  printf("new_object_setInstanceVariable(%s:%s)->%s = %s)\n", object->isa->name, [[object description] UTF8String], name, [[((id)value) description ] UTF8String]	);
+  //printf("new_object_setInstanceVariable(%s:%s)->%s = %s)\n", object->isa->name, [[object description] UTF8String], name, [[((id)value) description ] UTF8String]	);
 
   // if we're not a wrapped pike object, we should just go direct to the objective-c object.
   if(![object respondsToSelector: SELUID("__ObjCgetPikeObject")])
   {
-	printf("setting the object on a standard Objective-C object.\n");
+//	printf("setting the object on a standard Objective-C object.\n");
  	return (old_object_setInstanceVariable(object, name, value));
   }
 
@@ -573,7 +576,7 @@ Ivar new_object_setInstanceVariable(id object, const char *name, void *value)
 
 Ivar new_object_getInstanceVariable(id object, const char *name, void **value)
 {
-  printf("new_object_getInstanceVariable(%s, %s, %s)\n", object->isa->name, [[object description] UTF8String], name);
+//  printf("new_object_getInstanceVariable(%s, %s, %s)\n", object->isa->name, [[object description] UTF8String], name);
 
   // if we're a wrapped pike object, the instance variables will be in the pike object itself.
   if(![object respondsToSelector: SELUID("__ObjCgetPikeObject")] == YES)
@@ -740,6 +743,7 @@ printf("CreateClassDefinition(%s, %s)\n", name, superclassName);
     emptyMethodLists = malloc( sizeof(void *) );
     *emptyMethodLists = ((struct objc_method_list*)-1); // See objc-private.h in Darwin
 
+//	new_class->methodLists = NULL;
 	new_class->methodLists = emptyMethodLists;
 
     RegisterInstanceVariables(new_class, prog);

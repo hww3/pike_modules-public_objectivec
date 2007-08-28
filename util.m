@@ -430,7 +430,10 @@ struct object * wrap_objc_object(id r)
   struct objc_dynamic_class * pc; 
   struct pike_string * ps;
 
-  if(!r || !r->isa) { return NULL; }
+  if(!r || !r->isa) { 
+	printf("skipping null object.\n");
+ return NULL; 
+}
   
   /* TODO: Do we need to make these methods in PiObjCObject hidden? */
   else if([r respondsToSelector: SELUID("__ObjCgetPikeObject")])
@@ -439,12 +442,11 @@ struct object * wrap_objc_object(id r)
   }
   else 
   {
-    push_text(r->isa->name);
-    f_utf8_to_string(1);
-    prog = pike_create_objc_dynamic_class(Pike_sp[-1].u.string);
-    pop_stack();
+    ps = make_shared_binary_string(r->isa->name, strlen(r->isa->name));
+    prog = pike_create_objc_dynamic_class(ps);
+	free_string(ps);
+// printf("refs: %d\n", ps->refs);	
     if(!prog) return NULL;
-
 
     o = low_clone(prog);
     pc = OBJ2_DYNAMIC_OBJECT(o);
@@ -467,7 +469,7 @@ struct program * wrap_objc_class(Class r)
 {
   struct program * prog;
   struct objc_dynamic_class * pc; 
-  struct pike_string * ps;
+
   if(!r || !r->isa)  { return NULL; }
 
   push_text(r->name);

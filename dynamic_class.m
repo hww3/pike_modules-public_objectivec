@@ -134,7 +134,7 @@ void f_call_objc_method(INT32 args, int is_instance, SEL select, id obj)
 	
     pool = [global_autorelease_pool getAutoreleasePool];
 // printf("\ncall\n");    
-   printf("class: %s, select: %s, is_instance: %d\n", obj->isa->name, (char *) select, is_instance);
+//   printf("class: %s, select: %s, is_instance: %d\n", obj->isa->name, (char *) select, is_instance);
     if(is_instance)
       method = class_getInstanceMethod(obj->isa, select);
     else
@@ -670,17 +670,18 @@ int find_dynamic_program_in_cache(struct program * prog)
 
   if(c != NULL) { rv = 1; }
   else rv = 0;
-  if(c)
-    free_svalue(c);
+
   return rv;
 }
 
 struct program * pike_create_objc_dynamic_class(struct pike_string * classname)
 {
   struct svalue * c = NULL;
+  struct svalue * cn = NULL;
   struct program * p;
 
   /* first, we look up the requested name to see if it's been cached. */
+
   c = low_mapping_string_lookup(global_class_cache, classname);
 
   if(c == NULL)
@@ -688,19 +689,32 @@ struct program * pike_create_objc_dynamic_class(struct pike_string * classname)
     p = pike_low_create_objc_dynamic_class(classname->str);
     if(!p) return 0;
 
-    ref_push_program(p);
+	c = malloc(sizeof(struct svalue));
+    cn = malloc(sizeof(struct svalue));
+
+    c->type = T_PROGRAM;
+    c->u.program = p;
+
+    cn->type = T_STRING;
+    cn->u.string = classname;
+
 //    add_ref(classname);
-    push_string(classname);
-    low_mapping_insert(global_class_cache, Pike_sp-1, Pike_sp-2, 1);
-    low_mapping_insert(global_classname_cache, Pike_sp-2, Pike_sp-1, 1);
-    pop_stack();
-    pop_stack();
+//    add_ref(p);
+
+    low_mapping_insert(global_class_cache, cn, c, 1);
+    low_mapping_insert(global_classname_cache, c, cn, 1);
+
+free_svalue(c);
+free_svalue(cn);
+free(c);
+free(cn);
+
     return p;
   }
   else
   {
-    printf("Found %s in cache.\n", classname->str);
-    return c->u.program;  
+//    printf("Found %s in cache.\n", classname->str);
+    return c->u.program;
   }
 }
 
@@ -748,7 +762,7 @@ struct program * pike_low_create_objc_dynamic_class(char * classname)
     return 0;
   }
 
-  printf("CREATING DYNAMIC CLASS %s\n", classname);
+//  printf("CREATING DYNAMIC CLASS %s\n", classname);
   
   start_new_program();
 
@@ -977,6 +991,7 @@ struct program * pike_low_create_objc_dynamic_class(char * classname)
         Pike_error("unable to find Public.ObjectiveC.register_new_dynamic_program.\n");
       }
       push_text(classname);
+      add_ref(Pike_sp[-1].u.string);
       ref_push_program(dclass);
       apply_svalue(Pike_sp-3, 2);
       pop_stack();
