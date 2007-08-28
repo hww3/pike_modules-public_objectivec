@@ -13,7 +13,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * $Id: AppKit.mmod,v 1.8 2007-08-22 02:13:01 hww3 Exp $
+ * $Id: AppKit.mmod,v 1.9 2007-08-28 14:06:50 hww3 Exp $
  */
 
 /*
@@ -78,8 +78,6 @@
 
  PIKECLASS AppKit
  {
-   PIKEVAR object foo;
-
    PIKEFUN void NSRegisterServicesProvider(object provider, string name)
    {
 	  id p, n;
@@ -120,6 +118,7 @@
       char ** args;
       int c;
 	  async_error_mode = 1;
+	printf("calling NSApplicationMain()\n");
       c = NSApplicationMain(argc, argv);
 printf("\n\n\n*** NSApplicationMain() returns %d\n\n\n", c);
       async_error_mode = 0;

@@ -568,6 +568,7 @@ void f_objc_dynamic_class_sprintf(Class cls, INT32 args)
 {
     char * desc;
     int hash;
+
 	if(cls)
       desc = malloc(strlen(cls->name) + strlen("()") + 15);
     else 
@@ -579,8 +580,9 @@ void f_objc_dynamic_class_sprintf(Class cls, INT32 args)
 	
     if(desc == NULL)
       Pike_error("unable to allocate string.\n");
-
     pop_n_elems(args);
+    push_text(desc);
+    free(desc);
 }
 
 void f_objc_dynamic_class_isa(Class cls, INT32 args)
@@ -670,7 +672,8 @@ int find_dynamic_program_in_cache(struct program * prog)
 
   if(c != NULL) { rv = 1; }
   else rv = 0;
-
+//  if(c)
+//    free_svalue(c);
   return rv;
 }
 
@@ -679,7 +682,7 @@ struct program * pike_create_objc_dynamic_class(struct pike_string * classname)
   struct svalue * c = NULL;
   struct svalue * cn = NULL;
   struct program * p;
-
+  
   /* first, we look up the requested name to see if it's been cached. */
 
   c = low_mapping_string_lookup(global_class_cache, classname);
@@ -689,7 +692,7 @@ struct program * pike_create_objc_dynamic_class(struct pike_string * classname)
     p = pike_low_create_objc_dynamic_class(classname->str);
     if(!p) return 0;
 
-	c = malloc(sizeof(struct svalue));
+ 	c = malloc(sizeof(struct svalue));
     cn = malloc(sizeof(struct svalue));
 
     c->type = T_PROGRAM;
@@ -704,10 +707,10 @@ struct program * pike_create_objc_dynamic_class(struct pike_string * classname)
     low_mapping_insert(global_class_cache, cn, c, 1);
     low_mapping_insert(global_classname_cache, c, cn, 1);
 
-free_svalue(c);
-free_svalue(cn);
-free(c);
-free(cn);
+    free_svalue(c);
+    free_svalue(cn);
+    free(c);
+    free(cn);
 
     return p;
   }
@@ -875,7 +878,7 @@ struct program * pike_low_create_objc_dynamic_class(char * classname)
 
   /* todo we should work more on the optimizations. */
   ADD_FUNCTION("create", (void *)make_static_stub(isa, low_f_objc_dynamic_create), tFunc(tNone,tVoid), 0);  
-  ADD_FUNCTION("_sprintf", (void *)make_static_stub(isa, low_f_objc_dynamic_class_sprintf), tFunc(tAnd(tInt,tMixed),tVoid), 0);  
+//  ADD_FUNCTION("_sprintf", (void *)make_static_stub(isa, low_f_objc_dynamic_class_sprintf), tFunc(tAnd(tInt,tMixed),tVoid), 0);  
   ADD_FUNCTION("__isa", (void *)make_static_stub(isa, low_f_objc_dynamic_class_isa), tFunc(tAnd(tVoid,tMixed),tVoid), 0);  
 
   /* then, we add the instance methods. */
@@ -979,10 +982,11 @@ struct program * pike_low_create_objc_dynamic_class(char * classname)
   //set_exit_callback(objc_dynamic_class_exit);
 
   dclass = end_program();
-  
-  if(dclass && strlen(classname))
+
+  return dclass;
+
+  if(get_master() && dclass && strlen(classname))
   {
-      //printf("adding constant %s\n", classname);
       push_text("Public.ObjectiveC.register_new_dynamic_program");
       APPLY_MASTER("resolv", 1);
       if(Pike_sp[-1].type != T_FUNCTION)
@@ -998,6 +1002,5 @@ struct program * pike_low_create_objc_dynamic_class(char * classname)
   }
 
   return dclass;
-//  add_ref(dclass);
 }
 

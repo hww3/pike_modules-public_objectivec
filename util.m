@@ -651,7 +651,7 @@ NSLog([cobj description]);
 		        args_pushed++;
             push_svalue(sval);
 			free(sval);
-//           free(buf);
+          // free(buf);
 	       break;
 	     case '#':
 	       {

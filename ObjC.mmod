@@ -248,11 +248,13 @@ static void run_backend_from_runloop(CFRunLoopTimerRef timerRef, void *info)
     timeout.tv_usec = 0;
  //printf("run_backend_from_runloop\n");
 
+// TODO we can optimize this a bit more, right?
     push_text("Pike.DefaultBackend");
     SAFE_APPLY_MASTER("resolv", 1);
 
     push_float(0.0);
     apply_svalue(Pike_sp-2, 1);
+	pop_stack();
 //printf("done running backend.\n");
 
 //  gb_low_backend_once(info, &timeout);
@@ -560,7 +562,8 @@ Ivar new_object_setInstanceVariable(id object, const char *name, void *value)
     object_set_index(pobj, Pike_sp-1, pset);
 
     pop_n_elems(1);
-    free_svalue(pset);
+//    free_svalue(pset);
+    free(pset);
 
 	push_text("%O");
 	ref_push_object(pobj);
@@ -875,7 +878,7 @@ BOOL RegisterDynamicMethod( const char * dynamicMethodName, const char * classNa
         
         // Register our method
         class_addMethods(methodClass, methodList);
-        
+        //free(methodList);
         result = TRUE;
     }
         
