@@ -17,8 +17,6 @@
 /* plus an initialization method */
 - (id)initWithPikeObject:(struct object *)obj;
 - (struct object *) getPikeObject;
-//- (id)init;
-- (struct object *)__ObjCgetPikeObject;
 +(id)alloc;
 +(id)allocWithZone:(id) zone;
 
@@ -26,7 +24,13 @@
 - (void)dealloc;
 - (NSString *)description;
 - (NSString*) _copyDescription;
-- (BOOL) isProxy;
 - (BOOL) __ObjCisPikeType;
 -(int)__ObjCgetPikeType;
+
+/* NSObject protocol */
+- (unsigned)hash;
+- (BOOL)isEqual:(id)anObject;
+/* NSObject methods */
+- (NSComparisonResult)compare:(id)other;
+
 @end

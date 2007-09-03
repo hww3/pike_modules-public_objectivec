@@ -89,7 +89,7 @@
 	rv = svalue_to_id(Pike_sp-1);
 	pop_stack();
 		
-  //  printf("forwarding iterator to next object.\n");
+//    printf("forwarding iterator to next object.\n");
  //   add_ref(iterator);
 	apply_low(iterator, next_id, 0);
 	
@@ -211,10 +211,10 @@
 	struct svalue * k;
 //	printf("[OC_Mapping objectForKey: %s]\n", [[key description] UTF8String]);
 	k = low_id_to_svalue(key, 1);
-
+//printf("got svalue\n");
 //    add_ref(mapping);
     v = low_mapping_lookup(mapping, k);
-
+//printf("looked it up.\n");
     if(!v)
 {
 //	printf("missed the entry.\n");

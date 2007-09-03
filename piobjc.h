@@ -153,3 +153,18 @@ object_getInstanceVariableProc old_object_getInstanceVariable;
 int piobjc_classhandler_callback(const char* className);
 Class get_objc_proxy_class(struct program * prog);
 struct program * wrap_objc_class(Class r);
+
+#include <Foundation/NSMapTable.h>
+extern NSMapTableKeyCallBacks PiObjCUtil_PointerKeyCallBacks;
+extern NSMapTableValueCallBacks PiObjCUtil_PointerValueCallBacks;
+
+extern NSMapTableKeyCallBacks PiObjCUtil_ObjCIdentityKeyCallBacks;
+extern NSMapTableValueCallBacks PiObjCUtil_ObjCValueCallBacks;
+
+struct object * wrap_real_id(id r);
+
+static inline struct objc_method_list *
+PiObjCRT_NextMethodList(Class c, void ** p)
+{
+	return class_nextMethodList(c, p);
+}

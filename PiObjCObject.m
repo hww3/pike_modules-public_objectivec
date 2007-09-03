@@ -13,7 +13,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * $Id: PiObjCObject.m,v 1.30 2007-08-28 16:03:57 hww3 Exp $
+ * $Id: PiObjCObject.m,v 1.31 2007-09-03 02:35:56 hww3 Exp $
  */
 
 /*
@@ -97,8 +97,13 @@ f_sprintf(2);
 printf("%s", Pike_sp[-1].u.string->str);
 pop_stack();
 */
-    instance = [[self alloc] initWithPikeObject:obj];
-    [instance autorelease];
+    instance = PiObjC_FindObjCProxy(obj);
+	if(!instance)
+	{
+      instance = [[self alloc] initWithPikeObject:obj];
+      [instance autorelease];
+	  
+    }
   }        
   return instance;
 }
@@ -106,6 +111,11 @@ pop_stack();
 - (id)initWithPikeObject:(struct object *)obj
 {
   printf("PiObjCObject.initWithPikeObject\n");
+	if (pobject) {
+		PiObjC_UnregisterObjCProxy(pobject, self);
+	}
+	
+  PiObjC_RegisterObjCProxy(obj, self);
   pobject = obj;
   add_ref(obj);
   pinstantiated = YES;
@@ -135,26 +145,69 @@ pop_stack();
 	return self;
 }
 
-/*- (id)release
+- (id)release
 {
   printf("PiObjCObject.release()\n");
   if(pobject)
     free_object(pobject);
   [super release];
 }
-*/
+
 
 - (void)dealloc
 {
   printf("PiObjCObject.dealloc()\n");
+  PiObjC_UnregisterObjCProxy(pobject, self);
   if(pobject)
   	free_object(pobject);
   [super dealloc];
 }
 
-- (BOOL)isProxy
+/* NSObject protocol */
+- (unsigned)hash
 {
-  return NO;	
+	return (unsigned)(&pobject);
+}
+
+- (BOOL)isEqual:(id)other
+{
+	if (other == nil) 
+	{
+        [NSException raise: NSInvalidArgumentException
+                    format: @"nil argument"];
+    } 
+    else if (self == other) 
+    {
+        return YES;
+    }
+
+    if([other respondsToSelector: @selector(getPikeObject)])
+    {
+	   if([other getPikeObject] == pobject) return YES;
+    }
+
+   return NO;
+}
+
+/* NSObject methods */
+- (NSComparisonResult)compare:(id)other
+{
+	if (other == nil) 
+	{
+        [NSException raise: NSInvalidArgumentException
+                    format: @"nil argument"];
+    } 
+    else if (self == other) 
+    {
+        return NSOrderedSame;
+    }
+
+    if([other respondsToSelector: @selector(getPikeObject)])
+    {
+	   if([other getPikeObject] == pobject) return NSOrderedSame;
+    }
+
+   return NSOrderedDescending;
 }
 
 -(BOOL)__ObjCisPikeType
@@ -182,7 +235,7 @@ pop_stack();
 
 
 
-  [anInvocation retain];
+//  [anInvocation retain];
   sel = [anInvocation selector];
 
   printf("PiObjCObject.forwardInvocation: %s returns %s\n", (char *)sel, [[anInvocation methodSignature] methodReturnType] );
@@ -521,6 +574,11 @@ void dispatch_pike_method(struct object * pobject, SEL sel, NSInvocation * anInv
 	return pobject;
 }
 
+- (struct object *)  __piobjc_PikeObject__
+{
+	printf("PiObjCObject.__piobjc_PikeObject__\n");
+	return pobject;
+}
 
 // we use a really, really lame method for calculating the number of arguments
 // to a method: we count the number of colons. it's ugly, and it would be 
@@ -532,6 +590,16 @@ void dispatch_pike_method(struct object * pobject, SEL sel, NSInvocation * anInv
   struct svalue * func;
   struct thread_state *state;
   printf("PiObjCObject.methodSignatureForSelector: %s\n", (char *)aSelector);
+
+  if(aSelector == @selector(respondsToSelector:))
+  {
+    return [NSMethodSignature signatureWithObjCTypes:"c@::"]; 	
+  }
+
+  if(aSelector == @selector(methodDescriptionForSelector:))
+  {
+    return [NSMethodSignature signatureWithObjCTypes:"^{objc_method_description=:*}@::"]; 	
+  }
 
   if(!pobject) return nil;
 
@@ -622,43 +690,89 @@ void dispatch_pike_method(struct object * pobject, SEL sel, NSInvocation * anInv
     return [NSMethodSignature signatureWithObjCTypes:"^{objc_method_description=:*}@::"];
   }
 
-  if(aSelector == @selector(__ObjCgetPikeObject))
+  if(aSelector == @selector(getPikeObject))
   {
-//	char * enc;
-//	enc = @encode(struct object *);
-	
-    return [NSMethodSignature signatureWithObjCTypes: "@@:"];
+	id i;
+	char * enc;
+	char * e = @encode(struct object *);
+	enc = malloc(strlen(e) + 2);
+	strcpy(enc, e);
+//    free(e);
+	strcat(enc, "@:");
+    i = [NSMethodSignature signatureWithObjCTypes: enc];
+    return i;
   }
 
 
+  return nil;
 //  [NSException raise:NSInvalidArgumentException format:@"no such selector: %s", (char *)aSelector];	
 //  return [super methodSignatureForSelector: aSelector];
 //  return nil;
 }
 
-// see also getPikeObject... we probably want to make this hidden.
-- (struct object *) __ObjCgetPikeObject
-{
-//  printf("__ObjCgetPikeObject()\n");
-  if(pobject)
-    return pobject;	
-}
 
 - (BOOL) respondsToSelector:(SEL) aSelector
 {
   struct svalue * func;
+  struct objc_method_list* lst;
+  void* cookie;
+
   printf("PiObjCObject.respondsToSelector: %s? ", (char*) aSelector);
 
-  if(aSelector == @selector(__ObjCgetPikeObject))
+	/*
+	 * We cannot rely on NSProxy, it doesn't implement most of the
+	 * NSObject interface anyway.
+	 */
+
+	cookie = NULL;
+	lst = PiObjCRT_NextMethodList(self->isa, &cookie);
+	while (lst != NULL) {
+		int i;
+
+		for (i = 0; i < lst->method_count; i++) {
+//			printf("method: %s\n", lst->method_list[i].method_name);
+			if (lst->method_list[i].method_name == aSelector) {
+				printf("YES\n");
+				return YES;
+			}
+		}
+		lst = PiObjCRT_NextMethodList(self->isa, &cookie);
+   }
+
+	cookie = NULL;
+	lst = PiObjCRT_NextMethodList(self->isa->super_class, &cookie);
+	while (lst != NULL) {
+		int i;
+
+		for (i = 0; i < lst->method_count; i++) {
+//			printf("method: %s\n", lst->method_list[i].method_name);
+			if (lst->method_list[i].method_name == aSelector) {
+				printf("YES\n");
+				return YES;
+			}
+		}
+		lst = PiObjCRT_NextMethodList(self->isa->super_class, &cookie);
+   }
+
+/*
+
+  if(aSelector == @selector(__ObjCgetPikeArray))
   {
-	return YES;
+	return NO;
   }
+
+  if(aSelector == @selector(__ObjCgetPikeMapping))
+  {
+	return NO;
+  }
+
+*/
 
   func = get_func_by_selector(pobject, aSelector);
 
-  if(func) { /*printf("YES (1)\n"); */ free_svalue(func); free(func); return YES;}
-  else if(has_objc_method(self, aSelector)) { /*printf("YES (2)\n");*/ return YES;}
-  else { /*printf("NO\n");*/  return NO; }
+  if(func) { printf("YES (1)\n"); free_svalue(func); free(func); return YES;}
+  else if(has_objc_method(self, aSelector)) { printf("YES (2)\n"); return YES;}
+  else { printf("NO\n");  return NO; }
 }
 
 - (NSString *)description

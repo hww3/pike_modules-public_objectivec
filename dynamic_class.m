@@ -1001,6 +1001,7 @@ struct program * pike_low_create_objc_dynamic_class(char * classname)
       ref_push_program(dclass);
       apply_svalue(Pike_sp-3, 2);
       pop_stack();
+	return dclass;
     }
   }
   return dclass;

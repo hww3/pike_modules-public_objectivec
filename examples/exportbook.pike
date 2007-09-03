@@ -27,7 +27,7 @@ row = ({});
   }
   purge_autorelease_pool();
   qq++;
-} while(qq<100);
+} while(qq<1000);
 sleep(100);
   return 0;
 }

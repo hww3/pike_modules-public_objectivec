@@ -182,7 +182,10 @@ static void backend_callback(struct callback *_cb,
     backend_lower_timeout(backend, &timeout);
   } else
   {
-    [[NSRunLoop currentRunLoop] runUntilDate: [NSDate date]];
+
+     SInt32 result = CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, false);
+//printf("result: %d\n", result);
+//    [[NSRunLoop currentRunLoop] runUntilDate: [NSDate date]];
   }
 }
 
@@ -370,6 +373,8 @@ INIT
   THIS->pool = [[OC_NSAutoreleasePoolCollector alloc] init];
   [THIS->pool newAutoreleasePool];
 
+  PiObjC_InitProxyRegistry();
+
  global_class_cache = allocate_mapping(10);
  global_proxy_cache = allocate_mapping(10);
  global_classname_cache = allocate_mapping(10);
@@ -469,7 +474,7 @@ Ivar new_object_setInstanceVariable(id object, const char *name, void *value)
   struct svalue * pset;
   id vts;
 
-  //printf("new_object_setInstanceVariable(%s:%s)->%s = %s)\n", object->isa->name, [[object description] UTF8String], name, [[((id)value) description ] UTF8String]	);
+  printf("new_object_setInstanceVariable(%s:%s)->%s = %s)\n", object->isa->name, [[object description] UTF8String], name, [[((id)value) description ] UTF8String]	);
 
   // if we're not a wrapped pike object, we should just go direct to the objective-c object.
   if(![object respondsToSelector: SELUID("__ObjCgetPikeObject")])
@@ -556,9 +561,10 @@ Ivar new_object_setInstanceVariable(id object, const char *name, void *value)
 	id desc;
 	printf("setting a ptr in a pike object.\n");
     pobj = [object __ObjCgetPikeObject];
-    push_text(name);
 
     pset = ptr_to_svalue(value, x->ivar_type);
+    push_text(name);
+
     object_set_index(pobj, Pike_sp-1, pset);
 
     pop_n_elems(1);
@@ -756,8 +762,8 @@ printf("CreateClassDefinition(%s, %s)\n", name, superclassName);
 
  //   RegisterDynamicMethod("init", name, (IMP)make_create_stub(prog), "@4@4:4");
     RegisterDynamicMethod("__create", name, (IMP)make_create_stub(prog), "@4@4:4");
-    RegisterDynamicMethod("__ObjCgetPikeObject", name, (IMP)get_pike_object, "@4@4:4");
-    RegisterDynamicMethod("__whee", name, (IMP)get_pike_object, "@4@4:4");
+//    RegisterDynamicMethod("__ObjCgetPikeObject", name, (IMP)get_pike_object, "@4@4:4");
+//    RegisterDynamicMethod("__whee", name, (IMP)get_pike_object, "@4@4:4");
 
 
 
@@ -775,7 +781,6 @@ printf("CreateClassDefinition(%s, %s)\n", name, superclassName);
     free_svalue(ptr);
 	free(ptr);
     // TODO: do we need to free ptr?
-
     return YES;
 
 }

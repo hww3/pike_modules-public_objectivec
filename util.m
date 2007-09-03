@@ -23,6 +23,84 @@ extern struct mapping * global_proxy_cache;
  static int got_signature_for_func_func = 0;
  static struct program * nsnil_prog = NULL;
 
+@interface NSObject (PiObjCSupport)
+-(struct object*)__piobjc_PikeObject__;
++(struct object*)__piobjc_PikeObject__;
+@end /* PiObjCSupport */
+
+@implementation NSObject (PiObjCSupport)
+
+-(struct object*)__piobjc_PikeObject__
+{
+	struct object *rval;
+//printf("__piobjc_PikeObject__\n");
+	rval = PiObjC_FindPikeProxy(self);
+
+	if (rval == NULL) 
+	{
+		rval = wrap_real_id(self);
+//		add_ref(rval);
+	 	PiObjC_RegisterPikeProxy(self, rval);
+	}
+    //add_ref(rval);
+	return rval;
+}
+
++(struct object*)__piobjc_PikeObject__
+{
+	struct object *rval;
+printf("__piobjc_PikeObject__\n");
+
+	//rval = PyObjC_FindPythonProxy(self);
+	rval = NULL;
+	if (rval == NULL) {
+//		rval = (struct object *)PyObjCClass_New(self);
+		//PyObjC_RegisterPythonProxy(self, rval);
+	}
+
+	return rval;
+}
+
+@end /* PiObjCSupport */
+
+@interface NSProxy (PiObjCSupport)
+-(struct object*)__piobjc_PikeObject__;
++(struct object*)__piobjc_PikeObject__;
+@end /* PiObjCSupport */
+
+@implementation NSProxy (PiObjCSupport)
+
+-(struct object*)__piobjc_PikeObject__
+{
+	struct object *rval;
+printf("NSProxy.__piobjc_PikeObject__\n");
+	rval = PiObjC_FindPikeProxy(self);
+	if (rval == NULL) {
+		printf("wrapping...\n");
+		rval = wrap_real_id(self);
+printf("wrapped!\n");
+	 	PiObjC_RegisterPikeProxy(self, rval);
+	}
+
+	return rval;
+}
+
++(struct object*)__piobjc_PikeObject__
+{
+	struct object *rval;
+
+	//rval = PyObjC_FindPythonProxy(self);
+	rval = NULL;
+	if (rval == NULL) {
+//		rval = (struct object *)PyObjCClass_New(self);
+		//PyObjC_RegisterPythonProxy(self, rval);
+	}
+
+	return rval;
+}
+
+@end /* PiObjCSupport */
+
 @implementation OC_NSAutoreleasePoolCollector
 -(void)newAutoreleasePool
 {
@@ -61,6 +139,75 @@ extern struct mapping * global_proxy_cache;
 }
 
 @end
+
+
+NSMapTableKeyCallBacks PiObjCUtil_PointerKeyCallBacks = {
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+};
+
+NSMapTableValueCallBacks PiObjCUtil_PointerValueCallBacks = {
+	NULL,
+	NULL,
+	NULL,
+};
+
+static void
+nsmaptable_objc_retain(NSMapTable *table __attribute__((__unused__)), const void *datum) {
+	[(id)datum retain];
+}
+
+static void
+nsmaptable_objc_release(NSMapTable *table __attribute__((__unused__)), void *datum) {
+	[(id)datum release];
+}
+
+NSMapTableKeyCallBacks PiObjCUtil_ObjCIdentityKeyCallBacks = {
+	NULL,
+	NULL,
+	&nsmaptable_objc_retain,
+	&nsmaptable_objc_release,
+	NULL,
+	NULL,
+};
+
+NSMapTableValueCallBacks PiObjCUtil_ObjCValueCallBacks = {
+	&nsmaptable_objc_retain,
+	&nsmaptable_objc_release,
+	NULL  // generic description
+};
+
+struct object * wrap_real_id(id r)
+{
+  struct program * prog;
+  struct objc_dynamic_class * pc; 
+  struct pike_string * ps;
+  struct object * o;
+  id toc;
+
+    ps = make_shared_binary_string(r->isa->name, strlen(r->isa->name));
+    prog = pike_create_objc_dynamic_class(ps);
+	free_string(ps);
+
+    if(!prog) return NULL;
+
+    o = low_clone(prog);
+    pc = OBJ2_DYNAMIC_OBJECT(o);
+    pc->obj = (id)r;
+  // we need to  the object, because the dynamic_class object 
+  // will free it when the object is destroyed.
+  if((id)r->isa != [NSAutoreleasePool class])
+  {
+    [r retain];
+  }
+    pc->is_instance = 1;
+
+  return o;
+}
 
 void void_dispatch_method(id obj, SEL select, struct objc_method * method, marg_list argumentList)
 {
@@ -111,7 +258,7 @@ struct svalue * low_id_to_svalue(id obj, int prefer_native)
 {
 	struct svalue * sv;
 	struct object * o;
-	
+//	NSLog([obj description]);
 	if(!obj) {/*printf("low_id_to_svalue(): no object to convert!\n");*/ return NULL;}
 	
 	sv = malloc(sizeof(struct svalue));
@@ -130,8 +277,8 @@ struct svalue * low_id_to_svalue(id obj, int prefer_native)
 	//		printf("got a string to convert.\n");
 			u8s = [obj UTF8String];
 			str = make_shared_binary_string(u8s, [obj lengthOfBytesUsingEncoding: enc]);
-			free(u8s);
-//			ref_push_string(str);
+//			free(u8s);
+			ref_push_string(str);
 			f_utf8_to_string(1);
 			
 			sv->type = T_STRING;
@@ -426,42 +573,16 @@ struct svalue * low_ptr_to_svalue(void * ptr, char * type, int prefer_native)
 struct object * wrap_objc_object(id r)
 {
   struct object * o;
-  struct program * prog;
-  struct objc_dynamic_class * pc; 
-  struct pike_string * ps;
 
-  if(!r || !r->isa) { 
+  if(!r || !r->isa) 
+  { 
 	printf("skipping null object.\n");
- return NULL; 
-}
+    return NULL; 
+  }
   
   /* TODO: Do we need to make these methods in PiObjCObject hidden? */
-  else if([r respondsToSelector: SELUID("__ObjCgetPikeObject")])
-  {
-	o = [r __ObjCgetPikeObject];
-  }
-  else 
-  {
-    ps = make_shared_binary_string(r->isa->name, strlen(r->isa->name));
-    prog = pike_create_objc_dynamic_class(ps);
-	free_string(ps);
-// printf("refs: %d\n", ps->refs);	
-    if(!prog) return NULL;
-
-    o = low_clone(prog);
-    pc = OBJ2_DYNAMIC_OBJECT(o);
-    pc->obj = (id)r;
-  // we need to  the object, because the dynamic_class object 
-  // will free it when the object is destroyed.
-  if(! [(id)r isKindOfClass: [NSAutoreleasePool class]])
-  {
- //   if([(id)r isKindOfClass: [NSString class]])
- // 	  printf("[retain %p %s]\n", r, [r cString]);
-    [r retain];
-  }
-    pc->is_instance = 1;
-  }
-
+	o = [r __piobjc_PikeObject__];
+   add_ref(o);
   return o;
 }
 
@@ -646,7 +767,7 @@ int push_objc_types(NSMethodSignature* sig, NSInvocation* invocation)
            [invocation getArgument: &buf atIndex: arg];
            cobj = (id)buf;
 printf("arg %d: %p\n", arg, cobj->isa);
-NSLog([cobj description]);
+//NSLog([cobj description]);
            sval = id_to_svalue(cobj);
 		        args_pushed++;
             push_svalue(sval);
@@ -713,7 +834,7 @@ printf("piobjc_set_return_value()\n");
     {
 	  // id
     case 'c':
-    case 'i':
+    case 'i':  // TODO handle bignums
       if(svalue->type == T_INT)
       {
         printf("returning %d\n", svalue->u.integer);
@@ -806,6 +927,7 @@ struct svalue * get_func_by_selector(struct object * pobject, SEL aSelector)
   if(!pobject) return NULL;
 
   sv2 = malloc(sizeof(struct svalue));
+
   if(!sv2)
 	{
 		Pike_error("Unable to allocate memory.\n");
