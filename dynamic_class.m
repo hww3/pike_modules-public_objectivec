@@ -720,7 +720,7 @@ struct program * pike_create_objc_dynamic_class(struct pike_string * classname)
   }
 }
 
-static void event_handler(int ev) {
+void dynamic_class_event_handler(int ev) {
   switch(ev) {
 
   case PROG_EVENT_INIT: objc_dynamic_class_init(); break;
@@ -976,7 +976,7 @@ struct program * pike_low_create_objc_dynamic_class(char * classname)
   free_mapping(m);
   /* finally, we add the low level setup callbacks */
 
-  pike_set_prog_event_callback(event_handler);
+  pike_set_prog_event_callback(dynamic_class_event_handler);
   //set_init_callback(objc_dynamic_class_init);
   //set_exit_callback(objc_dynamic_class_exit);
 

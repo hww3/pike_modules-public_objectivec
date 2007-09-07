@@ -16,6 +16,7 @@
  */
 
 /* this code is from pyobjc-1.4. */
+extern void dynamic_class_event_handler(int ev);
 
 extern struct mapping * global_proxy_cache;
  static struct pike_type *a_markers[10], *b_markers[10];
@@ -1027,6 +1028,47 @@ BOOL isNSNil(struct svalue * sv)
 	else return 0;
 }
 
+struct object * new_method_runner(struct object * obj, SEL selector)
+{
+  struct program * dclass = NULL;
+  struct object * dobject = NULL;
+  static ptrdiff_t dclass_storage_offset;
+  int siglen;
+  char * psig;
+  id signature;
+  struct objc_dynamic_class * c;
+
+  c = OBJ2_DYNAMIC_OBJECT(obj);
+
+  [c->obj description2];
+  signature = [c->obj methodSignatureForSelector: selector];
+
+  if(!signature) 
+  {
+	printf("no method signature for selector %s\n", (char *)selector);
+    return NULL;
+  };
+
+  start_new_program();
+
+  add_string_constant("__objc_selector", (char *) selector, ID_PUBLIC);
+
+  dclass_storage_offset = ADD_STORAGE(struct objc_dynamic_class);
+
+  psig = pike_signature_from_nsmethodsignature(signature, &siglen);
+  quick_add_function("`()", strlen("`()"), f_objc_dynamic_instance_method, psig,
+                     siglen, 0, 
+                     OPT_SIDE_EFFECT|OPT_EXTERNAL_DEPEND);
+
+
+  pike_set_prog_event_callback(dynamic_class_event_handler);
+  dclass = end_program();
+
+  dobject = fast_clone_object(dclass);
+  
+  return dobject;
+}
+
 BOOL has_objc_method(id obj, SEL aSelector)
 {
 	void *iterator = 0;
@@ -1046,6 +1088,320 @@ BOOL has_objc_method(id obj, SEL aSelector)
   return NO;
 }
 
+
+// this is one of two functions that generate pike signatures. the other is pike_signature_from_objc_signature.
+char * pike_signature_from_nsmethodsignature(id nssig, int * lenptr)
+{
+  char * rettype;
+  char * argtype;
+  char * psig;
+  int spsig;
+  int argcount;
+  int offset;
+  char * type;
+  int sret;
+  int x;
+  int i;
+  int sargs;
+  int cpos;
+  int now;
+  char * psigo;
+  
+  argcount = [nssig numberOfArguments];
+
+  // ok, let's do return type first.
+
+//  printf("TYPE: %s\n", nssig->method_types);
+
+  type = [nssig methodReturnType];
+
+  while((*type)&&(*type=='r' || *type =='n' || *type =='N' || *type=='o' || *type=='O' || *type =='V'))
+                type++;
+
+    switch(*type)
+    {
+      case 'c': // char
+        rettype = tInt;
+        sret = CONSTANT_STRLEN(tInt);
+//      printf("c\n");
+        break;
+
+      case 'i': // int
+        rettype = tInt;
+      sret = CONSTANT_STRLEN(tInt);
+//      printf("i\n");
+        break;
+
+      case 's': // short
+        rettype = tInt;
+      sret = CONSTANT_STRLEN(tInt);
+//      printf("s\n");
+        break;
+
+      case 'l': // long
+        rettype = tInt;
+      sret = CONSTANT_STRLEN(tInt);
+      //    printf("l\n");
+        break;
+
+      case 'q': // long long
+        rettype = tInt;
+        sret = CONSTANT_STRLEN(tInt);
+//        printf("q\n");
+        break;
+
+      case 'C': // unsigned char
+        rettype = tInt;
+        sret = CONSTANT_STRLEN(tInt);
+//        printf("I\n");
+        break;
+
+      case 'I': // unsigned int
+        rettype = tInt;
+      sret = CONSTANT_STRLEN(tInt);
+//      printf("I\n");
+        break;
+
+      case 'S': // unsigned short
+        rettype = tInt;
+      sret = CONSTANT_STRLEN(tInt);
+//      printf("S\n");
+        break;
+
+      case 'L': // unsigned long
+        rettype = tInt;
+      sret = CONSTANT_STRLEN(tInt);
+//      printf("L\n");
+        break;
+
+      case 'Q': // unsigned long long
+        rettype = tInt;
+      sret = CONSTANT_STRLEN(tInt);
+//      printf("Q\n");
+        break;
+
+      case 'f': // float
+        rettype = tFloat;
+      sret = CONSTANT_STRLEN(tFloat);
+//      printf("f\n");
+        break;
+
+      case 'd': // double
+        rettype = tFloat;
+      sret = CONSTANT_STRLEN(tFloat);
+//      printf("d\n");
+        break;
+
+      case 'B': // bool
+        rettype = tInt;
+      sret = CONSTANT_STRLEN(tInt);
+//      printf("B\n");
+        break;
+
+      case 'v': // void
+        rettype = tVoid;
+      sret = CONSTANT_STRLEN(tVoid);
+//      printf("v\n");
+        break;
+
+      case '*': // char *
+        rettype = tStr;
+      sret = CONSTANT_STRLEN(tStr);
+//      printf("*\n");
+        break;
+
+      case '@': // object
+        rettype = tObj;
+      sret = CONSTANT_STRLEN(tObj);
+//      printf("@\n");
+        break;
+
+      case '#': // class
+        rettype = tPrg(tObj);
+      sret = CONSTANT_STRLEN(tPrg(tObj));
+//      printf("#\n");
+        break;
+
+      case ':': // SEL
+        rettype = tString;
+      sret = CONSTANT_STRLEN(tString);
+//      printf(":\n");
+        break;
+
+      case '[': // array
+        rettype = tArr(tMix);
+      sret = CONSTANT_STRLEN(tArr(tMix));
+//      printf("[\n");
+        break;
+
+      case '{': // struct
+        rettype = tObj;
+      sret = CONSTANT_STRLEN(tObj);
+//      printf("{\n");
+        break;
+
+      case '(': // union
+        rettype = tObj;
+      sret = CONSTANT_STRLEN(tObj);
+//      printf("(\n");
+        break;
+
+      case 'b':  // bit field
+        rettype = tInt;
+      sret = CONSTANT_STRLEN(tObj);
+//      printf("b\n");
+        break;
+
+      case '^':  // pointer
+        rettype = tObj;
+      sret = CONSTANT_STRLEN(tObj);
+//      printf("^\n");
+        break;
+
+      case '?':  // unknown (function ptr)
+        rettype = tObj;
+      sret = CONSTANT_STRLEN(tObj);
+      printf("?\n");
+        break;
+      default:
+        printf("SIGNATURE: %s\n", type);
+    }
+
+  for (x = 2; x < argcount; x++)
+  {
+    type = [nssig getArgumentTypeAtIndex: x];
+
+    while((*type)&&(*type=='r' || *type =='n' || *type =='N' || *type=='o' || *type=='O' || *type =='V'))
+                type++;
+
+    switch(*type)
+    {
+      case 'c': // char
+//      printf("c\n");
+        break;
+
+      case 'i': // int
+//        printf("i\n");
+        break;
+
+      case 's': // short
+//        printf("s\n");
+        break;
+
+      case 'l': // long
+//        printf("l\n");
+        break;
+
+      case 'q': // long long
+//        printf("q\n");
+        break;
+
+        case 'C': // unsigned char
+//           printf("C\n");
+           break;
+           
+        case 'I': // unsigned int
+//         printf("I\n");
+         break;
+
+ 
+       case 'S': // unsigned short
+//        printf("S\n");
+        break;
+
+      case 'L': // unsigned long
+//        printf("L\n");
+        break;
+
+      case 'Q': // unsigned long long
+//        printf("Q\n");
+        break;
+
+      case 'f': // float
+//        printf("f\n");
+        break;
+
+      case 'd': // double
+//        printf("d\n");
+        break;
+
+      case 'B': // bool
+//        printf("B\n");
+        break;
+
+      case 'v': // void
+//        printf("v\n");
+        break;
+
+      case '*': // char *
+//        printf("*\n");
+        break;
+
+      case '@': // object
+//        printf("@\n");
+        break;
+
+      case '#': // class
+//        printf("#\n");
+        break;
+
+      case ':': // SEL
+//        printf(":\n");
+        break;
+
+      case '[': // array
+//        printf("[\n");
+        break;
+
+      case '{': // struct
+//        printf("{\n");
+        break;
+
+      case '(': // union
+//        printf("(\n");
+        break;
+
+      case 'b':  // bit field
+//        printf("b\n");
+        break;
+
+      case '^':  // pointer
+//        printf("^\n");
+        break;
+
+      case '?':  // unknown (function ptr)
+        printf("c?\n");
+        break;
+    }
+
+
+  }
+
+  spsig = CONSTANT_STRLEN("\004\021\020") + (CONSTANT_STRLEN(tMix)*(argcount-2)) + sret;
+//printf("allocated %d bytes for signature.\n", spsig);
+  psig = malloc(spsig);
+  psigo = psig;
+  now = 0;
+
+  psig[now++] = '\004';
+
+  for(i = 0; i < (argcount-2); i++)
+    psig[now++] = '\373';
+
+
+  psig[now++] = '\021';
+  psig[now++] = '\020';
+  
+  for(cpos = 0; cpos < sret; cpos++)
+  {
+    psig[now++] = rettype[cpos];
+  }
+
+  *lenptr = spsig;
+  return psigo;
+}
+
+// this is one of two functions that generate pike signature strings.
 char * pike_signature_from_objc_signature(struct objc_method * nssig, int * lenptr)
 {
   char * rettype;
