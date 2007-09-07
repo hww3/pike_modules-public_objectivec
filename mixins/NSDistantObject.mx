@@ -1,0 +1,40 @@
+MIXIN NSDistantObject
+{
+
+  PIKEFUN mixed `[](mixed t)
+  {
+    char * selector;
+	struct object * obj;
+	
+	if(t->type != T_STRING)
+	{
+		pop_stack();
+	   Pike_error("expected string\n");
+	}
+
+	// first, we should see if we respond to the selector.
+	selector = selector_from_pikename(t->u.string);
+
+    if([THIS->obj respondsToSelector: selector])
+	{
+//  	  printf("yeah, we do.\n");
+	  obj = new_method_runner(this_object(), selector);
+	}
+	else
+	{
+		free(selector);
+		pop_stack();
+		push_undefined();
+		return;
+	}
+	
+    free(selector);
+    pop_stack();
+    push_object(obj);
+    return;
+  }
+
+  EXTRA
+  {
+  }
+}
