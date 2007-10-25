@@ -13,7 +13,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * $Id: PiObjCObject.m,v 1.31 2007-09-03 02:35:56 hww3 Exp $
+ * $Id: PiObjCObject.m,v 1.32 2007-10-25 04:15:05 hww3 Exp $
  */
 
 /*
@@ -427,11 +427,11 @@ void instantiate_pike_native_class(struct program * prog, id obj, SEL sel)
 //	pobject = Pike_sp[-1].u.object;
 //  add_ref(pobject);
   add_ref(prog);
-//printf("setting the object's instance variable\n");
-
+printf("* setting the object's instance variable\n");
 //	object_setInstanceVariable(obj, "pobject",  pobject);
 	old_object_setInstanceVariable(obj, "pobject",  pobject);
-//printf("done\n");
+	
+printf("done\n");
 }
 
 #define LOW_SVALUE_STACK_MARGIN 20
@@ -779,6 +779,8 @@ void dispatch_pike_method(struct object * pobject, SEL sel, NSInvocation * anInv
 {
 	id desc;
 	push_text("%O");
+	if(!pobject)
+	  return @"Incomplete Object!";
 	ref_push_object(pobject);
 	f_sprintf(2);
 	desc = [NSString stringWithUTF8String: Pike_sp[-1].u.string->str];

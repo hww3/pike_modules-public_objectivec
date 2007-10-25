@@ -20,6 +20,18 @@
 
 #include "util.h"
 
+#ifndef THIS_IS_FOUNDATION
+extern struct program * Foundation_NSStructWrapper_program;
+static ptrdiff_t Foundation_NSStructWrapper_storage_offset;
+
+struct Foundation_NSStructWrapper_struct
+{
+	void * value;
+	void * decode;
+	void * encode;
+};
+#define OBJ2_NSSTRUCTWRAPPER(o) ((struct Foundation_NSStructWrapper_struct *)(o->storage+Foundation_NSStructWrapper_storage_offset))
+#endif
 
 #ifndef THIS_IS_OBJC_OBJECT_HOLDER
 static ptrdiff_t objc_class_method_storage_offset;

@@ -1401,6 +1401,14 @@ char * pike_signature_from_nsmethodsignature(id nssig, int * lenptr)
   return psigo;
 }
 
+
+unsigned piobjc_type_size(char** type_encoding)
+{
+	int result=-1;
+	*type_encoding=(char*)NSGetSizeAndAlignment(*type_encoding,(unsigned*)&result,NULL);
+	return result;
+}
+
 // this is one of two functions that generate pike signature strings.
 char * pike_signature_from_objc_signature(struct objc_method * nssig, int * lenptr)
 {

@@ -257,7 +257,7 @@ void f_call_objc_method(INT32 args, int is_instance, SEL select, id obj)
 
         case '*': 
            if(sv->type!=T_STRING)
-             Pike_error("Type mismatch for method argument..");
+             Pike_error("Type mismatch for method argument.");
            marg_setValue(argumentList,offset,char *, sv->u.string->str);
   	 break;
   	      case ':':
@@ -265,6 +265,11 @@ void f_call_objc_method(INT32 args, int is_instance, SEL select, id obj)
   	           marg_setValue(argumentList,offset,SEL , sel_registerName(sv->u.string->str));
   	         break;
 
+		
+		//	marg_setValue(argumentList,offset,void *, (unsigned short)sv->u.integer);
+		
+		
+		
         case '@': 
 // TODO: do we need to integrate this with svalue_to_id()?
           if(sv->type==T_OBJECT)
@@ -347,13 +352,25 @@ void f_call_objc_method(INT32 args, int is_instance, SEL select, id obj)
         }
         break;
 
+        case '{':
+		{
+			struct Foundation_NSStructWrapper_struct * s;
+           if(sv->type!=T_OBJECT)
+             Pike_error("Type mismatch for method argument.\n");
+
+			s = get_storage(sv->u.object, Foundation_NSStructWrapper_program);
+			if(!s) Pike_error("Expected Struct object.\n");
+			memcpy(marg_getRef(argumentList,offset,void),(struct Foundation_NSStructWrapper_struct *)s->value,piobjc_type_size(&type));				
+			
+		//	marg_setValue(argumentList, offset, )
+		}
+			break;
 
         case '^':
   Pike_error("unable to support type ^\n");
   //           marg_setValue(argumentList,offset,void , OBJ2_NSOBJECT(o)->object_data->object);
            break;
         case '[':
-        case '{':
         case '(':
         case 'b':
         case 'v':
@@ -1006,4 +1023,3 @@ struct program * pike_low_create_objc_dynamic_class(char * classname)
   }
   return dclass;
 }
-

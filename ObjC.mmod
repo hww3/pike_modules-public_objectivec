@@ -20,8 +20,8 @@
  *!
  */
 
-object_setInstanceVariableProc old_object_setInstanceVariable;
-object_getInstanceVariableProc old_object_getInstanceVariable;
+object_setInstanceVariableProc old_object_setInstanceVariable = NULL;
+object_getInstanceVariableProc old_object_getInstanceVariable = NULL;
 
 static CFRunLoopTimerRef		gTimerRef;
 static int backend_callback_set = 0;
@@ -31,7 +31,7 @@ static void backend_callback(struct callback *_cb,
                              void *post_select);
 static void run_backend_from_runloop(CFRunLoopTimerRef timerRef, void *info);
 
-id global_autorelease_pool;
+id global_autorelease_pool = NULL;
 struct mapping * global_proxy_cache;
 struct mapping * global_class_cache;
 struct mapping * global_classname_cache;
@@ -352,24 +352,21 @@ EXTRA
 	[p release];
       }
 
-  init_pool = [[NSAutoreleasePool alloc] init];
-
-  override_object_setInstanceVariable();
-  override_object_getInstanceVariable();
-  objc_setClassHandler(piobjc_classhandler_callback);
-
-  add_string_constant("__version", "0.1", 0);
-  add_string_constant("__author", "Bill Welliver <bill@welliver.org>", 0);
+    init_pool = [[NSAutoreleasePool alloc] init];
+ 
+    add_string_constant("__version", "0.1", 0);
+    add_string_constant("__author", "Bill Welliver <bill@welliver.org>", 0);
 
   pike_init_piobjc_foundation();
   pike_init_piobjc_appkit();
   [init_pool release];
   global_autorelease_pool = [[OC_NSAutoreleasePoolCollector alloc] init];
+
 }
 
 INIT
 {
-
+printf("STARTING OBJECTIVE C BRIDGE\n");
   THIS->pool = [[OC_NSAutoreleasePoolCollector alloc] init];
   [THIS->pool newAutoreleasePool];
 
@@ -382,6 +379,12 @@ INIT
  add_ref(global_class_cache);
  add_ref(global_classname_cache);
  add_ref(global_mixin_dict);
+
+ override_object_setInstanceVariable();
+ override_object_getInstanceVariable();
+
+ printf("setting the class handler %p\n", old_object_setInstanceVariable);
+ objc_setClassHandler(piobjc_classhandler_callback);
 
  start_mixins();
 
@@ -396,6 +399,8 @@ EXIT
   free_mapping(global_class_cache);
   free_mapping(global_classname_cache);
   free_mapping(global_mixin_dict);
+printf("SHUTTING DOWN OBJECTIVE C BRIDGE\n");
+
 }
 
 /*! @decl void new_class(string name, program p)
@@ -412,7 +417,17 @@ PIKEFUN void new_class(string name, program p)
 void override_object_setInstanceVariable()
 {
 
-  kern_return_t err = mach_override("_object_setInstanceVariable", NULL, 
+  kern_return_t err;
+
+  printf("override_object_setInstanceVariable()\n");
+ 
+  if(old_object_setInstanceVariable)
+  {
+	printf("* not overriding, as we already have.\n");
+	return;
+  }
+
+  err = mach_override("_object_setInstanceVariable", NULL, 
                                     (void*)new_object_setInstanceVariable, 
                                     (void**)&old_object_setInstanceVariable
                                     );
@@ -425,7 +440,17 @@ void override_object_setInstanceVariable()
 void override_object_getInstanceVariable()
 {
 
-  kern_return_t err = mach_override("_object_getInstanceVariable", NULL, 
+  kern_return_t err;
+ 
+  printf("override_object_getInstanceVariable()\n");
+
+  if(old_object_getInstanceVariable)
+  {
+	printf("* not overriding, as we already have.\n");
+	return;
+  }
+
+  err = mach_override("_object_getInstanceVariable", NULL, 
                                     (void*)new_object_getInstanceVariable, 
                                     (void**)&old_object_getInstanceVariable
                                     );
@@ -453,14 +478,14 @@ int piobjc_classhandler_callback(const char* className)
   SAFE_APPLY_MASTER("low_cast_to_program", 2 );
   if(Pike_sp[-1].type == T_PROGRAM)
   {
-//printf("got the program\n");
+    printf("got the program\n");
     add_piobjcclass(className, Pike_sp[-1].u.program);
     pop_stack();
     return 1;
   }
   else
   {
-//printf("got nothing\n");
+printf("got nothing\n");
     pop_stack();
     return 0;
   }
@@ -474,12 +499,12 @@ Ivar new_object_setInstanceVariable(id object, const char *name, void *value)
   struct svalue * pset;
   id vts;
 
-  printf("new_object_setInstanceVariable(%s:%s)->%s = %s)\n", object->isa->name, [[object description] UTF8String], name, [[((id)value) description ] UTF8String]	);
+//  printf("new_object_setInstanceVariable(%s:%s)->%s = %s)\n", object->isa->name, [[object description] UTF8String], name, [[((id)value) description ] UTF8String]	);
 
   // if we're not a wrapped pike object, we should just go direct to the objective-c object.
   if(![object respondsToSelector: SELUID("__ObjCgetPikeObject")])
   {
-//	printf("setting the object on a standard Objective-C object.\n");
+	printf("setting the object on a standard Objective-C object.\n");
  	return (old_object_setInstanceVariable(object, name, value));
   }
 

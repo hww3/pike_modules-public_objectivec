@@ -34,6 +34,8 @@
 #define ARG(_n_) Pike_sp[-((args - _n_) + 1)]
 #endif
 
+unsigned piobjc_type_size(char** type_encoding);
+
 struct object * new_nsobject_object(id obj);
 struct svalue * get_func_by_selector(struct object * pobject, SEL aSelector);
 void piobjc_set_return_value(id sig, id invocation, struct svalue * svalue);
