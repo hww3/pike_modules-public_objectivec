@@ -499,10 +499,10 @@ Ivar new_object_setInstanceVariable(id object, const char *name, void *value)
   struct svalue * pset;
   id vts;
 
-//  printf("new_object_setInstanceVariable(%s:%s)->%s = %s)\n", object->isa->name, [[object description] UTF8String], name, [[((id)value) description ] UTF8String]	);
+  printf("new_object_setInstanceVariable(%s:%s)->%s = %s)\n", object->isa->name, [[object description] UTF8String], name, [[((id)value) description ] UTF8String]	);
 
   // if we're not a wrapped pike object, we should just go direct to the objective-c object.
-  if(![object respondsToSelector: SELUID("__ObjCgetPikeObject")])
+  if(![object respondsToSelector: SELUID("getPikeObject")])
   {
 	printf("setting the object on a standard Objective-C object.\n");
  	return (old_object_setInstanceVariable(object, name, value));
@@ -533,7 +533,7 @@ Ivar new_object_setInstanceVariable(id object, const char *name, void *value)
     if(pike_type == PIKE_T_OBJECT)
     {
 
-      pobj = [vts __ObjCgetPikeObject];
+      pobj = [vts getPikeObject];
 
       if(!pobj)
       {
@@ -585,7 +585,7 @@ Ivar new_object_setInstanceVariable(id object, const char *name, void *value)
   {
 	id desc;
 	printf("setting a ptr in a pike object.\n");
-    pobj = [object __ObjCgetPikeObject];
+    pobj = [object getPikeObject];
 
     pset = ptr_to_svalue(value, x->ivar_type);
     push_text(name);
@@ -613,7 +613,7 @@ Ivar new_object_getInstanceVariable(id object, const char *name, void **value)
 //  printf("new_object_getInstanceVariable(%s, %s, %s)\n", object->isa->name, [[object description] UTF8String], name);
 
   // if we're a wrapped pike object, the instance variables will be in the pike object itself.
-  if(![object respondsToSelector: SELUID("__ObjCgetPikeObject")] == YES)
+  if(![object respondsToSelector: SELUID("getPikeObject")] == YES)
   {
     return (old_object_getInstanceVariable(object, name, value));
   }
@@ -630,7 +630,7 @@ Ivar new_object_getInstanceVariable(id object, const char *name, void **value)
     // TODO: we assume that all set variables are objects. we should fix this sooner rather than later.
     // TODO: do we need to lock here?
 
-    pobj = [object __ObjCgetPikeObject];
+    pobj = [object getPikeObject];
     
     if(!pobj)
     {
@@ -787,7 +787,7 @@ printf("CreateClassDefinition(%s, %s)\n", name, superclassName);
 
  //   RegisterDynamicMethod("init", name, (IMP)make_create_stub(prog), "@4@4:4");
     RegisterDynamicMethod("__create", name, (IMP)make_create_stub(prog), "@4@4:4");
-//    RegisterDynamicMethod("__ObjCgetPikeObject", name, (IMP)get_pike_object, "@4@4:4");
+//    RegisterDynamicMethod("getPikeObject", name, (IMP)get_pike_object, "@4@4:4");
 //    RegisterDynamicMethod("__whee", name, (IMP)get_pike_object, "@4@4:4");
 
 
