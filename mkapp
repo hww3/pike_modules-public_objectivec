@@ -64,19 +64,69 @@ EOF
 
 echo "building stub..."
 
-gcc -arch i386 -arch ppc -F /Users/hww3/Pike/7.7/build/Frameworks/ -c "${APPNAME}.m" -o "${APPNAME}.o"
-gcc -arch i386 -arch ppc "${APPNAME}.o" -o "${APPNAME}" -F/Users/hww3/Pike/7.7/build/Frameworks/ -framework Pike -framework Foundation
+gcc  -F. -c "${APPNAME}.m" -o "${APPNAME}.o"
+gcc "${APPNAME}.o" -o "${APPNAME}" -F.  -framework Pike -framework System -framework Foundation
+#gcc -arch i386 -arch ppc -F. -c "${APPNAME}.m" -o "${APPNAME}.o"
+#gcc -arch i386 -arch ppc "${APPNAME}.o" -o "${APPNAME}" -F. -lc -framework Pike -framework System
 
-if [ -d "./${APPNAME}.app" ] ;
+if [ ! -d "./${APPNAME}.app" ] ;
 then
-else
   echo "creating app bundle..."
   mkdir -p "${APPNAME}.app/Contents/MacOS"
   mkdir -p "${APPNAME}.app/Contents/Resources"
   mkdir -p "${APPNAME}.app/Contents/Frameworks"
+  cp -rf Pike.framework "${APPNAME}.app/Contents/Frameworks"
 
-// need to create files:
-// PkgInfo Info.plist version.plist
+cat << EOF > "${APPNAME}.app/Contents/Resources/${APPNAME}.pike"
+
+import Public.ObjectiveC;
+object NSApp;
+
+int main(int argc, array argv)
+{
+  NSApp = Cocoa.NSApplication.sharedApplication();
+  add_constant("NSApp", NSApp);
+  NSApp->activateIgnoringOtherApps_(1);
+
+  add_backend_to_runloop(Pike.DefaultBackend, 0.3);
+  return AppKit()->NSApplicationMain(argc, argv);
+}
+
+EOF
+
+# create bundle special files.
+cat << EOF > ${APPNAME}.app/Contents/PkgInfo
+gInfo 
+APPL????
+EOF
+
+cat << EOF > ${APPNAME}.app/Contents/Info.plist
+
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.
+com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+        <key>CFBundleDevelopmentRegion</key>
+        <string>English</string>
+        <key>CFBundleExecutable</key>
+        <string>${APPNAME}</string>
+        <key>CFBundleGetInfoString</key>
+        <string>1.0, foo</string>
+        <key>CFBundleIdentifier</key>
+        <string>org.gotpike.${APPNAME}</string>
+        <key>CFBundlePackageType</key>
+        <string>APPL</string>
+        <key>CFBundleSignature</key>
+        <string>WvTx</string>
+        <key>NSMainNibFile</key>
+        <string>MainMenu</string>
+        <key>NSPrincipalClass</key>
+        <string>NSApplication</string>
+</dict>
+</plist>
+EOF
+
 fi
 
 mv "${APPNAME}" "${APPNAME}.app/Contents/MacOS"
