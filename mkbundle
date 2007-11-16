@@ -1,0 +1,157 @@
+#!/bin/sh
+
+
+echo making bundle for $1
+
+APPNAME=$1
+
+cat << EOF > ${APPNAME}.m
+/*
+ * !!!! THIS IS GENERATED CODE, DO NOT EDIT !!!!
+ */
+
+/*
+
+	 1054  gcc -arch ppc -FCaster.app/Contents/Frameworks -c BWTestBundle.m -o BWTestBundle.o
+	 1055  MACOSX_DEPLOYMENT_TARGET="10.4" gcc -arch ppc BWTestBundle.o -bundle -o TestBundle -FTestBundle.saver/Contents/Frameworks -framework Pike -framework Foundation -undefined dynamic_lookup -framework ScreenSaver
+	 1056  install_name_tool -change @executable_path/../Frameworks/Pike.framework/Pike @loader_path/../Frameworks/Pike.framework/Pike TestBundle
+	 1057  cp TestBundle TestBundle.saver/Contents/MacOS/TestBundle
+
+*/
+
+#import <Pike/OCPikeInterpreter.h>
+#import <Foundation/Foundation.h>
+#import <Foundation/NSBundle.h>
+#import <Foundation/NSString.h>
+
+//extern char ** environ;
+
+static void __attribute__ ((constructor)) _piobjc_bundle_load(void);
+
+static const char *bundlePath() {
+    int i;
+    const struct mach_header *header = _dyld_get_image_header_containing_address(&bundlePath);
+    int count = _dyld_image_count();
+    for (i = 0; i < count; i++) {
+        if (_dyld_get_image_header(i) == header) {
+            return _dyld_get_image_name(i);
+        }
+    }
+    abort();
+    return NULL;
+}
+
+static void _piobjc_bundle_load()
+{
+
+	NSBundle* bundle;
+	NSString* mainPath;
+	Class cls;
+	OCPikeInterpreter* pi;
+	BOOL res = NO;
+        char * bundleLoc;
+
+    bundleLoc = (char *)bundlePath();
+
+	mainPath = [NSString stringWithCString: bundleLoc];
+	mainPath = [mainPath stringByAppendingString: @"/../../Resources/"];
+	mainPath = [mainPath stringByStandardizingPath];
+    	NSLog(mainPath);
+
+
+	if (mainPath == NULL) {
+		[NSException raise:NSInternalInconsistencyException 
+			format:@"Bundle %%@ does not contain a %(MAINFILE)s file",
+			bundle];
+	}
+
+	pi = [OCPikeInterpreter sharedInterpreter];
+
+	if (![pi isStarted]) {
+		[pi startInterpreter];
+
+
+	}
+
+
+	push_text([mainPath UTF8String]);
+	f_utf8_to_string(1);
+	SAFE_APPLY_MASTER("add_program_path", 1);
+	//  TODO: shouldn't SAFE_APPLY_MASTER do this for us?
+    //	pop_stack();
+	NSLog(@"Initialized the embedded Pike Interpreter.\n");
+	
+	// now, let's initialize the objective c bridge.
+	// looking up the module should be enough to do it.	
+	push_text("Public.ObjectiveC.module");
+
+	APPLY_MASTER("resolv", 1);
+	
+	if(Pike_sp[-1].type != T_OBJECT)
+	{
+	  NSLog(@"Unable to enable the Objective-C Bridge!\n");
+	}
+	else
+	{
+	  NSLog(@"Loaded Public.ObjectiveC.\n");
+	}
+	
+	pop_stack();
+	
+}
+
+EOF
+
+echo "building stub..."
+
+gcc  -F. -c "${APPNAME}.m" -o "${APPNAME}.o"
+MACOSX_DEPLOYMENT_TARGET="10.4" gcc -arch ppc "${APPNAME}.o" -bundle -o "${APPNAME}" -F. -framework Pike -framework Foundation -undefined dynamic_lookup
+install_name_tool -change @executable_path/../Frameworks/Pike.framework/Pike @loader_path/../Frameworks/Pike.framework/Pike "${APPNAME}"
+#gcc "${APPNAME}.o" -o "${APPNAME}" -F.  -framework Pike -framework System -framework Foundation
+
+if [ ! -d "./${APPNAME}.bundle" ] ;
+then
+  echo "creating bundle..."
+  mkdir -p "${APPNAME}.bundle/Contents/MacOS"
+  mkdir -p "${APPNAME}.bundle/Contents/Resources"
+  mkdir -p "${APPNAME}.bundle/Contents/Frameworks"
+  cp -rf Pike.framework "${APPNAME}.bundle/Contents/Frameworks"
+
+# create bundle special files.
+cat << EOF > ${APPNAME}.bundle/Contents/PkgInfo
+gInfo 
+APPL????
+EOF
+
+cat << EOF > ${APPNAME}.bundle/Contents/Info.plist
+
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.
+com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+        <key>CFBundleDevelopmentRegion</key>
+        <string>English</string>
+        <key>CFBundleExecutable</key>
+        <string>${APPNAME}</string>
+        <key>CFBundleGetInfoString</key>
+        <string>1.0, foo</string>
+        <key>CFBundleIdentifier</key>
+        <string>org.gotpike.${APPNAME}</string>
+        <key>CFBundlePackageType</key>
+        <string>APPL</string>
+        <key>CFBundleSignature</key>
+        <string>WvTx</string>
+        <key>NSMainNibFile</key>
+        <string>MainMenu</string>
+        <key>NSPrincipalClass</key>
+        <string>${APPNAME}</string>
+</dict>
+</plist>
+EOF
+
+fi
+
+mv "${APPNAME}" "${APPNAME}.bundle/Contents/MacOS"
+
+rm "${APPNAME}.m" "${APPNAME}.o"
