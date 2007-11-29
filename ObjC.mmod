@@ -647,7 +647,7 @@ Ivar new_object_getInstanceVariable(id object, const char *name, void **value)
       return NULL;
     }
 
-    rv = unwrap_objc_object(to.u.object);
+    rv = id_from_object(to.u.object);
     
     *value = rv;
     

@@ -13,7 +13,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * $Id: PiObjCObject.m,v 1.32 2007-10-25 04:15:05 hww3 Exp $
+ * $Id: PiObjCObject.m,v 1.33 2007-11-29 00:35:47 hww3 Exp $
  */
 
 /*
@@ -81,30 +81,14 @@ void dispatch_pike_method(struct object * pobject, SEL sel, NSInvocation * anInv
 
 @implementation PiObjCObject
 
+// this is a bit of a misnomer: we don't want more than one PiObjCObject instance per pike object.
+// we assume that this has already been verified. thus, it should be okay to create the object.
 +(id) newWithPikeObject:(struct object *) obj
 {              
   id instance;
-  instance = (id)unwrap_objc_object(obj);
-  if(instance == NULL) 
-  {
-/*
-	printf("Whoo hoo, we have a native pike object!\n");
+  instance = [[self alloc] initWithPikeObject:obj];
+  [instance autorelease];
 
-push_text("Whoo hoo, we have a native pike object: %O\n");
-ref_push_object(obj);
-f_indices(1);
-f_sprintf(2);
-printf("%s", Pike_sp[-1].u.string->str);
-pop_stack();
-*/
-    instance = PiObjC_FindObjCProxy(obj);
-	if(!instance)
-	{
-      instance = [[self alloc] initWithPikeObject:obj];
-      [instance autorelease];
-	  
-    }
-  }        
   return instance;
 }
 
@@ -150,6 +134,7 @@ pop_stack();
   printf("PiObjCObject.release()\n");
   if(pobject)
     free_object(pobject);
+  
   [super release];
 }
 
@@ -159,7 +144,10 @@ pop_stack();
   printf("PiObjCObject.dealloc()\n");
   PiObjC_UnregisterObjCProxy(pobject, self);
   if(pobject)
+  {
+	PiObjC_UnregisterObjCProxy(pobject, self);
   	free_object(pobject);
+  }
   [super dealloc];
 }
 

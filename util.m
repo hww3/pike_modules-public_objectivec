@@ -34,7 +34,7 @@ extern struct mapping * global_proxy_cache;
 -(struct object*)__piobjc_PikeObject__
 {
 	struct object *rval;
-//printf("__piobjc_PikeObject__\n");
+printf("__piobjc_PikeObject__\n");
 	rval = PiObjC_FindPikeProxy(self);
 
 	if (rval == NULL) 
@@ -227,31 +227,9 @@ struct svalue * object_dispatch_method(id obj, SEL select, struct objc_method * 
   THREADS_ALLOW();
   r = objc_msgSendv(obj,select,method_getSizeOfArguments(method),argumentList);
   THREADS_DISALLOW();
-  if(r == obj)
-  {
-	printf("%s returns same out as in.\n", select);
-	o = malloc(sizeof(struct svalue));
-	if(!o) Pike_error("object_dispatch_method: unable to allocate memory.\n");
-	o->type = T_OBJECT;
-	o->subtype = 0;
-	o->u.object = Pike_fp->current_object;
-  }
-  else
-  {
   o = id_to_svalue(r);
-  }
   if(!(o && o->u.object))
 	o = NULL;
-  else
-{
-	/*
-push_text("Whoo hoo, we have a native pike object: %O\n");
-ref_push_object(o->u.object);
-f_sprintf(2);
-printf("%s", Pike_sp[-1].u.string->str);
-pop_stack();
-*/
-}
   return o;
 }
 
@@ -397,15 +375,7 @@ id svalue_to_id(struct svalue * sv)
 		  		struct object * o;
 		  		//add_ref(sv->u.object);
 		  		o = sv->u.object;
-		  		rv = unwrap_objc_object(o);
-		  		if(!rv)
-		  		{
-					Class cls;
-//		    		printf("Whee! We're wrappin' an object for a return value!\n");
-		    	// if we don't have a wrapped object, we should make a pike object wrapper.
-					cls = get_objc_proxy_class(o->prog);
-		    		rv = [cls newWithPikeObject: o];
-		  		}
+				rv = id_from_object(o);
 			}
 			break;
 			
@@ -462,41 +432,24 @@ Class get_objc_proxy_class(struct program * prog)
 	return cls;
 }
 
-
 // ok, here's the algorithm we should use for unwrapping
 //
-// if the top level program does not have c methods, we know it's a pike object, and there's nothing to unwrap.
-// if the program does have c methods, we check to see if we've added the program as a dynamic class. if so, we can unwrap
-// otherwise, we can't unwrap (such as for someone passing an image object).
-id unwrap_objc_object(struct object * o)
+// all pike objects that represent an objective c object should have an 
+// objective c counterpart stored if they've been through the bridge.
+// that means, if we have one in the map, then it's the right one.
+// if a pike object doesn't, then it's definitely a pike object that hasn't
+// been through the bridge at all, and we should wrap it.
+id id_from_object(struct object * o)
 {
-	int is_objcobj = 0;
-	if(o && o->prog->flags & !PROGRAM_HAS_C_METHODS)
+	id c;
+	
+	c = PiObjC_FindObjCProxy(o);	
+	if(!c)
 	{
-		printf("unwrap_objc_object(): can't unwrap a pure pike object.\n");
-		return 0;
+		c = objcify_pike_object(o);
 	}
-    else
-	{
-		is_objcobj = find_dynamic_program_in_cache(o->prog);
-		if(is_objcobj)
-		{
-		  struct objc_dynamic_class * s = (struct objc_dynamic_class *)get_storage(o, o->prog);
-		  if(!s) { /*printf("unwrap_objc_object(): couldn't get storage!\n"); */ return nil; }
-		  else { /*printf("unwrap_objc_object(): got the id!\n");*/ return s->obj; }
-		}
-		else
-		{
-			push_text("unwrap_objc_object(): didn't find an objc class for the object: %O\n");
-			ref_push_object(o);
-			f_sprintf(2);
-			printf("%s", Pike_sp[-1].u.string->str);
-			pop_stack();
-
-		}
-		return 0;
-	}
-
+	
+	return c;
 }
 
 SEL selector_from_pikename(struct pike_string * name)

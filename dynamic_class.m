@@ -53,6 +53,7 @@ void f_objc_dynamic_create(Class cls, INT32 args)
 // [THIS->obj retain];
   THIS->is_instance = 1;
 // printf("finished creating object.\n");
+  PiObjC_RegisterPikeProxy(THIS->obj, Pike_fp->current_object);
 }
 
 void f_objc_dynamic_instance_method(INT32 args)
@@ -280,8 +281,7 @@ void f_call_objc_method(INT32 args, int is_instance, SEL select, id obj)
 			else
             {
 			  Class cls;
-			  cls = get_objc_proxy_class(o->prog);
-      	      wrapper = [cls newWithPikeObject: o];
+      	      wrapper = id_from_object(o);
               marg_setValue(argumentList, offset, id, wrapper);
 			}
   		  } 
@@ -361,7 +361,7 @@ void f_call_objc_method(INT32 args, int is_instance, SEL select, id obj)
 			s = get_storage(sv->u.object, Foundation_NSStructWrapper_program);
 			if(!s) Pike_error("Expected Struct object.\n");
 			memcpy(marg_getRef(argumentList,offset,void),(struct Foundation_NSStructWrapper_struct *)s->value,piobjc_type_size(&type));				
-			
+			printf("set the value.\n");
 		//	marg_setValue(argumentList, offset, )
 		}
 			break;
@@ -673,6 +673,7 @@ void objc_dynamic_class_exit()
 // printf("id refs: %p %d %s %s\n", THIS->obj, [THIS->obj retainCount], THIS->obj->isa->name, [[THIS->obj description] UTF8String]);
  if(THIS->obj) {	//printf("[release %p %s]\n", THIS->obj, THIS->obj->isa->name);
   //  [THIS->obj release];
+    PiObjC_UnregisterPikeProxy(THIS->obj, Pike_fp->current_object);
     [THIS->obj release]; 
   }
 }
