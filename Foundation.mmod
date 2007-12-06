@@ -13,7 +13,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * $Id: Foundation.mmod,v 1.3 2007-11-29 00:35:47 hww3 Exp $
+ * $Id: Foundation.mmod,v 1.4 2007-12-06 04:41:00 hww3 Exp $
  */
 
 /*
@@ -241,6 +241,17 @@
 
    EXIT 
    {
+   }
+
+   PIKEFUN void NSRegisterServicesProvider(object provider, string name)
+   {
+	 id p, n;
+	
+	 n = svalue_to_id(Pike_sp[-args +2-1]);
+	 p = svalue_to_id(Pike_sp[-args +1-1]);
+	
+	NSRegisterServicesProvider(p,n);
+	pop_n_elems(args);
    }
 
  }
