@@ -46,3 +46,4 @@ id get_NSObject_from_Object(struct object *o);
 char * get_signature_for_func(struct svalue * func, SEL selector);
 id unwrap_objc_object(struct object * o);
 char * pike_signature_from_nsmethodsignature(id nssig, int * lenptr);
+struct object * new_method_runner(struct object * obj, SEL selector);

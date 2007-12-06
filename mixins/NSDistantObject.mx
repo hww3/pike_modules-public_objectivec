@@ -3,7 +3,7 @@ MIXIN NSDistantObject
 
   PIKEFUN mixed `[](mixed t)
   {
-    char * selector;
+    SEL selector;
 	struct object * obj;
 	
 	if(t->type != T_STRING)

@@ -57,6 +57,7 @@ PIKEFUN void `[]=(mixed key, mixed value)
   id k;
   id v;
   id m;
+  NSMutableDictionary * d;
 
   struct svalue * sv;
 
@@ -66,7 +67,8 @@ PIKEFUN void `[]=(mixed key, mixed value)
   k = svalue_to_id(key);  
   v = svalue_to_id(value);
 
-  [ THIS->obj setObject: v ForKey: k ];
+  d = (NSMutableDictionary *)THIS->obj;
+  [ d setObject: v forKey: k ];
 
   pop_n_elems(args);
  

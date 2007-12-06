@@ -3,7 +3,7 @@ MIXIN NSCFString
 
   PIKEFUN mixed cast(string t)
   {
-    char * str;
+    const char * str;
     pop_stack();
     str = [THIS->obj UTF8String];
     push_text(str);   
