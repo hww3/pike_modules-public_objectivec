@@ -53,7 +53,32 @@ void f_objc_dynamic_create(Class cls, INT32 args)
 // [THIS->obj retain];
   THIS->is_instance = 1;
 // printf("finished creating object.\n");
+	printf("created: %s %p\n", THIS->obj->isa->name, Pike_fp->current_object);
   PiObjC_RegisterPikeProxy(THIS->obj, Pike_fp->current_object);
+}
+
+void low_f_objc_runner_method(ffi_cif* cif, void* resp, void** args, void* userdata)
+{
+  INT32 pargs;
+  char * m;
+  m = (char *)userdata;
+  pargs = *((INT32 *)args[0]);
+//  printf("low_f_call_objc_class_method()\n");
+  f_objc_runner_method(m, pargs);	
+}
+
+void f_objc_runner_method(char * selector, INT32 args)
+{	
+	SEL select;
+	id obj;
+	
+	obj = THIS->obj;        
+
+	select = selector;
+	
+//	printf("f_objc_runner_method: %s\n", select);
+
+	f_call_objc_method(args, 1, select, obj);
 }
 
 void f_objc_dynamic_instance_method(INT32 args)
@@ -70,6 +95,8 @@ void f_objc_dynamic_instance_method(INT32 args)
   obj = THIS->obj;        
 
   select = selector_from_pikename(name);
+
+//printf("f_objc_dynamic_instance_method: %s\n", select);
 
   f_call_objc_method(args, 1, select, obj);
 }
@@ -117,6 +144,7 @@ void f_call_objc_class_method(struct objc_class_method_desc * m, INT32 args)
   f_call_objc_method(args, 0, m->select, m->class);
 }
 
+extern void describe_proxy();
 void f_call_objc_method(INT32 args, int is_instance, SEL select, id obj)
 {
 
@@ -133,6 +161,7 @@ void f_call_objc_method(INT32 args, int is_instance, SEL select, id obj)
 	int num_float_arguments = 0;
 	
     pool = [global_autorelease_pool getAutoreleasePool];
+	//describe_proxy();
 // printf("\ncall\n");    
 //   printf("class: %s, select: %s, is_instance: %d\n", obj->isa->name, (char *) select, is_instance);
     if(is_instance)
@@ -529,10 +558,8 @@ void f_call_objc_method(INT32 args, int is_instance, SEL select, id obj)
 
           if(o)
           {
-			if(o->type == T_OBJECT && o->u.object)
-				push_object(o->u.object);
-  		    else 
-    		    push_svalue(o);
+   		    push_svalue(o);
+			free_svalue(o);
 			free(o);
           }
 		  else
@@ -661,23 +688,32 @@ void f_objc_dynamic_setter(char * vn, INT32 args)
   old_object_setInstanceVariable(THIS->obj, vn, var);
 }
 
-
 void objc_dynamic_class_init()
 {
-   THIS->obj = NULL;
+   THIS->obj = NULL;	
 }
 
 void objc_dynamic_class_exit()
 {
-//	printf("exiting: %s %p\n", THIS->obj->isa->name, Pike_fp->current_object);
-// printf("id refs: %p %d %s %s\n", THIS->obj, [THIS->obj retainCount], THIS->obj->isa->name, [[THIS->obj description] UTF8String]);
- if(THIS->obj) {	//printf("[release %p %s]\n", THIS->obj, THIS->obj->isa->name);
-  //  [THIS->obj release];
+//   printf("exiting: %p %s %p\n", THIS, THIS->obj->isa->name, Pike_fp->current_object);
+   if(THIS->obj) {
+//	NSLog([THIS->obj description]);
     PiObjC_UnregisterPikeProxy(THIS->obj, Pike_fp->current_object);
     [THIS->obj release]; 
   }
 }
 
+void objc_dynamic_runner_init()
+{
+   THIS->obj = NULL;
+}
+
+void objc_dynamic_runner_exit()
+{
+ if(THIS->obj) {
+    [THIS->obj release]; 
+  }
+}
 int find_dynamic_program_in_cache(struct program * prog)
 {
   int rv = 0;
@@ -748,7 +784,19 @@ void dynamic_class_event_handler(int ev) {
   }
 }
 
+void dynamic_runner_event_handler(int ev) {
+  switch(ev) {
 
+  case PROG_EVENT_INIT: objc_dynamic_runner_init(); break;
+  case PROG_EVENT_EXIT: objc_dynamic_runner_exit(); break;
+ 
+  default: break;
+  }
+}
+
+
+//! this method generates a pike class for a given objective-c class
+//! using reflection.
 struct program * pike_low_create_objc_dynamic_class(char * classname)
 {
   char * ncn;
@@ -942,12 +990,11 @@ struct program * pike_low_create_objc_dynamic_class(char * classname)
   }
 
   isa = isa->super_class;
-  while ((isa && isa->super_class && isa->super_class != isa))
+  while (isa)
   {
     iterator = 0;
     methodList = 0;
     selector = 0;
-
 //    printf("name: %s\n", isa->name);
     while (methodList = class_nextMethodList(isa, &iterator)) 
     {
@@ -986,24 +1033,25 @@ struct program * pike_low_create_objc_dynamic_class(char * classname)
         }
       }
     }
-    if(isa->super_class)
+    if(isa->super_class && isa == isa->super_class)
+{
+//	printf("breakin'\n");
+		break;
+	}
+	else if(isa->super_class)
       isa = isa->super_class;
-    else break;
+	else isa = 0;
   }
   
   free_mapping(m);
   /* finally, we add the low level setup callbacks */
 
   pike_set_prog_event_callback(dynamic_class_event_handler);
-  //set_init_callback(objc_dynamic_class_init);
-  //set_exit_callback(objc_dynamic_class_exit);
 
   dclass = end_program();
 
   if(dclass && strlen(classname))
   {
-
-    //add_program_constant(classname, dclass, 0);
 
     if(get_master())
     {

@@ -35,7 +35,7 @@
 #endif
 
 unsigned piobjc_type_size(char** type_encoding);
-
+void low_f_objc_runner_method(ffi_cif* cif, void* resp, void** args, void* userdata);
 
 id id_from_object(struct object * o);
 struct object * new_nsobject_object(id obj);

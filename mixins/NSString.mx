@@ -2,6 +2,7 @@ MIXIN NSString
 {
 
   PIKEFUN mixed cast(string t)
+	optflags OPT_SIDE_EFFECT;
   {
     pop_stack();
     push_text([THIS->obj UTF8String]);

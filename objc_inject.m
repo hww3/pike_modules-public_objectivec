@@ -426,15 +426,15 @@ objc_inject(pid_t pid, int use_main_thread, char *bundlePath, char *systemPath, 
 	unsigned int size = sizeof(objc_inject_param) + strtable_size;
 	err = task_for_pid(mach_task_self(), pid, &th.target_task);
 	if (err) {
-		//fprintf(stderr, "couldn't get task for pid\n");
+		fprintf(stderr, "couldn't get task for pid\n");
 		return -1;
 	}
 	if (!get_target_mach_header(&th)) {
-		//fprintf(stderr, "blew up trying to get at mach_header\n");
+		fprintf(stderr, "blew up trying to get at mach_header\n");
 		return -1;
 	}
 	if (!calculate_header(&th)) {
-		//fprintf(stderr, "couldn't calculate target mach_header\n");
+		fprintf(stderr, "couldn't calculate target mach_header\n");
 		return -1;
 	}
 	param = malloc(size);
@@ -460,7 +460,7 @@ objc_inject(pid_t pid, int use_main_thread, char *bundlePath, char *systemPath, 
     }
     if (img_index == img_count) {
         free(param);
-        //fprintf(stderr, "couldn't find libSystem's index\n");
+        fprintf(stderr, "couldn't find libSystem's index\n");
         return -1;
     }
     slide = _dyld_get_image_vmaddr_slide(img_index);
@@ -486,10 +486,10 @@ objc_inject(pid_t pid, int use_main_thread, char *bundlePath, char *systemPath, 
     IMAGE_WRAP(INJECT_test_func);
     IMAGE_WRAP(INJECT_EventLoopTimerEntry);
 #undef IMAGE_WRAP
-//	err = mach_inject((mach_inject_entry)INJECT_ENTRY, param, size, pid, 0);
+	err = mach_inject((mach_inject_entry)INJECT_ENTRY, param, size, pid, 0);
 	free(param);
 	if (err) {
-		//fprintf(stderr, "couldn't inject\n");
+		fprintf(stderr, "couldn't inject\n");
 		return -1;
 	}
 	return 0;

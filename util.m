@@ -16,7 +16,7 @@
  */
 
 /* this code is from pyobjc-1.4. */
-extern void dynamic_class_event_handler(int ev);
+extern void dynamic_runner_event_handler(int ev);
 
 extern struct mapping * global_proxy_cache;
  static struct pike_type *a_markers[10], *b_markers[10];
@@ -34,29 +34,25 @@ extern struct mapping * global_proxy_cache;
 -(struct object*)__piobjc_PikeObject__
 {
 	struct object *rval;
-printf("__piobjc_PikeObject__\n");
+//printf("__piobjc_PikeObject__\n");
+
 	rval = PiObjC_FindPikeProxy(self);
 
 	if (rval == NULL) 
 	{
 		rval = wrap_real_id(self);
-//		add_ref(rval);
 	 	PiObjC_RegisterPikeProxy(self, rval);
 	}
-    //add_ref(rval);
 	return rval;
 }
 
 +(struct object*)__piobjc_PikeObject__
 {
 	struct object *rval;
-printf("__piobjc_PikeObject__\n");
+//printf("__piobjc_PikeObject__\n");
 
-	//rval = PyObjC_FindPythonProxy(self);
 	rval = NULL;
 	if (rval == NULL) {
-//		rval = (struct object *)PyObjCClass_New(self);
-		//PyObjC_RegisterPythonProxy(self, rval);
 	}
 
 	return rval;
@@ -75,11 +71,12 @@ printf("__piobjc_PikeObject__\n");
 {
 	struct object *rval;
 printf("NSProxy.__piobjc_PikeObject__\n");
+NSLog([self description]);
 	rval = PiObjC_FindPikeProxy(self);
 	if (rval == NULL) {
-		printf("wrapping...\n");
+//		printf("wrapping...\n");
 		rval = wrap_real_id(self);
-printf("wrapped!\n");
+//printf("wrapped!\n");
 	 	PiObjC_RegisterPikeProxy(self, rval);
 	}
 
@@ -90,11 +87,8 @@ printf("wrapped!\n");
 {
 	struct object *rval;
 
-	//rval = PyObjC_FindPythonProxy(self);
 	rval = NULL;
 	if (rval == NULL) {
-//		rval = (struct object *)PyObjCClass_New(self);
-		//PyObjC_RegisterPythonProxy(self, rval);
 	}
 
 	return rval;
@@ -182,6 +176,7 @@ NSMapTableValueCallBacks PiObjCUtil_ObjCValueCallBacks = {
 	NULL  // generic description
 };
 
+// registering of proxy objects will be performed by the caller of this function.
 struct object * wrap_real_id(id r)
 {
   struct program * prog;
@@ -197,6 +192,7 @@ struct object * wrap_real_id(id r)
     if(!prog) return NULL;
 
     o = low_clone(prog);
+
     pc = OBJ2_DYNAMIC_OBJECT(o);
     pc->obj = (id)r;
   // we need to  the object, because the dynamic_class object 
@@ -210,26 +206,38 @@ struct object * wrap_real_id(id r)
   return o;
 }
 
+//! send a message to an objective c object, expect no result.
 void void_dispatch_method(id obj, SEL select, struct objc_method * method, marg_list argumentList)
 {
-	printf("void_dispatch_method()\n");
   THREADS_ALLOW();
 //  printf("void [%s %s]\n", [[obj description] UTF8String], select);
   objc_msgSendv(obj,select,method_getSizeOfArguments(method),argumentList);
   THREADS_DISALLOW();
 }
 
+//! send a message to an objective c object, expect an object in return.
 struct svalue * object_dispatch_method(id obj, SEL select, struct objc_method * method, marg_list argumentList)
 {
   struct svalue * o;
   id r;
-  
+
   THREADS_ALLOW();
   r = objc_msgSendv(obj,select,method_getSizeOfArguments(method),argumentList);
   THREADS_DISALLOW();
+
+ 
+
+  if(obj == r)
+	printf("*** object same out as in.\n");
+
   o = id_to_svalue(r);
+
   if(!(o && o->u.object))
 	o = NULL;
+else
+{
+//	add_ref(o->u.object);
+}
   return o;
 }
 
@@ -274,7 +282,6 @@ struct svalue * low_id_to_svalue(id obj, int prefer_native)
 		struct array * a;
 		
 		a = [obj __ObjCgetPikeArray];
-        // add_ref(a);
 		sv->type = T_ARRAY;
 		sv->subtype = 0;
 		sv->u.array = a;
@@ -285,7 +292,6 @@ struct svalue * low_id_to_svalue(id obj, int prefer_native)
 		struct mapping * m;
 		
 		m = [obj __ObjCgetPikeMapping];
-        // add_ref(m);
 		sv->type = T_MAPPING;
 		sv->subtype = 0;
 		sv->u.mapping = m;
@@ -296,8 +302,6 @@ struct svalue * low_id_to_svalue(id obj, int prefer_native)
 
     if(o)
     {
-//	    add_ref(o);
-//	printf("o'': %d\n",o->refs);
 		sv->type = T_OBJECT;
 		sv->subtype = 0;
 		sv->u.object = o;
@@ -307,7 +311,6 @@ struct svalue * low_id_to_svalue(id obj, int prefer_native)
 	  sv->type = T_INT;
 	  sv->subtype = 1;
 	  sv->u.integer = 0;
-//	  printf("id_to_svalue(): no object!\n");
     }
 
     return sv;
@@ -318,6 +321,8 @@ void * svalue_to_ptr(struct svalue * sval, char * type)
 	return NULL;
 }
 
+// convert an object to an svalue. the result should be an object or int zero.
+// preserves identity.
 struct svalue * id_to_svalue(id obj)
 {
 	return low_id_to_svalue(obj, 0);
@@ -536,7 +541,7 @@ struct object * wrap_objc_object(id r)
   
   /* TODO: Do we need to make these methods in PiObjCObject hidden? */
 	o = [r __piobjc_PikeObject__];
-   add_ref(o);
+
   return o;
 }
 
@@ -555,6 +560,7 @@ struct program * wrap_objc_class(Class r)
   return prog;
 }
 
+// push a set of arguments on the stack, converting to pike data types as appropriate.
 int push_objc_types(NSMethodSignature* sig, NSInvocation* invocation)
 {
 	char * type = NULL;
@@ -564,6 +570,7 @@ int push_objc_types(NSMethodSignature* sig, NSInvocation* invocation)
 	struct svalue * sval = NULL;
 	int args_pushed = 0;
  	// args 0 and 1 are the object and the method, respectively.
+	printf("Signature: %s\n", [sig getArgumentTypeAtIndex: 0]);
 	for(arg = 2; arg < [sig numberOfArguments];arg++)
     {
 	  // now, we push the argth argument onto the stack.
@@ -981,6 +988,8 @@ BOOL isNSNil(struct svalue * sv)
 	else return 0;
 }
 
+// do we need to keep the pike object as well, or is it good enough
+// to keep only the objective-c object? could get tricky, i'd say.
 struct object * new_method_runner(struct object * obj, SEL selector)
 {
   struct program * dclass = NULL;
@@ -990,10 +999,10 @@ struct object * new_method_runner(struct object * obj, SEL selector)
   char * psig;
   id signature;
   struct objc_dynamic_class * c;
+  void * stub;
 
   c = OBJ2_DYNAMIC_OBJECT(obj);
-
-  [c->obj description2];
+NSLog([c->obj description]);
   signature = [c->obj methodSignatureForSelector: selector];
 
   if(!signature) 
@@ -1009,16 +1018,21 @@ struct object * new_method_runner(struct object * obj, SEL selector)
   dclass_storage_offset = ADD_STORAGE(struct objc_dynamic_class);
 
   psig = pike_signature_from_nsmethodsignature(signature, &siglen);
-  quick_add_function("`()", strlen("`()"), f_objc_dynamic_instance_method, psig,
+
+  stub = quick_make_stub(selector, low_f_objc_runner_method);
+  quick_add_function("`()", strlen("`()"), stub, psig,
                      siglen, 0, 
                      OPT_SIDE_EFFECT|OPT_EXTERNAL_DEPEND);
 
 
-  pike_set_prog_event_callback(dynamic_class_event_handler);
+  pike_set_prog_event_callback(dynamic_runner_event_handler);
   dclass = end_program();
 
   dobject = fast_clone_object(dclass);
-  
+  [c->obj retain];
+  OBJ2_DYNAMIC_OBJECT(dobject)->obj = c->obj;
+  OBJ2_DYNAMIC_OBJECT(dobject)->is_instance = 1;
+
   return dobject;
 }
 

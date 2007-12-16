@@ -46,14 +46,15 @@ PIKEFUN void create()
 {
 }
 
-#if defined(MAC_OS_X_VERSION_10_3) && defined(__ppc__)
 
 /*! @decl int inject(int pid, int use_main_thread, string bundlePath, string systemPath, string carbonPath)
  *!
  */
 PIKEFUN int inject(int pid, int use_main_thread, string bundlePath, string systemPath, string carbonPath)
 {
-  int r;
+  mach_error_t r;
+  pid_t p;
+  p = (pid_t)pid;
 
   r = objc_inject(pid, use_main_thread, bundlePath->str, systemPath->str, carbonPath->str);
 
@@ -61,7 +62,19 @@ PIKEFUN int inject(int pid, int use_main_thread, string bundlePath, string syste
   push_int(r);
   return;
 }
-#endif
+
+
+PIKEFUN int inject_bundle(string bundlepath, int pid)
+{
+  mach_error_t r;
+  pid_t p;
+  p = (pid_t)pid;
+
+  r = mach_inject_bundle_pid(bundlepath->str, pid);
+  pop_n_elems(args);
+  push_int(r);
+  return;
+}
 
 /*! @decl void add_backend_runloop()
  *!

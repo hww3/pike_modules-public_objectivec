@@ -3,7 +3,7 @@
 || This file is part of Pike. For copyright information see COPYRIGHT.
 || Pike is distributed under GPL, LGPL and MPL. See the file COPYING
 || for more information.
-|| $Id: screensaver_config.h.in,v 1.3 2007-08-24 19:32:27 hww3 Exp $
+|| $Id: screensaver_config.h.in,v 1.4 2007-12-16 02:29:01 hww3 Exp $
 */
 
 #ifndef MACHINE_H
@@ -24,11 +24,17 @@
 #define _ALL_SOURCE
 #endif
 
+/* Building as a library? */
+#undef LIBPIKE
+
 /* Where's the master.pike file installed? */
 #define DEFAULT_MASTER "@prefix@/lib/pike/master.pike"
 
 /* Define this if you want run time self tests */
 #undef PIKE_DEBUG
+
+/* Define this if you want some extra (possibly verbose) run time self tests */
+#undef PIKE_EXTRA_DEBUG
 
 /* Define to make Pike do a full cleanup at exit to detect leaks. */
 #undef DO_PIKE_CLEANUP
@@ -48,6 +54,9 @@
 /* Define this if you want checkpoints */
 #undef DMALLOC_TRACE
 
+/* Define this if you want dmalloc to keep track of freed memory. */
+#undef DMALLOC_TRACK_FREE
+
 /* With this, dmalloc will trace malloc(3) calls */
 #undef ENCAPSULATE_MALLOC
 
@@ -57,6 +66,9 @@
 /* Define this to enable the internal Pike security system */
 #undef PIKE_SECURITY
 
+/* Define this to enable experimental facets support */
+#undef WITH_FACETS
+
 /* Define this to enable the internal bignum conversion */
 #undef AUTO_BIGNUM
 
@@ -65,6 +77,9 @@
 
 /* Define this if you want to enable the shared nodes mode of the optimizer. */
 #undef SHARED_NODES
+
+/* Define this if you want to enable the new type checker code. */
+#undef NEW_ARG_CHECK
 
 /* Define this to use the new keypair loop. */
 #undef PIKE_MAPPING_KEYPAIR_LOOP
@@ -322,6 +337,9 @@
 /* Define if your signals are one-shot */
 #undef SIGNAL_ONESHOT
 
+/* Define this if eval_instruction gets large on your platform. */
+#undef PIKE_SMALL_EVAL_INSTRUCTION
+
 /* Define if you have gcc-style computed goto, and want to use them. */
 #undef HAVE_COMPUTED_GOTO
 
@@ -336,6 +354,9 @@
 
 /* You have cl-type __declspec? */
 #undef HAVE_DECLSPEC
+
+/* Your va_list is a state pointer? */
+#undef VA_LIST_IS_STATE_PTR
 
 /* Does your compiler grock 'volatile' */
 #define VOLATILE volatile
@@ -412,7 +433,7 @@
 /* Define if you have struct sockaddr_in6 */
 #undef HAVE_STRUCT_SOCKADDR_IN6
 
-/* Define this to the max value of an unsigned short unles <limits.h> does.. */
+/* Define this to the max value of an unsigned short unless <limits.h> does.. */
 #undef USHRT_MAX
 
 /* Define these if you are going to use threads */
@@ -432,6 +453,9 @@
 
 /* Define this if you have Windows NT threads */
 #undef NT_THREADS
+
+/* Use DDLs for dynamically linked modules on NT. */
+#undef USE_DLL
 
 /* Define this if your THREAD_T type is a pointer type. */
 #undef PIKE_THREAD_T_IS_POINTER
@@ -529,6 +553,9 @@
 /* set this to the modifier type string to print ptrdiff_t, like "" or "l" */
 #undef PRINTPTRDIFFT
 
+/* set this to the modifier type string to print off_t if that type exists */
+#undef PRINTOFFT
+
 /* set this to the modifier type string to print INT64 if that type exists */
 #undef PRINTINT64
 
@@ -545,10 +572,10 @@
 /* Define to the page size (handled efficiently by malloc). */
 #undef PIKE_MALLOC_PAGE_SIZE
 
-/* PIKE_YES if the number reported by get_cpu_time (rusage.c) is
- * thread local, PIKE_NO if it isn't, PIKE_UNKNOWN if it couldn't be
- * established. */
-#undef CPU_TIME_IS_THREAD_LOCAL
+/* PIKE_YES if the number reported by fallback_get_cpu_time (rusage.c)
+ * is thread local, PIKE_NO if it isn't, PIKE_UNKNOWN if it couldn't
+ * be established. */
+#undef FB_CPU_TIME_IS_THREAD_LOCAL
 
 
 /* Define to one of `_getb67', `GETB67', `getb67' for Cray-2 and Cray-YMP
@@ -622,7 +649,7 @@
 
 /* If using the C implementation of alloca, define if you know the
    direction of stack growth for your system; otherwise it will be
-   automatically deduced at runtime.
+   automatically deduced at run-time.
 	STACK_DIRECTION > 0 => grows toward higher addresses
 	STACK_DIRECTION < 0 => grows toward lower addresses
 	STACK_DIRECTION = 0 => direction of growth unknown */
@@ -669,62 +696,5 @@
  *  3 = works excellently
  */
 #define PIKE_OOB_WORKS -1
-
-/* We want to use errno later */
-#ifdef _SGI_SPROC_THREADS
-/* Magic define of _SGI_MP_SOURCE above might redefine errno below */
-#include <errno.h>
-#if defined(HAVE_OSERROR) && !defined(errno)
-#define errno (oserror())
-#endif /* HAVE_OSERROR && !errno */
-#endif /* _SGI_SPROC_THREADS */
-
-/* This macro is only provided for compatibility with
- * Windows PreRelease. Use ALIGNOF() instead!
- * (Needed for va_arg().)
- */
-#ifndef __alignof
-#define __alignof(X) ((size_t)&(((struct { char ignored_ ; X fooo_; } *)0)->fooo_))
-#endif /* __alignof */
-
-#ifdef HAVE_FUNCTION_ATTRIBUTES
-#define ATTRIBUTE(X) __attribute__ (X)
-#else
-#define ATTRIBUTE(X)
-#endif
-
-#ifdef HAVE_DECLSPEC
-#define DECLSPEC(X) __declspec(X)
-#else /* !HAVE_DECLSPEC */
-#define DECLSPEC(X)
-#endif /* HAVE_DECLSPEC */
-
-#ifndef HAVE_WORKING_REALLOC_NULL
-#define realloc(PTR, SZ)	pike_realloc(PTR,SZ)
-#endif
-
-/* NOTE:
- *    PIKE_CONCAT doesn't get defined if there isn't any way to
- *    concatenate symbols
- */
-#ifdef HAVE_ANSI_CONCAT
-#define PIKE_CONCAT(X,Y)	X##Y
-#define PIKE_CONCAT3(X,Y,Z)	X##Y##Z
-#define PIKE_CONCAT4(X,Y,Z,Q)	X##Y##Z##Q
-#else
-#ifdef HAVE_KR_CONCAT
-#define PIKE_CONCAT(X,Y)	X/**/Y
-#define PIKE_CONCAT3(X,Y,Z)	X/**/Y/**/Z
-#define PIKE_CONCAT4(X,Y,Z,Q)	X/**/Y/**/Z/**/Q
-#endif /* HAVE_KR_CONCAT */
-#endif /* HAVE_ANSI_CONCAT */
-
-#define TOSTR(X)	#X
-#define DEFINETOSTR(X)	TOSTR(X)
-
-/* Some identifiers used as flags in the defines above. */
-#define PIKE_YES	1
-#define PIKE_NO		2
-#define PIKE_UNKNOWN	3
 
 #endif /* MACHINE_H */

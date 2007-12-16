@@ -1,14 +1,14 @@
 - KVO and Bindings support
-- bundle support for writing PrefPanes and such.
 - support for in-out parameters and variants.
 - get DO working properly with proxied classes.
-- support for c-structs and c-arrays as arguments and return values.
+- support for c-structs and c-arrays as arguments and return values (in progress).
 - investigate feasibility of supporting GNUStep or The Cocotron.
 - variable overloading for accessing Cocoa variables from Pike using 
 `->symbol() and friends. (in progress)
 - ability to refine methods for classes in an easily extended way 
-    (complete, see mixins/ for examples.)- Backend running while in  
-    NSApplicationMain() (complete)
+    (complete, see mixins/ for examples.)
+- Backend running while in  NSApplicationMain() (complete)
 - automated application bundling (in progress, using Pike.framework in 
-    7.7)
+    7.7, see mkapp)
+- bundle support for writing PrefPanes and such (in progress, see mkbundle)
 - equality functions

@@ -2,6 +2,7 @@ MIXIN NSCFString
 {
 
   PIKEFUN mixed cast(string t)
+	optflags OPT_SIDE_EFFECT;
   {
     const char * str;
     pop_stack();

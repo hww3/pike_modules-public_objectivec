@@ -1,6 +1,11 @@
 MIXIN NSDistantObject
 {
 
+PIKEFUN string mdo()
+{
+  push_text("howdy!");
+}
+
   PIKEFUN mixed `[](mixed t)
   {
     SEL selector;
@@ -15,20 +20,11 @@ MIXIN NSDistantObject
 	// first, we should see if we respond to the selector.
 	selector = selector_from_pikename(t->u.string);
 
-    if([THIS->obj respondsToSelector: selector])
+//    if([THIS->obj respondsToSelector: selector])
 	{
-//  	  printf("yeah, we do.\n");
-	  obj = new_method_runner(this_object(), selector);
+	  obj = new_method_runner(Pike_fp->current_object, selector);
+	//	free_object(obj);
 	}
-	else
-	{
-		free(selector);
-		pop_stack();
-		push_undefined();
-		return;
-	}
-	
-    free(selector);
     pop_stack();
     push_object(obj);
     return;

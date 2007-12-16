@@ -4,7 +4,6 @@
 		Some rights reserved: <http://creativecommons.org/licenses/by/2.0/>
 
 	***************************************************************************/
-#if defined(MACOSX) && defined(__ppc__)
 #include	"mach_inject.h"
 
 #include <mach-o/dyld.h>
@@ -199,4 +198,3 @@ machImageForPointer(
 	
 	return err_threadEntry_image_not_found;
 }
-#endif /* MACOSX */

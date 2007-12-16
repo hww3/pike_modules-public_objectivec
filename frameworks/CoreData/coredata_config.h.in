@@ -3,7 +3,7 @@
 || This file is part of Pike. For copyright information see COPYRIGHT.
 || Pike is distributed under GPL, LGPL and MPL. See the file COPYING
 || for more information.
-|| $Id: coredata_config.h.in,v 1.2 2007-08-24 19:32:26 hww3 Exp $
+|| $Id: coredata_config.h.in,v 1.3 2007-12-16 02:29:01 hww3 Exp $
 */
 
 #ifndef MACHINE_H
@@ -649,7 +649,7 @@
 
 /* If using the C implementation of alloca, define if you know the
    direction of stack growth for your system; otherwise it will be
-   automatically deduced at runtime.
+   automatically deduced at run-time.
 	STACK_DIRECTION > 0 => grows toward higher addresses
 	STACK_DIRECTION < 0 => grows toward lower addresses
 	STACK_DIRECTION = 0 => direction of growth unknown */
