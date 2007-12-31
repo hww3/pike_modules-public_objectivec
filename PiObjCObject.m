@@ -13,7 +13,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * $Id: PiObjCObject.m,v 1.33 2007-11-29 00:35:47 hww3 Exp $
+ * $Id: PiObjCObject.m,v 1.34 2007-12-31 05:11:42 hww3 Exp $
  */
 
 /*
@@ -327,7 +327,7 @@ void low_create_pike_object(ffi_cif* cif, void* resp, void** args, void* userdat
   obj = *(id*)args[0];
   sel = *(SEL*)args[1];
   
-  printf("low_create_pike_object()\n");
+  printf("low_create_pike_object(%p, %p, %s)\n", prog, obj, sel);
   rv = create_pike_object(prog, obj, sel);
 
   *(id*) resp = rv;
@@ -418,7 +418,7 @@ void instantiate_pike_native_class(struct program * prog, id obj, SEL sel)
 printf("* setting the object's instance variable\n");
 //	object_setInstanceVariable(obj, "pobject",  pobject);
 	old_object_setInstanceVariable(obj, "pobject",  pobject);
-	
+	  PiObjC_RegisterObjCProxy(pobject, obj);
 printf("done\n");
 }
 

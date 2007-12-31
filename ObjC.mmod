@@ -70,7 +70,7 @@ PIKEFUN int inject_bundle(string bundlepath, int pid)
   pid_t p;
   p = (pid_t)pid;
 
-  r = mach_inject_bundle_pid(bundlepath->str, pid);
+//  r = mach_inject_bundle_pid(bundlepath->str, pid);
   pop_n_elems(args);
   push_int(r);
   return;
@@ -401,6 +401,12 @@ printf("STARTING OBJECTIVE C BRIDGE\n");
 
  start_mixins();
 
+ static ptrdiff_t dclass_storage_offset;
+ start_new_program();
+ dclass_storage_offset = ADD_STORAGE(struct objc_dynamic_class);
+ objc_object_container_program = end_program();
+
+
 }
 
 EXIT
@@ -517,7 +523,7 @@ Ivar new_object_setInstanceVariable(id object, const char *name, void *value)
   // if we're not a wrapped pike object, we should just go direct to the objective-c object.
   if(![object respondsToSelector: SELUID("getPikeObject")])
   {
-	printf("setting the object on a standard Objective-C object.\n");
+//	printf("setting the object on a standard Objective-C object.\n");
  	return (old_object_setInstanceVariable(object, name, value));
   }
 
@@ -609,12 +615,12 @@ Ivar new_object_setInstanceVariable(id object, const char *name, void *value)
 //    free_svalue(pset);
     free(pset);
 
-	push_text("%O");
-	ref_push_object(pobj);
-	f_sprintf(2);
-	desc = [NSString stringWithUTF8String: Pike_sp[-1].u.string->str];
-	pop_stack();
-	NSLog(desc);
+//	push_text("%O");
+//	ref_push_object(pobj);
+//	f_sprintf(2);
+//	desc = [NSString stringWithUTF8String: Pike_sp[-1].u.string->str];
+//	pop_stack();
+//	NSLog(desc);
   }
 
   // finally, if we're a standard objective c object, we might be able to 

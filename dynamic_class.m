@@ -6,8 +6,8 @@
 #include "piobjc.h"
 
 #undef THIS
-#define THIS ((struct objc_dynamic_class *)(Pike_interpreter.frame_pointer->current_storage))
-#define OBJ2_OBJC_OBJECT_HOLDER(o) ((struct objc_object_holder_struct *)get_storage(o, objc_object_holder_program))
+#define THIS OBJ2_DYNAMIC_OBJECT(Pike_fp->current_object)
+//#define OBJ2_OBJC_OBJECT_HOLDER(o) ((struct objc_object_holder_struct *)get_storage(o, objc_object_holder_program))
 #define THIS_OBJC ((struct _struct *)(Pike_interpreter.frame_pointer->current_storage))
 
 extern id global_autorelease_pool;
@@ -28,7 +28,7 @@ void f_objc_dynamic_create(Class cls, INT32 args)
   struct svalue sval;
   struct pike_string * cname;
   
-// printf("dynamic_create: %s()\n", cls->isa->name);
+ printf("dynamic_create: %s()\n", cls->isa->name);
 
   if(args!=0)
   {
@@ -53,7 +53,7 @@ void f_objc_dynamic_create(Class cls, INT32 args)
 // [THIS->obj retain];
   THIS->is_instance = 1;
 // printf("finished creating object.\n");
-	printf("created: %s %p\n", THIS->obj->isa->name, Pike_fp->current_object);
+	printf("created: %s(%p/%p)\n", THIS->obj->isa->name, Pike_fp->current_object, THIS);
   PiObjC_RegisterPikeProxy(THIS->obj, Pike_fp->current_object);
 }
 
@@ -63,7 +63,7 @@ void low_f_objc_runner_method(ffi_cif* cif, void* resp, void** args, void* userd
   char * m;
   m = (char *)userdata;
   pargs = *((INT32 *)args[0]);
-//  printf("low_f_call_objc_class_method()\n");
+  printf("low_f_call_objc_class_method()\n");
   f_objc_runner_method(m, pargs);	
 }
 
@@ -76,7 +76,7 @@ void f_objc_runner_method(char * selector, INT32 args)
 
 	select = selector;
 	
-//	printf("f_objc_runner_method: %s\n", select);
+	printf("f_objc_runner_method: %s\n", select);
 
 	f_call_objc_method(args, 1, select, obj);
 }
@@ -92,11 +92,11 @@ void f_objc_dynamic_instance_method(INT32 args)
 
   name = ID_FROM_INT(Pike_fp->current_object->prog, Pike_fp->fun)->name;
   prog = Pike_fp->current_object->prog;
-  obj = THIS->obj;        
+  obj = THIS->obj;
 
   select = selector_from_pikename(name);
 
-//printf("f_objc_dynamic_instance_method: %s\n", select);
+printf("f_objc_dynamic_instance_method: pike:%p->%s, objc:%p->%s\n", THIS, name->str, obj, select);
 
   f_call_objc_method(args, 1, select, obj);
 }
@@ -107,7 +107,7 @@ void low_f_call_objc_class_method(ffi_cif* cif, void* resp, void** args, void* u
   struct objc_class_method_desc * m;
   m = (struct objc_class_method_desc *)userdata;
   pargs = *((INT32 *)args[0]);
-//  printf("low_f_call_objc_class_method()\n");
+  printf("low_f_call_objc_class_method()\n");
   f_call_objc_class_method(m, pargs);
 }
 
@@ -144,7 +144,6 @@ void f_call_objc_class_method(struct objc_class_method_desc * m, INT32 args)
   f_call_objc_method(args, 0, m->select, m->class);
 }
 
-extern void describe_proxy();
 void f_call_objc_method(INT32 args, int is_instance, SEL select, id obj)
 {
 
@@ -695,11 +694,19 @@ void objc_dynamic_class_init()
 
 void objc_dynamic_class_exit()
 {
-//   printf("exiting: %p %s %p\n", THIS, THIS->obj->isa->name, Pike_fp->current_object);
-   if(THIS->obj) {
+	struct objc_dynamic_class * ps;
+	
+//	push_text("obj: %O\n");
+//	push_object(Pike_fp->current_object);
+//	f_sprintf(2);
+//	printf("%s", Pike_sp[-1].u.string->str);
+//	printf("exiting: %p\n", Pike_fp->current_object); //, THIS->obj->isa->name, Pike_fp->current_object);
+//	printf("storage: %p\n", Pike_fp->current_storage);
+	ps = (struct objc_dynamic_class *)Pike_fp->current_storage;
+   if(ps && ps->obj) {
 //	NSLog([THIS->obj description]);
-    PiObjC_UnregisterPikeProxy(THIS->obj, Pike_fp->current_object);
-    [THIS->obj release]; 
+    PiObjC_UnregisterPikeProxy(ps->obj, Pike_fp->current_object);
+    [ps->obj release]; 
   }
 }
 
@@ -834,11 +841,9 @@ struct program * pike_low_create_objc_dynamic_class(char * classname)
   
   start_new_program();
 
+  low_inherit(objc_object_container_program, NULL, -1, 0, 0, NULL);
   add_string_constant("__objc_classname", classname, ID_PUBLIC);
   
-  dclass_storage_offset = ADD_STORAGE(struct objc_dynamic_class);
-
-
   /* first, we should add the instance variables. */
   ivar_list = isa->ivars;
 

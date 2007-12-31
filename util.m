@@ -185,16 +185,21 @@ struct object * wrap_real_id(id r)
   struct object * o;
   id toc;
 
-    ps = make_shared_binary_string(r->isa->name, strlen(r->isa->name));
-    prog = pike_create_objc_dynamic_class(ps);
-	free_string(ps);
+  ps = make_shared_binary_string(r->isa->name, strlen(r->isa->name));
+  prog = pike_create_objc_dynamic_class(ps);
+  free_string(ps);
 
-    if(!prog) return NULL;
+  if(!prog) return NULL;
 
-    o = low_clone(prog);
+  o = low_clone(prog);
 
-    pc = OBJ2_DYNAMIC_OBJECT(o);
-    pc->obj = (id)r;
+  printf("created pike object %p\n", o);
+
+  pc = OBJ2_DYNAMIC_OBJECT(o);
+  pc->obj = (id)r;
+
+  printf("created pike object storage %p\n", pc);
+
   // we need to  the object, because the dynamic_class object 
   // will free it when the object is destroyed.
   if((id)r->isa != [NSAutoreleasePool class])
@@ -220,13 +225,11 @@ struct svalue * object_dispatch_method(id obj, SEL select, struct objc_method * 
 {
   struct svalue * o;
   id r;
-
+printf("object_dispatch_method(): calling\n");
   THREADS_ALLOW();
   r = objc_msgSendv(obj,select,method_getSizeOfArguments(method),argumentList);
-  THREADS_DISALLOW();
-
- 
-
+  THREADS_DISALLOW(); 
+printf("object_dispatch_method(): returned from method.\n");
   if(obj == r)
 	printf("*** object same out as in.\n");
 
@@ -238,6 +241,7 @@ else
 {
 //	add_ref(o->u.object);
 }
+printf("object_dispatch_method returning.\n");
   return o;
 }
 
@@ -245,7 +249,7 @@ struct svalue * low_id_to_svalue(id obj, int prefer_native)
 {
 	struct svalue * sv;
 	struct object * o;
-//	NSLog([obj description]);
+	NSLog([obj description]);
 	if(!obj) {/*printf("low_id_to_svalue(): no object to convert!\n");*/ return NULL;}
 	
 	sv = malloc(sizeof(struct svalue));

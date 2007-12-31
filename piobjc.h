@@ -49,14 +49,10 @@ struct objc_dynamic_class
   int is_instance;
 };
 
-#define OBJ2_DYNAMIC_OBJECT(o) ((struct objc_dynamic_class *)get_storage(o, o->prog))
+#define OBJ2_DYNAMIC_OBJECT(o) ((struct objc_dynamic_class *)get_storage(o, objc_object_container_program))
 
-#define NEW_OBJC_OBJECT_HOLDER() clone_object(objc_object_holder_program, 0)
-#define NEW_NSCLASS() clone_object(NSClass_program, 0)
-#define NEW_NSSTRING() clone_object(NSString_program, 0)
-#define NEW_NSOBJECT() clone_object(NSObject_program, 0)
-#define NEW_METHODWRAPPER() clone_object(MethodWrapper_program, 0);
 
+struct program * objc_object_container_program;
 
 void start_mixins();
 void stop_mixins();
