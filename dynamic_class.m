@@ -702,6 +702,10 @@ void objc_dynamic_class_exit()
 //	printf("%s", Pike_sp[-1].u.string->str);
 //	printf("exiting: %p\n", Pike_fp->current_object); //, THIS->obj->isa->name, Pike_fp->current_object);
 //	printf("storage: %p\n", Pike_fp->current_storage);
+	
+	// TODO: this is probably not the appropriate place to do this; we should add an exit handler on 
+	// the inherited class instead of doing it here.
+	
 	ps = (struct objc_dynamic_class *)Pike_fp->current_storage;
    if(ps && ps->obj) {
 //	NSLog([THIS->obj description]);
