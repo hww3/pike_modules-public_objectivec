@@ -183,7 +183,9 @@ void f_call_objc_method(INT32 args, int is_instance, SEL select, id obj)
 
     printf("%s(%d args), expecting %d, returning %d\n", (char * ) select, args, arguments-2, num_pointer_return_arguments+1);
 
-    if((args) != (arguments-2))
+	// the number of required arguments is:
+	// the total number of arguments for the method - (2 (standard objc args) + the number of pointer return args)
+    if((args) < (arguments-(2 + num_pointer_return_arguments)))
       Pike_error("incorrect number of arguments to method provided.\n");
    
 
@@ -196,8 +198,13 @@ void f_call_objc_method(INT32 args, int is_instance, SEL select, id obj)
     {
       int offset;
       struct svalue * sv;
-      sv = Pike_sp-args+(x-2);
 
+      // make sure that we have an argument to pass, otherwise it's null.
+      // this should only be a factor when pointer return args are present, and nothing is passed in them.
+      if((x-2) <= args)
+        sv = Pike_sp-args+(x-2);
+	  else sv = NULL;
+	
       method_getArgumentInfo(method, x, (const char **)(&type), &offset);
       //printf("argument %d %s\n", x, type);
       while((*type)&&(*type=='r' || *type =='n' || *type =='N' || *type=='o' || *type=='O' || *type =='V'))
@@ -398,8 +405,18 @@ void f_call_objc_method(INT32 args, int is_instance, SEL select, id obj)
 			break;
 
         case '^':
-  Pike_error("unable to support type ^\n");
-  //           marg_setValue(argumentList,offset,void , OBJ2_NSOBJECT(o)->object_data->object);
+        {
+			void * buf;
+			int len;
+			len = piobjc_type_size(&type);
+			buf = malloc(len);
+			if(sv)
+			{
+				// TODO: we need to actually set values here, if they're passed.
+			}
+printf("unable to support type ^: passing empty placeholder, len is %d\n", len);
+             marg_setValue(argumentList,offset,void *, buf);
+        }
            break;
         case '[':
         case '(':
@@ -598,10 +615,19 @@ void f_call_objc_method(INT32 args, int is_instance, SEL select, id obj)
       }
       [pool release];
     }
+
+
+    // now, the fun begins. if we have "pointer return" parameters, we need to get that sorted out here.
+    if(num_pointer_return_arguments)
+    {
+	  num_pointer_return_arguments = push_objc_pointer_return_type(method, argumentList);
+      f_aggregate(num_pointer_return_arguments + 1);
+    }
   }
 
   @catch (NSException * e)
   {
+	pop_stack();
     Pike_error("%s: %s\n", [(NSString *)[e name] UTF8String], [(NSString *)[e reason] UTF8String]);
   }
 
@@ -613,9 +639,13 @@ void f_objc_dynamic_class_sprintf(Class cls, INT32 args)
 {
     char * desc;
     int hash;
-
+	int len;
+	
 	if(cls)
-      desc = malloc(strlen(cls->name) + strlen("()") + 15);
+	{
+	  len = strlen(cls->name) + strlen("()") + 15;
+      desc = malloc(len);
+    }
     else 
 	{
 		pop_n_elems(args);
@@ -625,6 +655,7 @@ void f_objc_dynamic_class_sprintf(Class cls, INT32 args)
 	
     if(desc == NULL)
       Pike_error("unable to allocate string.\n");
+	snprintf(desc, len, "%s(%p)", cls->name, THIS->obj);
     pop_n_elems(args);
     push_text(desc);
     free(desc);
@@ -955,7 +986,7 @@ struct program * pike_low_create_objc_dynamic_class(char * classname)
 
   /* todo we should work more on the optimizations. */
   ADD_FUNCTION("create", (void *)make_static_stub(isa, low_f_objc_dynamic_create), tFunc(tNone,tVoid), 0);  
-//  ADD_FUNCTION("_sprintf", (void *)make_static_stub(isa, low_f_objc_dynamic_class_sprintf), tFunc(tAnd(tInt,tMixed),tVoid), 0);  
+  ADD_FUNCTION("_sprintf", (void *)make_static_stub(isa, low_f_objc_dynamic_class_sprintf), tFunc(tAnd(tInt,tMixed),tVoid), 0);  
   ADD_FUNCTION("__isa", (void *)make_static_stub(isa, low_f_objc_dynamic_class_isa), tFunc(tAnd(tVoid,tMixed),tVoid), 0);  
 
   /* then, we add the instance methods. */
@@ -1078,7 +1109,8 @@ struct program * pike_low_create_objc_dynamic_class(char * classname)
       add_ref(Pike_sp[-1].u.string);
       ref_push_program(dclass);
       apply_svalue(Pike_sp-3, 2);
-      pop_stack();
+      // remove the return result, as well as the function we got from resolv()
+      pop_n_elems(2);
 	return dclass;
     }
   }

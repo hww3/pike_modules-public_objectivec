@@ -251,8 +251,10 @@ struct svalue * low_id_to_svalue(id obj, int prefer_native)
 {
 	struct svalue * sv;
 	struct object * o = NULL;
-	NSLog([obj description]);
+	printf("low_id_to_svalue: %p\n", obj);
 	if(!obj) {/*printf("low_id_to_svalue(): no object to convert!\n");*/ return NULL;}
+	else
+  	  NSLog([obj description]);
 	
 	sv = malloc(sizeof(struct svalue));
 	
@@ -564,6 +566,230 @@ struct program * wrap_objc_class(Class r)
   pop_stack();  
   
   return prog;
+}
+
+int push_objc_pointer_return_type(struct objc_method * method, marg_list margs)
+{
+	int arg = 2;
+	int offset = 0;
+	int argcount = 0;
+	const char * type;
+	int args_pushed = 0;
+			
+	argcount = method_getNumberOfArguments(method);
+
+    for(arg = 2; arg < argcount; arg++ )
+    {
+  	  int is_pointer_return_type = 0;
+	  method_getArgumentInfo(method, arg, (const char **)(&type), &offset);
+	  while((*type)&&(*type=='r' || *type =='n' || *type =='N' || *type=='o' || *type=='O' || *type =='V'))
+	  {
+		// TODO: this could get us into real trouble. we need to investigate this, here and in the other locations in this file.
+		switch(*type)
+		{
+			case 'N':
+			case 'o':
+			  is_pointer_return_type++;
+			  break;
+		}
+	    type++;
+	  }
+	
+    switch(*type)
+    {
+	  case '^':
+	    is_pointer_return_type++;
+		type++;
+	    break;
+    }
+
+  	  if(!is_pointer_return_type) continue;
+	
+	  // otherwise, we need to push the type.
+	  // is there any value to breaking this out to a separate function? not sure.  
+	//printf("have a pointer return type, %s\n", type);
+	      switch(*type)
+	      {
+		     case 'c':
+		     {
+		       // char
+  			   char * buf = marg_getValue(margs, offset, char *);
+	           push_int(*buf);
+			   free(buf);
+			   args_pushed++;
+			}
+		       break;
+	         case 'C':
+	         {
+		       unsigned char * buf = marg_getValue(margs, offset, unsigned char *);
+	           push_int(*buf);
+			   free(buf);
+			   args_pushed++;
+			 }
+		       break;
+		     case 'i':
+		       // int
+		      {
+		       int * buf = marg_getValue(margs, offset, int *);
+	           push_int(*buf);
+			   free(buf);
+			   args_pushed++;
+			 }
+			 break;
+		     case 'I':
+		       // int
+		      {
+		       unsigned int * buf = marg_getValue(margs, offset, unsigned int *);
+	           push_int(*buf);
+			   free(buf);
+			   args_pushed++;
+			 }
+		       break;
+		
+		/*
+		     case 's':
+		       // int
+		       buf = (short*)malloc(sizeof(short));
+	           if(buf == NULL)
+	             Pike_error("unable to allocate memory.\n");
+	           [invocation getArgument: &buf atIndex: arg];
+	           push_int((short)(*(short *)buf));
+			   args_pushed++;
+	           free(buf);
+		       break;
+		     case 'S':
+		       // int
+		       buf = (unsigned short*)malloc(sizeof(unsigned short));
+	           if(buf == NULL)
+	             Pike_error("unable to allocate memory.\n");
+	           [invocation getArgument: &buf atIndex: arg];
+	           push_int((unsigned short)(*(unsigned short *)buf));
+			   args_pushed++;
+	           free(buf);
+		       break;
+		     case 'l':
+		       // int
+		       buf = (long*)malloc(sizeof(long));
+	           if(buf == NULL)
+	             Pike_error("unable to allocate memory.\n");
+	           [invocation getArgument: &buf atIndex: arg];
+	           push_int((long)(*(long *)buf));
+			   args_pushed++;
+	           free(buf);
+		       break;	
+		     case 'L':
+		       // int
+		       buf = (unsigned long*)malloc(sizeof(unsigned long));
+	           if(buf == NULL)
+	             Pike_error("unable to allocate memory.\n");
+	           [invocation getArgument: &buf atIndex: arg];
+	           push_int((unsigned long)(*(unsigned long *)buf));
+			   args_pushed++;
+	           free(buf);
+		       break;
+			     case 'f':
+		       // int
+		       buf = (float*)malloc(sizeof(float));
+	           if(buf == NULL)
+	             Pike_error("unable to allocate memory.\n");
+	           [invocation getArgument: &buf atIndex: arg];
+	           push_float((float)(*(float *)buf));
+			   args_pushed++;
+	           free(buf);
+		       break;
+		     case 'd':
+		       // int
+		       buf = (double*)malloc(sizeof(double));
+	           if(buf == NULL)
+	             Pike_error("unable to allocate memory.\n");
+	           [invocation getArgument: &buf atIndex: arg];
+	           push_float((double)(*(double *)buf));
+			   args_pushed++;
+	           free(buf);
+		       break;
+		     case 'q':
+		       // int
+		       buf = (long long*)malloc(sizeof(long long));
+	           if(buf == NULL)
+	             Pike_error("unable to allocate memory.\n");
+	           [invocation getArgument: &buf atIndex: arg];
+	           push_float((long long)(*(long long *)buf));
+			   args_pushed++;
+	           free(buf);
+		       break;
+		     case 'Q':
+		       // int
+		       buf = (unsigned long long*)malloc(sizeof(unsigned long long));
+	           if(buf == NULL)
+	             Pike_error("unable to allocate memory.\n");
+	           [invocation getArgument: &buf atIndex: arg];
+	           push_float((unsigned long long)(*(unsigned long long *)buf));
+			   args_pushed++;
+	           free(buf);
+		       break;
+		     case '*':
+		       // int
+		       buf = (char*)malloc(sizeof(char *));
+	           if(buf == NULL)
+	             Pike_error("unable to allocate memory.\n");
+	           [invocation getArgument: &buf atIndex: arg];
+	           push_text((char *)buf);
+			   args_pushed++;
+	           free(buf);
+		       break;
+		     case ':':
+		       // int
+		       buf = (SEL)malloc(sizeof(SEL));
+	           if(buf == NULL)
+	             Pike_error("unable to allocate memory.\n");
+	           [invocation getArgument: &buf atIndex: arg];
+	           push_text((char *)buf);
+			   args_pushed++;
+	           free(buf);
+		       break;
+		*/
+		     case '@':
+		      {
+				struct svalue * sval;
+		        id * buf = marg_getValue(margs, offset, id *);
+	            sval = id_to_svalue((*buf));
+				//push_int(21);
+				if(sval)
+  	              push_svalue(sval);
+			    else push_int(0);
+				free(buf);
+				free(sval);
+	
+			   args_pushed++;
+			 }
+		       break;
+		/*
+		     case '#':
+		       {
+		         struct program * pprog;
+	           buf = (Class)malloc(sizeof(Class));
+	           if(buf == NULL)
+	             Pike_error("unable to allocate memory.\n");
+	           [invocation getArgument: &buf atIndex: arg];
+	           pprog = wrap_objc_class((Class)buf);
+	           if(!pprog){printf("AAAAAH! No program to push.\n");}
+	    		   args_pushed++;
+	           push_program(pprog);
+	           //free(buf);
+	         }
+		       break;
+
+	         default:
+	           printf("type: %s\n", type);
+	           Pike_error("invalid argument type!\n");
+	           break;
+*/
+	      }
+	
+//	  marg_getValue(margs, )
+    }
+
+	return args_pushed;
 }
 
 // push a set of arguments on the stack, converting to pike data types as appropriate.
@@ -1074,19 +1300,27 @@ int get_num_pointer_return_arguments(struct objc_method * nssig)
 
   for (x = 2; x < argcount; x++)
   {
+	int is_pointer_return = 0;
     method_getArgumentInfo(nssig, x, (const char **)&type, &offset);
-
+	printf("type: %s\n", type);
     while((*type)&&(*type=='r' || *type =='n' || *type =='N' || *type=='o' || *type=='O' || *type =='V'))
   {
 	switch(*type)
 	{
 		case 'N':
 		case 'o':
-		  pointer_return++;
+		  is_pointer_return++;
 		  break;
 	}
     type++;
   }
+  	switch(*type)
+	{
+		case '^':
+		  is_pointer_return++;
+	}
+	if(is_pointer_return) pointer_return++;
+
 }
   return pointer_return; 
 }
@@ -1379,6 +1613,7 @@ char * pike_signature_from_nsmethodsignature(id nssig, int * lenptr)
 
       case '^':  // pointer
 //        printf("^\n");
+  	    pointer_return ++;
         break;
 
       case '?':  // unknown (function ptr)
@@ -1718,6 +1953,7 @@ char * pike_signature_from_objc_signature(struct objc_method * nssig, int * lenp
 
       case '^':  // pointer
 //        printf("^\n");
+  	    pointer_return ++;
         break;
 
       case '?':  // unknown (function ptr)
