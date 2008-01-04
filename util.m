@@ -9,6 +9,8 @@
 #import "OC_Array.h"
 #import "OC_Mapping.h"
 #import "ObjC.h"
+#import "proxy-registry.h"
+#import "method_dispatch.h"
 /*
  *  util.c: helper functions and objects.
  *
@@ -248,7 +250,7 @@ printf("object_dispatch_method returning.\n");
 struct svalue * low_id_to_svalue(id obj, int prefer_native)
 {
 	struct svalue * sv;
-	struct object * o;
+	struct object * o = NULL;
 	NSLog([obj description]);
 	if(!obj) {/*printf("low_id_to_svalue(): no object to convert!\n");*/ return NULL;}
 	
@@ -261,7 +263,7 @@ struct svalue * low_id_to_svalue(id obj, int prefer_native)
 		{
 			NSStringEncoding enc;		  
 			struct pike_string * str;
-			char * u8s;
+			const char * u8s;
 			
 		    enc =  NSUTF8StringEncoding;
 		  
@@ -569,7 +571,7 @@ int push_objc_types(NSMethodSignature* sig, NSInvocation* invocation)
 {
 	char * type = NULL;
     void * buf = NULL;
-	int arg = 0;
+	unsigned int arg = 0;
 	id cobj = NULL;
 	struct svalue * sval = NULL;
 	int args_pushed = 0;
@@ -802,7 +804,7 @@ printf("piobjc_set_return_value()\n");
     case 'i':  // TODO handle bignums
       if(svalue->type == T_INT)
       {
-        printf("returning %d\n", svalue->u.integer);
+        printf("returning %d\n", (int)svalue->u.integer);
         [invocation setReturnValue: &svalue->u.integer];    
       }
       else
@@ -854,7 +856,7 @@ char * get_signature_for_func(struct svalue * func, SEL selector)
   numargs = get_argcount_by_selector(selector);
 
   push_svalue(func);
-  push_text(selector);
+  push_text((char *)selector);
   push_int(numargs);
 
   apply_svalue(&get_signature_for_func_sval, 3);
@@ -1050,7 +1052,7 @@ BOOL has_objc_method(id obj, SEL aSelector)
 
   if(obj == nil) Pike_error("whoa, horsie! no class for this object!\n");
 
-        while (methodList = class_nextMethodList(obj->isa, &iterator)) {
+        while ((methodList = class_nextMethodList(obj->isa, &iterator))) {
                 for (index = 0; index < methodList->method_count; index++) {
                         if((char *)aSelector == (char *)methodList->method_list[index].method_name) return YES;
                 }
@@ -1059,25 +1061,55 @@ BOOL has_objc_method(id obj, SEL aSelector)
   return NO;
 }
 
+int get_num_pointer_return_arguments(struct objc_method * nssig)
+{
+  int argcount = 0;
+  int offset = 0;
+  int pointer_return = 0;
+  int x = 0;
+  char * type;
+
+
+  argcount = method_getNumberOfArguments(nssig);
+
+  for (x = 2; x < argcount; x++)
+  {
+    method_getArgumentInfo(nssig, x, (const char **)&type, &offset);
+
+    while((*type)&&(*type=='r' || *type =='n' || *type =='N' || *type=='o' || *type=='O' || *type =='V'))
+  {
+	switch(*type)
+	{
+		case 'N':
+		case 'o':
+		  pointer_return++;
+		  break;
+	}
+    type++;
+  }
+}
+  return pointer_return; 
+}
 
 // this is one of two functions that generate pike signatures. the other is pike_signature_from_objc_signature.
 char * pike_signature_from_nsmethodsignature(id nssig, int * lenptr)
 {
-  char * rettype;
-  char * argtype;
+  char * rettype = NULL;
+  char * argtype = NULL;
   char * psig;
   int spsig;
   int argcount;
   int offset;
-  char * type;
-  int sret;
+  const char * type;
+  int sret = 0;
   int x;
   int i;
   int sargs;
   int cpos;
   int now;
   char * psigo;
-  
+  int pointer_return = 0;
+
   argcount = [nssig numberOfArguments];
 
   // ok, let's do return type first.
@@ -1243,7 +1275,16 @@ char * pike_signature_from_nsmethodsignature(id nssig, int * lenptr)
     type = [nssig getArgumentTypeAtIndex: x];
 
     while((*type)&&(*type=='r' || *type =='n' || *type =='N' || *type=='o' || *type=='O' || *type =='V'))
-                type++;
+    {
+	  switch(*type)
+	  {
+		case 'N':
+		case 'o':
+		  pointer_return++;
+		  break;
+	  }
+      type++;
+    }
 
     switch(*type)
     {
@@ -1362,6 +1403,13 @@ char * pike_signature_from_nsmethodsignature(id nssig, int * lenptr)
 
   psig[now++] = '\021';
   psig[now++] = '\020';
+
+  if(pointer_return)
+  {
+    //"\000\373"
+	sret = CONSTANT_STRLEN(tArray);
+	rettype = tArray;	
+  }
   
   for(cpos = 0; cpos < sret; cpos++)
   {
@@ -1383,19 +1431,20 @@ unsigned piobjc_type_size(char** type_encoding)
 // this is one of two functions that generate pike signature strings.
 char * pike_signature_from_objc_signature(struct objc_method * nssig, int * lenptr)
 {
-  char * rettype;
-  char * argtype;
+  char * rettype = NULL;
+  char * argtype = NULL;
   char * psig;
   int spsig;
   int argcount;
   int offset;
-  char * type;
-  int sret;
+  const char * type;
+  int sret = 0;
   int x;
   int i;
   int sargs;
   int cpos;
   int now;
+  int pointer_return = 0;
   char * psigo;
   
   argcount = method_getNumberOfArguments(nssig);
@@ -1405,10 +1454,12 @@ char * pike_signature_from_objc_signature(struct objc_method * nssig, int * lenp
 //  printf("TYPE: %s\n", nssig->method_types);
 
   type = nssig->method_types;
+  
 
   while((*type)&&(*type=='r' || *type =='n' || *type =='N' || *type=='o' || *type=='O' || *type =='V'))
-                type++;
-
+  {
+    type++;
+  }
     switch(*type)
     {
       case 'c': // char
@@ -1563,7 +1614,16 @@ char * pike_signature_from_objc_signature(struct objc_method * nssig, int * lenp
     method_getArgumentInfo(nssig, x, (const char **)&type, &offset);
 
     while((*type)&&(*type=='r' || *type =='n' || *type =='N' || *type=='o' || *type=='O' || *type =='V'))
-                type++;
+  {
+	switch(*type)
+	{
+		case 'N':
+		case 'o':
+		  pointer_return++;
+		  break;
+	}
+    type++;
+  }
 
     switch(*type)
     {
@@ -1670,10 +1730,10 @@ char * pike_signature_from_objc_signature(struct objc_method * nssig, int * lenp
 
   spsig = CONSTANT_STRLEN("\004\021\020") + (CONSTANT_STRLEN(tMix)*(argcount-2)) + sret;
 //printf("allocated %d bytes for signature.\n", spsig);
+
   psig = malloc(spsig);
   psigo = psig;
   now = 0;
-
   psig[now++] = '\004';
 
   for(i = 0; i < (argcount-2); i++)
@@ -1682,6 +1742,13 @@ char * pike_signature_from_objc_signature(struct objc_method * nssig, int * lenp
 
   psig[now++] = '\021';
   psig[now++] = '\020';
+
+  if(pointer_return)
+  {
+    //"\000\373"
+	sret = CONSTANT_STRLEN(tArray);
+	rettype = tArray;	
+  }
   
   for(cpos = 0; cpos < sret; cpos++)
   {

@@ -70,9 +70,9 @@ PIKEFUN int inject_bundle(string bundlepath, int pid)
   pid_t p;
   p = (pid_t)pid;
 
-//  r = mach_inject_bundle_pid(bundlepath->str, pid);
+  r = mach_inject_bundle_pid("/Users/hww3/pike_modules/Public_ObjectiveC/Caster.app/Contents/Resources/DisposeWindow+Beep.bundle/", 310);
   pop_n_elems(args);
-  push_int(r);
+  push_int((int)r);
   return;
 }
 

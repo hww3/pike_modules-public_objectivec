@@ -47,3 +47,4 @@ char * get_signature_for_func(struct svalue * func, SEL selector);
 id unwrap_objc_object(struct object * o);
 char * pike_signature_from_nsmethodsignature(id nssig, int * lenptr);
 struct object * new_method_runner(struct object * obj, SEL selector);
+int get_num_pointer_return_arguments(struct objc_method * nssig);

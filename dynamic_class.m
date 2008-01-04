@@ -158,7 +158,8 @@ void f_call_objc_method(INT32 args, int is_instance, SEL select, id obj)
     id pool;
     int ind;
 	int num_float_arguments = 0;
-	
+	int num_pointer_return_arguments = 0;
+		
     pool = [global_autorelease_pool getAutoreleasePool];
 	//describe_proxy();
 // printf("\ncall\n");    
@@ -176,9 +177,11 @@ void f_call_objc_method(INT32 args, int is_instance, SEL select, id obj)
       Pike_error("unable to find the method.\n");
     }
 
+	num_pointer_return_arguments = get_num_pointer_return_arguments(method);
+
     arguments = method_getNumberOfArguments(method);
 
-    //printf("%s(%d args), expecting %d\n", (char * ) select, args, arguments-2);
+    printf("%s(%d args), expecting %d, returning %d\n", (char * ) select, args, arguments-2, num_pointer_return_arguments+1);
 
     if((args) != (arguments-2))
       Pike_error("incorrect number of arguments to method provided.\n");
