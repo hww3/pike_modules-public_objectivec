@@ -13,7 +13,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  *
- * $Id: Foundation.mmod,v 1.5 2007-12-16 02:29:00 hww3 Exp $
+ * $Id: Foundation.mmod,v 1.6 2008-01-10 05:14:46 hww3 Exp $
  */
 
 /*
@@ -169,6 +169,50 @@
     r = (NSRect *)s->value;
     push_int(NSIsEmptyRect(*r));
   }
+
+
+  PIKEFUN string NSLocalizedString(string key, string comment)
+  {
+    id s,k,c;
+    push_string(key);
+    f_string_to_utf8(1);
+    push_string(comment);
+    f_string_to_utf8(1);
+
+	k = [NSString stringWithUTF8String: Pike_sp[-2].u.string->str];
+	c = [NSString stringWithUTF8String: Pike_sp[-1].u.string->str];
+	
+	pop_n_elems(4);
+	
+	s = NSLocalizedString(k, c);
+	
+	push_text([s UTF8String]);
+	f_utf8_to_string(1);
+  }
+
+  PIKEFUN string NSLocalizedStringFromTable(string key, string table, string comment)
+  {
+    id s,k,t,c;
+    push_string(key);
+    f_string_to_utf8(1);
+    push_string(table);
+    f_string_to_utf8(1);
+    push_string(comment);
+    f_string_to_utf8(1);
+
+	k = [NSString stringWithUTF8String: Pike_sp[-3].u.string->str];
+	t = [NSString stringWithUTF8String: Pike_sp[-2].u.string->str];
+	c = [NSString stringWithUTF8String: Pike_sp[-1].u.string->str];
+	
+	pop_n_elems(6);
+	
+	s = NSLocalizedStringFromTable(k, t, c);
+	
+	push_text([s UTF8String]);
+	f_utf8_to_string(1);
+  }
+
+
 
   PIKEFUN program NSClassFromString(string aClassName)
   {
