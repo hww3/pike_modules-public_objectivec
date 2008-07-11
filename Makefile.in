@@ -1,9 +1,9 @@
 # $Id: Makefile.in,v 1.39 2008-01-04 01:39:30 hww3 Exp $
 @make_variables@
 VPATH=@srcdir@:@srcdir@/../..:../..
-#FFIOBJS=libffi/src/types.o libffi/src/prep_cif.o libffi/src/@OC_ARCH@/ffi_darwin.o libffi/src/@OC_ARCH@/darwin.o
-FFIOBJS=libffi/src/types.o libffi/src/prep_cif.o libffi/src/@OC_ARCH@/ffi_darwin.o libffi/src/@OC_ARCH@/darwin_closure.o libffi/src/@OC_ARCH@/darwin.o
-OBJS=ObjC.o dynamic_class.o util.o proxy-registry.o OC_Array.o OC_Mapping.o Foundation.o AppKit.o PiObjCObject.o objc_inject.o load_bundle.o mach_inject.o mach_inject_bundle.o mach_inject_bundle_stub.o mach_override.o method_dispatch.o $(FFIOBJS)  _mixins.o 
+FFIOBJS=libffi/src/types.o libffi/src/prep_cif.o libffi/src/@OC_ARCH@/ffi_darwin.o libffi/src/@OC_ARCH@/darwin.o
+#FFIOBJS=libffi/src/types.o libffi/src/prep_cif.o libffi/src/@OC_ARCH@/ffi_darwin.o libffi/src/@OC_ARCH@/darwin_closure.o libffi/src/@OC_ARCH@/darwin.o
+OBJS=ObjC.o dynamic_class.o util.o proxy-registry.o OC_Array.o OC_Mapping.o Foundation.o AppKit.o PiObjCObject.o   mach_override.o method_dispatch.o $(FFIOBJS)  _mixins.o 
 MODDIR=Public.pmod/
 MODNAME=ObjectiveC
 MODULE_PMOD_IN=module.pmod.in
@@ -71,6 +71,6 @@ install_frameworks:
 compile0:
 	$(RUNPIKE) $(SRCDIR)/build_mixin.pike $(SRCDIR)/mixins > _mixins.m
 	$(MAKE) all
-	for mod in frameworks/*; do (test "frameworks/CVS" != "$$mod" && cd $(SRCDIR)/$$mod && $(RUNPIKE) -x module); cd $(SRCDIR); done;
+	for mod in frameworks/*; do (test "frameworks/CVS" != "$$mod" && cd $(SRCDIR)/$$mod && echo "building $$mod" && $(RUNPIKE) -x module); cd $(SRCDIR); done;
 
 @dependencies@

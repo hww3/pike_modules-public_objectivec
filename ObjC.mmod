@@ -46,10 +46,10 @@ PIKEFUN void create()
 {
 }
 
-
 /*! @decl int inject(int pid, int use_main_thread, string bundlePath, string systemPath, string carbonPath)
  *!
  */
+/*
 PIKEFUN int inject(int pid, int use_main_thread, string bundlePath, string systemPath, string carbonPath)
 {
   mach_error_t r;
@@ -62,8 +62,8 @@ PIKEFUN int inject(int pid, int use_main_thread, string bundlePath, string syste
   push_int(r);
   return;
 }
-
-
+*/
+/*
 PIKEFUN int inject_bundle(string bundlepath, int pid)
 {
   mach_error_t r;
@@ -75,7 +75,7 @@ PIKEFUN int inject_bundle(string bundlepath, int pid)
   push_int((int)r);
   return;
 }
-
+*/
 /*! @decl void add_backend_runloop()
  *!
  */
@@ -488,7 +488,7 @@ int piobjc_classhandler_callback(const char* className)
   push_text(className);
 
   if(Pike_fp && Pike_fp->pc &&
-      (file = low_get_line(Pike_fp->pc, Pike_fp->context.prog, &lineno))) {
+      (file = low_get_line(Pike_fp->pc, Pike_fp->context->prog, &lineno))) {
      push_string(file);
    }else{
      push_int(0);
@@ -562,7 +562,9 @@ Ivar new_object_setInstanceVariable(id object, const char *name, void *value)
 
       push_text(name);
       push_object(pobj);
-      object_set_index(pobj, Pike_sp-1, Pike_sp-2);
+	
+	  // FIXME: is zero the right answer?
+      object_set_index(pobj, 0, Pike_sp-1, Pike_sp-2);
 
       pop_n_elems(1);
       free_svalue(pset);
@@ -577,7 +579,8 @@ Ivar new_object_setInstanceVariable(id object, const char *name, void *value)
       push_text(name);
       push_mapping(map);
 
-      object_set_index(pobj, Pike_sp-2, Pike_sp-1);
+	  // FIXME: is zero the right answer?
+      object_set_index(pobj, 0, Pike_sp-2, Pike_sp-1);
 
       pop_n_elems(2);
 
@@ -591,7 +594,8 @@ Ivar new_object_setInstanceVariable(id object, const char *name, void *value)
       push_text(name);
       push_array(arr);
 
-      object_set_index(pobj, Pike_sp-2, Pike_sp-1);
+	  // FIXME: is zero the right answer?
+      object_set_index(pobj, 0, Pike_sp-2, Pike_sp-1);
 
       pop_n_elems(2);
 
@@ -609,7 +613,8 @@ Ivar new_object_setInstanceVariable(id object, const char *name, void *value)
     pset = ptr_to_svalue(value, x->ivar_type);
     push_text(name);
 
-    object_set_index(pobj, Pike_sp-1, pset);
+	// FIXME: is zero the right answer?
+    object_set_index(pobj, 0, Pike_sp-1, pset);
 
     pop_n_elems(1);
 //    free_svalue(pset);
@@ -658,7 +663,8 @@ Ivar new_object_getInstanceVariable(id object, const char *name, void **value)
 
     push_text(name);
 
-    object_index_no_free(&to, pobj, Pike_sp-1);
+	// FIXME: is zero the right answer?
+    object_index_no_free(&to, pobj, 0, Pike_sp-1);
 
     if(to.type == T_INT && to.subtype)
     {

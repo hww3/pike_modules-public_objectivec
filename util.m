@@ -1151,7 +1151,8 @@ struct svalue * get_func_by_selector(struct object * pobject, SEL aSelector)
   push_text(funname);
   free(funname);
 
-  object_index_no_free(sv2, pobject, Pike_sp-1);
+  // FIXME: is zero the right answer?
+  object_index_no_free(sv2, pobject, 0, Pike_sp-1);
   pop_stack();
 
   if(sv2->type == PIKE_T_FUNCTION) // jackpot!

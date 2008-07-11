@@ -151,6 +151,7 @@ mach_override(
 			(void*) &originalFunctionPtr,
 			NULL );
 	
+	printf ("In mach_override\n");
 	return mach_override_ptr( originalFunctionPtr, overrideFunctionAddress,
 		originalFunctionReentryIsland );
 }
@@ -472,15 +473,23 @@ typedef struct {
 	unsigned char constraint[15]; // sequence of bytes in memory order
 }	AsmInstructionMatch;
 
+/*
 static AsmInstructionMatch possibleInstructions[] = {
 	{ 0x1, {0xFF}, {0x90} },							// nop
 	{ 0x1, {0xFF}, {0x55} },							// push %esp
 	{ 0x2, {0xFF, 0xFF}, {0x89, 0xE5} },				// mov %esp,%ebp
 	{ 0x1, {0xFF}, {0x53} },							// push %ebx
 	{ 0x3, {0xFF, 0xFF, 0x00}, {0x83, 0xEC, 0x00} },	// sub 0x??, %esp
-	{ 0x1, {0xFF}, {0x57} },							// push %edi
-	{ 0x1, {0xFF}, {0x56} },							// push %esi
 	{ 0x0 }
+};
+*/
+
+static AsmInstructionMatch possibleInstructions[] = {
+	{ 0x1, {0xFF}, {0x90} },				// nop
+        { 0x1, {0xF8}, {0x50} },				// push %eax | %ebx | %ecx | %edx | %ebp | %esp | %esi | %edi
+        { 0x2, {0xFF, 0xFF}, {0x89, 0xE5} },	// mov %esp,%ebp
+        { 0x3, {0xFF, 0xFF, 0x00}, {0x83, 0xEC, 0x00} }, // sub 0x??, %esp
+        { 0x0 }
 };
 
 static Boolean codeMatchesInstruction(unsigned char *code, AsmInstructionMatch* instruction) 
@@ -492,6 +501,7 @@ static Boolean codeMatchesInstruction(unsigned char *code, AsmInstructionMatch* 
 		unsigned char mask = instruction->mask[i];
 		unsigned char constraint = instruction->constraint[i];
 		unsigned char codeValue = code[i];
+		
 		match = ((codeValue & mask) == constraint);
 		if (!match) break;
 	}
@@ -517,7 +527,7 @@ eatKnownInstructions(
 		
 		// See if instruction matches one  we know
 		AsmInstructionMatch* curInstr = possibleInstructions;
-		do {
+		do { 
 			if (curInstructionKnown = codeMatchesInstruction(ptr, curInstr)) break;
 			curInstr++;
 		} while (curInstr->length > 0);

@@ -875,12 +875,12 @@ struct program * pike_low_create_objc_dynamic_class(char * classname)
     return 0;
   }
 
-//  printf("CREATING DYNAMIC CLASS %s\n", classname);
+  printf("CREATING DYNAMIC CLASS %s\n", classname);
   
   start_new_program();
 
   low_inherit(objc_object_container_program, NULL, -1, 0, 0, NULL);
-  add_string_constant("__objc_classname", classname, ID_PUBLIC);
+  add_string_constant("__objc_classname", "classname", ID_PUBLIC);
   
   /* first, we should add the instance variables. */
   ivar_list = isa->ivars;
