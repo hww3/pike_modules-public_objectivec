@@ -876,7 +876,7 @@ struct program * pike_low_create_objc_dynamic_class(char * classname)
   }
 
   printf("CREATING DYNAMIC CLASS %s\n", classname);
-  
+  enter_compiler(NULL, 0);
   start_new_program();
 
   low_inherit(objc_object_container_program, NULL, -1, 0, 0, NULL);
@@ -1092,6 +1092,7 @@ struct program * pike_low_create_objc_dynamic_class(char * classname)
   pike_set_prog_event_callback(dynamic_class_event_handler);
 
   dclass = end_program();
+  exit_compiler();
 
   if(dclass && strlen(classname))
   {
