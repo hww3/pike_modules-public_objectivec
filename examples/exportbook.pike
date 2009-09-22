@@ -43,9 +43,12 @@ void describe_value(object fv)
       row += ({(string )fv});
     };
     if(e){
-//werror("error casting %O, %O to string.\n",  
-//fv?fv->__objc_classname:"",
-//fv?sort(indices(fv)):fv); 
+werror("error!\n");
+/*
+werror("error casting %O, %O to string.\n",  
+fv?fv->__objc_classname:"",
+fv?sort(indices(fv)):fv); 
+*/
 exit(1);}
   }
 }

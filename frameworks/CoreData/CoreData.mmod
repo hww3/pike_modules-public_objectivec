@@ -1,6 +1,19 @@
-#include <piobjc.h>
+#include "../../libffi/include/ffi.h"
+#include "../../piobjc.h"
+#import "../../util.h"
+#import "../../ObjC.h"
+#import <Foundation/NSBundle.h>
+#import <Foundation/NSString.h>
+#import <Foundation/NSAutoreleasePool.h>
+#import <Foundation/NSThread.h>
 
-PIKEFUN void foo()
+INIT
 {
-  printf("foo!\n");
+  start_mixins();
 }
+
+EXIT
+{
+  stop_mixins();
+}
+

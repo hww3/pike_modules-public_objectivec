@@ -79,6 +79,7 @@
  PIKECLASS Foundation
  {
 
+
   PIKECLASS NSStructWrapper
   {
     CVAR void * value;

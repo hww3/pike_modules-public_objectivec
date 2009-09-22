@@ -52,7 +52,7 @@ void f_objc_dynamic_create(Class cls, INT32 args)
   THIS->obj = [cls alloc];
 // [THIS->obj retain];
   THIS->is_instance = 1;
-// printf("finished creating object.\n");
+// printf("finished  object.\n");
 	printf("created: %s(%p/%p)\n", THIS->obj->isa->name, Pike_fp->current_object, THIS);
   PiObjC_RegisterPikeProxy(THIS->obj, Pike_fp->current_object);
 }
@@ -81,22 +81,44 @@ void f_objc_runner_method(char * selector, INT32 args)
 	f_call_objc_method(args, 1, select, obj);
 }
 
-void f_objc_dynamic_instance_method(INT32 args)
+
+void low_f_objc_dynamic_instance_method(ffi_cif* cif, void* resp, void** args, void* userdata)
+{
+	INT32 margs;
+	char * function_name;
+	  
+  	function_name = (char *)userdata;
+  	margs = *((INT32*)args[0]);
+	printf("low_f_objc_dynamic_instance_method(%s, %d)\n", function_name, margs);
+	
+  	f_objc_dynamic_instance_method(margs, function_name);
+}
+
+void f_objc_dynamic_instance_method(INT32 args, char * function_name)
 {
   struct pike_string * name;
-  struct program * prog;
   id obj;
   struct svalue sval;
   struct objc_object_holder_struct * pobj;
   SEL select = NULL;
 
-  name = ID_FROM_INT(Pike_fp->current_object->prog, Pike_fp->fun)->name;
-  prog = Pike_fp->current_object->prog;
-  obj = THIS->obj;
+//obj = Pike_fp->current_object;
+printf("Pike_fp: %p\n", Pike_fp);
+printf("Pike_fp->current_object: %p\n", Pike_fp->current_object);
+if(!THIS) printf("NO THIS!\n\n");
+printf("refs: %d\n", Pike_fp->current_object->refs);
+// TODO this doesn't seem right:
+add_ref(Pike_fp->current_object);
+
+ obj = THIS->obj;
+
+	name = make_shared_binary_string(function_name, strlen(function_name));
 
   select = selector_from_pikename(name);
 
 printf("f_objc_dynamic_instance_method: pike:%p->%s, objc:%p->%s\n", THIS, name->str, obj, select);
+
+free_string(name);
 
   f_call_objc_method(args, 1, select, obj);
 }
@@ -433,7 +455,7 @@ printf("unable to support type ^: passing empty placeholder, len is %d\n", len);
     while((*type)&&(*type=='r' || *type =='n' || *type =='N' || *type=='o' || *type=='O' || *type =='V'))
   		type++;
 
-//    printf("SENDING MESSAGE %s WITH RETURN TYPE: %s\n", select, type);
+    printf("SENDING MESSAGE %s WITH RETURN TYPE: %s\n", select, type);
 
     pop_n_elems(args);
 
@@ -628,7 +650,8 @@ printf("unable to support type ^: passing empty placeholder, len is %d\n", len);
   @catch (NSException * e)
   {
 	pop_stack();
-    Pike_error("%s: %s\n", [(NSString *)[e name] UTF8String], [(NSString *)[e reason] UTF8String]);
+	printf("%s: %s\n", [(NSString *)[e name] UTF8String], [(NSString *)[e reason] UTF8String]);
+//    Pike_error("%s: %s\n", [(NSString *)[e name] UTF8String], [(NSString *)[e reason] UTF8String]);
   }
 
   if(argumentList) 
@@ -877,10 +900,11 @@ struct program * pike_low_create_objc_dynamic_class(char * classname)
 
   printf("CREATING DYNAMIC CLASS %s\n", classname);
   enter_compiler(NULL, 0);
+//  enter_compiler(NULL, 0);
   start_new_program();
 
   low_inherit(objc_object_container_program, NULL, -1, 0, 0, NULL);
-  add_string_constant("__objc_classname", "classname", ID_PUBLIC);
+  add_string_constant("__objc_classname", classname, ID_PUBLIC);
   
   /* first, we should add the instance variables. */
   ivar_list = isa->ivars;
@@ -986,7 +1010,9 @@ struct program * pike_low_create_objc_dynamic_class(char * classname)
 
   /* todo we should work more on the optimizations. */
   ADD_FUNCTION("create", (void *)make_static_stub(isa, low_f_objc_dynamic_create), tFunc(tNone,tVoid), 0);  
-  ADD_FUNCTION("_sprintf", (void *)make_static_stub(isa, low_f_objc_dynamic_class_sprintf), tFunc(tAnd(tInt,tMixed),tVoid), 0);  
+
+//  ADD_FUNCTION("_sprintf", (void *)make_static_stub(isa, low_f_objc_dynamic_class_sprintf), tFunc(tAnd(tInt,tMixed),tVoid), 0);  
+
   ADD_FUNCTION("__isa", (void *)make_static_stub(isa, low_f_objc_dynamic_class_isa), tFunc(tAnd(tVoid,tMixed),tVoid), 0);  
 
   /* then, we add the instance methods. */
@@ -1016,8 +1042,8 @@ struct program * pike_low_create_objc_dynamic_class(char * classname)
 //	printf("Adding %s, as an instance method.\n", selector);
         pikename = make_pike_name_from_selector(selector);
         psig = pike_signature_from_objc_signature(&methodList->method_list[index], &siglen);
-        quick_add_function((char *)pikename, strlen((char *)pikename), f_objc_dynamic_instance_method, psig,
-                           siglen, 0, 
+        quick_add_function((char *)pikename, strlen((char *)pikename), make_dynamic_method_stub((char*)pikename), psig,
+                           siglen, 0, 	
                            OPT_SIDE_EFFECT|OPT_EXTERNAL_DEPEND);
          push_text(selector);
          // printf("added %s to mapping.\n", Pike_sp[-1].u.string->str);
@@ -1061,7 +1087,7 @@ struct program * pike_low_create_objc_dynamic_class(char * classname)
           pikename = make_pike_name_from_selector(selector);
           psig = pike_signature_from_objc_signature(&methodList->method_list[index], &siglen);
 
-          quick_add_function((char *)pikename, strlen((char *)pikename), f_objc_dynamic_instance_method, psig,
+          quick_add_function((char *)pikename, strlen((char *)pikename), make_dynamic_method_stub((char*)pikename), psig,
                            siglen, 0, 
                            OPT_SIDE_EFFECT|OPT_EXTERNAL_DEPEND);
 

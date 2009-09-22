@@ -73,7 +73,7 @@ extern struct mapping * global_proxy_cache;
 {
 	struct object *rval;
 printf("NSProxy.__piobjc_PikeObject__\n");
-NSLog([self description]);
+//NSLog([self description]);
 	rval = PiObjC_FindPikeProxy(self);
 	if (rval == NULL) {
 //		printf("wrapping...\n");
@@ -253,8 +253,8 @@ struct svalue * low_id_to_svalue(id obj, int prefer_native)
 	struct object * o = NULL;
 	printf("low_id_to_svalue: %p\n", obj);
 	if(!obj) {/*printf("low_id_to_svalue(): no object to convert!\n");*/ return NULL;}
-	else
-  	  NSLog([obj description]);
+	//else
+  //	  NSLog([obj description]);
 	
 	sv = malloc(sizeof(struct svalue));
 	
@@ -1235,7 +1235,7 @@ struct object * new_method_runner(struct object * obj, SEL selector)
   void * stub;
 
   c = OBJ2_DYNAMIC_OBJECT(obj);
-NSLog([c->obj description]);
+//NSLog([c->obj description]);
   signature = [c->obj methodSignatureForSelector: selector];
 
   if(!signature) 

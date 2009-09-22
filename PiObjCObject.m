@@ -125,7 +125,7 @@ void dispatch_pike_method(struct object * pobject, SEL sel, NSInvocation * anInv
 
 - (id) __create
 {
-	NSLog(@"[__create called]\n");
+	NSLog(@"[__create called (base method, should never see this!)]\n");
 	return self;
 }
 
@@ -329,7 +329,6 @@ void low_create_pike_object(ffi_cif* cif, void* resp, void** args, void* userdat
   
   printf("low_create_pike_object(%p, %p, %s)\n", prog, obj, sel);
   rv = create_pike_object(prog, obj, sel);
-
   *(id*) resp = rv;
 }
 
@@ -350,7 +349,7 @@ id create_pike_object(struct program  * prog, id obj, SEL sel)
       if((state = thread_state_for_id(th_self()))!=NULL)
       {
         /* This is a pike thread.  Do we have the interpreter lock? */
-        if(1 || !state->swapped)
+        if(!state->swapped)
         {
           /* Yes.  Go for it... */
           instantiate_pike_native_class(prog, obj, sel);
@@ -413,7 +412,7 @@ void instantiate_pike_native_class(struct program * prog, id obj, SEL sel)
   pobject = clone_object(prog, 0);	
 			
 //	pobject = Pike_sp[-1].u.object;
-//  add_ref(pobject);
+  add_ref(pobject);
   add_ref(prog);
 printf("* setting the object's instance variable\n");
 //	object_setInstanceVariable(obj, "pobject",  pobject);
@@ -766,8 +765,8 @@ void dispatch_pike_method(struct object * pobject, SEL sel, NSInvocation * anInv
 - (NSString *)description
 {
 	id desc;
-	push_text("%O");
-	if(!pobject)
+//	push_text("%O");
+//	if(!pobject)
 	  return @"Incomplete Object!";
 	ref_push_object(pobject);
 	f_sprintf(2);

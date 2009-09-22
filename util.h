@@ -34,6 +34,8 @@
 #define ARG(_n_) Pike_sp[-((args - _n_) + 1)]
 #endif
 
+struct svalue * ptr_to_svalue(void * ptr, char * type);
+
 unsigned piobjc_type_size(char** type_encoding);
 void low_f_objc_runner_method(ffi_cif* cif, void* resp, void** args, void* userdata);
 

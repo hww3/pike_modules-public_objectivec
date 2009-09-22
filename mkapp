@@ -10,6 +10,8 @@ cat << EOF > ${APPNAME}.m
 #import <Pike/OCPikeInterpreter.h>
 #import <Foundation/NSString.h>
 #import <Foundation/NSAutoreleasePool.h>
+#import <AppKit/NSApplication.h>
+#import <Foundation/NSObjCRuntime.h>
 
 int main(int argc, char** argv) { 
 struct object * m;
@@ -22,6 +24,8 @@ NSAutoreleasePool *innerPool = [[NSAutoreleasePool alloc] init];
 // these 2 lines set up and start the interpreter. 
 i = [OCPikeInterpreter sharedInterpreter]; 
 [i startInterpreter];
+
+[NSApplication sharedApplication];
 
 // ok, now that we have things set up, let's use it. 
 // first, an example of calling pike c level apis directly. 
@@ -45,14 +49,21 @@ pop_stack();
 
  apply(m, "add_program_path", 1); 
 
-// push_text(argv[0]);
- push_text("$APPNAME");
+push_text("Public.ObjectiveC");
+apply(m,"resolv", 1);
+pop_stack();
+ push_text(argv[0]);
+ push_text("foo");
  push_text("$APPNAME.pike");
  f_aggregate(2);
- pike_push_env();
-
- apply(m, "_main", 2); 
-
+apply(m, "_main", 1); 
+printf("!!!!!??????\n");
+id y = NSClassFromString(@"CasterController");
+if(!y) printf("aieee!\n");
+id x = [[y alloc] init];
+printf("!!!! running foo() !!!\n");
+object_setInstanceVariable(x, "q", (@"TEST"));
+[x foo];
 // finally, we clean up. 
 [i stopInterpreter]; 
 [innerPool release]; 
@@ -64,8 +75,8 @@ EOF
 
 echo "building stub..."
 
-gcc  -F. -c "${APPNAME}.m" -o "${APPNAME}.o"
-gcc "${APPNAME}.o" -o "${APPNAME}" -F.  -framework Pike -framework System -framework Foundation
+gcc -arch i386 -F. -c "${APPNAME}.m" -o "${APPNAME}.o"
+gcc -arch i386 "${APPNAME}.o" -o "${APPNAME}" -F.  -framework AppKit -framework Pike -framework System -framework Foundation
 #gcc -arch i386 -arch ppc -F. -c "${APPNAME}.m" -o "${APPNAME}.o"
 #gcc -arch i386 -arch ppc "${APPNAME}.o" -o "${APPNAME}" -F. -lc -framework Pike -framework System
 
@@ -89,7 +100,8 @@ int main(int argc, array argv)
   NSApp->activateIgnoringOtherApps_(1);
 
   add_backend_to_runloop(Pike.DefaultBackend, 0.3);
-  return AppKit()->NSApplicationMain(argc, argv);
+//  return AppKit()->NSApplicationMain(argc, argv);
+return 0;
 }
 
 EOF
@@ -131,4 +143,4 @@ fi
 
 mv "${APPNAME}" "${APPNAME}.app/Contents/MacOS"
 
-rm "${APPNAME}.m" "${APPNAME}.o"
+#rm "${APPNAME}.m" "${APPNAME}.o"

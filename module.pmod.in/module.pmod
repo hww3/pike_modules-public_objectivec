@@ -28,6 +28,30 @@ static void create()
   Cocoa = ClassFinder();
 
   ::create();
+  register_classes();
+
+}
+
+void  register_classes()
+{
+  foreach(Array.uniq(master()->pike_program_path);; string path)
+  {
+	werror("Loading programs from " + path);
+	foreach(glob("*.pike", get_dir(path));; string pike_prog)
+	{
+	    string pike_prog_path = combine_path(path, pike_prog);
+		werror("considering %s\n", pike_prog_path);
+		if(file_stat(pike_prog_path)->isreg)
+		{
+			program p;
+			p = (program)pike_prog; //{werror("failed to compile.\n"); continue;}
+			if(!p) continue;
+			string cn = (pike_prog/".pike")[0];
+			werror("registering " + cn);
+			new_class(cn, p);
+		}
+	}
+  }
 }
 
 int cocoa_gui_error_handler(object|array trace)
@@ -38,6 +62,7 @@ int cocoa_gui_error_handler(object|array trace)
     if(!x) Cocoa.NSApplication.sharedApplication()->stop_(this);
     return x;
 }
+
 
 int register_new_dynamic_program(string programname, program p)
 {

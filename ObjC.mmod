@@ -13,15 +13,26 @@
 #import "OC_Mapping.h"
 #import "OC_Array.h"
 #import "PiObjCObject.h"
-
+#import <AddressBook/ABAddressBook.h>
 #include <CoreFoundation/CoreFoundation.h>
+#include "method_dispatch.h"
+#import "proxy-registry.h"
 
 /*! @decl int index(int pid, int use_main_thread, string bundlePath, string systemPath, string carbonPath)
  *!
  */
+void override_object_setInstanceVariable();
+void override_object_getInstanceVariable();
+void override_objc_getClass();
+
+void pike_init_piobjc_foundation();
+void pike_init_piobjc_appkit();
+void pike_exit_piobjc_appkit();
+void pike_exit_piobjc_foundation();
 
 object_setInstanceVariableProc old_object_setInstanceVariable = NULL;
 object_getInstanceVariableProc old_object_getInstanceVariable = NULL;
+objc_getClassProc old_objc_getClass = NULL;
 
 static CFRunLoopTimerRef		gTimerRef;
 static int backend_callback_set = 0;
@@ -81,7 +92,7 @@ PIKEFUN int inject_bundle(string bundlepath, int pid)
  */
 PIKEFUN int add_backend_runloop()
 {
-  	backend_cb = (void *)add_backend_callback( backend_callback, 0, 0);
+  	backend_cb = add_backend_callback( backend_callback, 0, 0);
     backend_callback_set = 1;
 }
 
@@ -92,7 +103,7 @@ PIKEFUN int remove_backend_runloop()
 {
     if(backend_callback_set)
     {
-    	remove_callback( backend_callback );
+    	remove_callback( backend_cb );
         backend_callback_set = 0;
     }
 }
@@ -379,11 +390,17 @@ EXTRA
 
 INIT
 {
-printf("STARTING OBJECTIVE C BRIDGE\n");
+  static ptrdiff_t dclass_storage_offset;
+
+printf("STARTING OBJECTIVE C BRIDGE 0.1\n");
+
   THIS->pool = [[OC_NSAutoreleasePoolCollector alloc] init];
   [THIS->pool newAutoreleasePool];
 
   PiObjC_InitProxyRegistry();
+  objc_setClassHandler(piobjc_classhandler_callback);
+
+// [ABAddressBook sharedAddressBook];
 
  global_class_cache = allocate_mapping(10);
  global_proxy_cache = allocate_mapping(10);
@@ -393,19 +410,17 @@ printf("STARTING OBJECTIVE C BRIDGE\n");
  add_ref(global_classname_cache);
  add_ref(global_mixin_dict);
 
+ override_objc_getClass();
  override_object_setInstanceVariable();
  override_object_getInstanceVariable();
 
- printf("setting the class handler %p\n", old_object_setInstanceVariable);
- objc_setClassHandler(piobjc_classhandler_callback);
-
  start_mixins();
 
- static ptrdiff_t dclass_storage_offset;
+ enter_compiler(NULL, 0);
  start_new_program();
  dclass_storage_offset = ADD_STORAGE(struct objc_dynamic_class);
  objc_object_container_program = end_program();
-
+ exit_compiler();
 
 }
 
@@ -429,6 +444,37 @@ PIKEFUN void new_class(string name, program p)
 {
    add_piobjcclass(name->str, p);
    pop_n_elems(args);
+}
+
+
+// set up method override for 
+void override_objc_getClass()
+{
+  mach_error_t err;
+
+return;
+
+  printf("override_objc_getClass()\n");
+ 
+  if(old_objc_getClass)
+  {
+	printf("* not overriding, as we already have.\n");
+	return;
+  }
+
+  err = mach_override("_objc_getClass", "libobjc", 
+                                    (void*)new_objc_getClass, 
+                                    (void**)&old_objc_getClass
+                                    );
+  if(err)
+  {
+
+printf("an error occurred. %d\n", err);
+
+if(err == err_cannot_override)
+  printf("cannot override.\n");
+   //   Pike_error("an error occurred while setting up the Objective-C environment.\n");
+  }
 }
 
 
@@ -478,44 +524,53 @@ void override_object_getInstanceVariable()
       Pike_error("an error occurred while setting up the Objective-C environment.\n");
   }
 }
-
+int iq =0;
 int piobjc_classhandler_callback(const char* className)
 {
   struct pike_string *file;
   INT32 lineno;
-
+iq++;
+//if(iq!=1) return 0;
   printf("piobjc_classhandler_callback(%s)\n", className);
   push_text(className);
 
   if(Pike_fp && Pike_fp->pc &&
       (file = low_get_line(Pike_fp->pc, Pike_fp->context->prog, &lineno))) {
+printf("file: %s\n", file->str);
      push_string(file);
    }else{
      push_int(0);
   }
 
-  SAFE_APPLY_MASTER("low_cast_to_program", 2 );
+  APPLY_MASTER("low_cast_to_program", 2);
+
   if(Pike_sp[-1].type == T_PROGRAM)
   {
     printf("got the program\n");
-    add_piobjcclass(className, Pike_sp[-1].u.program);
+    add_piobjcclass((char *)className, Pike_sp[-1].u.program);
     pop_stack();
     return 1;
   }
   else
   {
-printf("got nothing\n");
+    printf("got nothing\n");
     pop_stack();
     return 0;
   }
 }
 
+id new_objc_getClass(const char *name)
+{
+printf("new_objc_getClass(%s)\n", name);
+   return (old_objc_getClass(name));
+}
+
 Ivar new_object_setInstanceVariable(id object, const char *name, void *value)
 {
-  int pike_type = NULL;
+  int pike_type = 0;
   Ivar x;
-  struct object * pobj;
-  struct svalue * pset;
+  struct object * pobj = NULL;
+  struct svalue * pset = NULL;
   id vts;
 
   printf("new_object_setInstanceVariable(%s:%s)->%s = %s)\n", object->isa->name, [[object description] UTF8String], name, [[((id)value) description ] UTF8String]	);
@@ -629,7 +684,10 @@ Ivar new_object_setInstanceVariable(id object, const char *name, void *value)
   }
 
   // finally, if we're a standard objective c object, we might be able to 
-
+  //
+  // TODO:
+  // eh? how'd we get here? should we just return x?
+  return x;
 }
 
 Ivar new_object_getInstanceVariable(id object, const char *name, void **value)
@@ -734,11 +792,13 @@ printf("CreateClassDefinition(%s, %s)\n", name, superclassName);
 
     if (super_class == nil)
     {
+        printf("no superclass <%s>!\n", superclassName);
         return NO;
     }
 
     if (objc_lookUpClass (name) != nil) 
     {
+        printf("already have class <%s>!\n", name);
         return NO;
     }
 
@@ -860,7 +920,7 @@ BOOL RegisterInstanceVariables(Class cls, struct program * prog)
    if(num_vars == 0)
    {
      cls->ivars = NULL;
-     return;
+     return YES;
    }  
    
    l = malloc(sizeof(struct objc_ivar_list) + ((num_vars) * sizeof(struct objc_ivar) ));
@@ -908,6 +968,7 @@ BOOL RegisterInstanceVariables(Class cls, struct program * prog)
 */
    cls->instance_size = offset;
 
+  return YES;
 }
 
 BOOL RegisterDynamicMethod( const char * dynamicMethodName, const char * className, IMP method, char * methodTypes )

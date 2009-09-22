@@ -114,7 +114,7 @@ struct objc_class_method_desc
 };
         
 void f_objc_dynamic_class_method(INT32 args);
-void f_objc_dynamic_instance_method(INT32 args);
+void f_objc_dynamic_instance_method(INT32 args, char * function_name);
 void objc_dynamic_class_exit();
 void objc_dynamic_class_init();
 void f_objc_dynamic_create(Class cls, INT32 args);
@@ -154,6 +154,11 @@ Ivar new_object_setInstanceVariable(id object, const char *name, void *value);
 
 typedef Ivar (* object_getInstanceVariableProc)(id object, const char *name, void  **value);
 Ivar new_object_getInstanceVariable(id object, const char *name, void **value);
+
+typedef id (* objc_getClassProc)(const char *name);
+id new_objc_getClass(const char *name);
+
+objc_getClassProc old_objc_getClass;
 
 object_setInstanceVariableProc old_object_setInstanceVariable;
 object_getInstanceVariableProc old_object_getInstanceVariable;

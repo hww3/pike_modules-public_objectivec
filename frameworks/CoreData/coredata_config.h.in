@@ -3,7 +3,7 @@
 || This file is part of Pike. For copyright information see COPYRIGHT.
 || Pike is distributed under GPL, LGPL and MPL. See the file COPYING
 || for more information.
-|| $Id: coredata_config.h.in,v 1.3 2007-12-16 02:29:01 hww3 Exp $
+|| $Id: acconfig.h,v 1.160 2008/09/03 19:47:20 grubba Exp $
 */
 
 #ifndef MACHINE_H
@@ -11,7 +11,7 @@
 
 /* We must define this *always* */
 #ifndef POSIX_SOURCE
-#define POSIX_SOURCE
+#define POSIX_SOURCE	1
 #endif
 
 /* Get more declarations in GNU libc. */
@@ -53,6 +53,9 @@
 
 /* Define this if you want checkpoints */
 #undef DMALLOC_TRACE
+
+/* Define this if you want backtraces for C code in your dmalloc output. */
+#undef DMALLOC_C_STACK_TRACE
 
 /* Define this if you want dmalloc to keep track of freed memory. */
 #undef DMALLOC_TRACK_FREE
@@ -124,6 +127,9 @@
 
 /* Define this if your ld doesn't have an option to set the run path */
 #undef USE_LD_LIBRARY_PATH
+
+/* Define this on OS X to get two-level namespace support in ld */
+#undef USE_OSX_TWOLEVEL_NAMESPACE
 
 /* Define if your tcc supports #pragma TenDRA longlong type allow. */
 #undef HAVE_PRAGMA_TENDRA_LONGLONG
@@ -357,6 +363,9 @@
 
 /* Your va_list is a state pointer? */
 #undef VA_LIST_IS_STATE_PTR
+
+/* Defined if va_copy exists in stdarg.h. */
+#undef HAVE_VA_COPY
 
 /* Does your compiler grock 'volatile' */
 #define VOLATILE volatile
@@ -644,12 +653,9 @@
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION
 
-/* This should always be defined. */
-#undef POSIX_SOURCE
-
 /* If using the C implementation of alloca, define if you know the
    direction of stack growth for your system; otherwise it will be
-   automatically deduced at run-time.
+   automatically deduced at runtime.
 	STACK_DIRECTION > 0 => grows toward higher addresses
 	STACK_DIRECTION < 0 => grows toward lower addresses
 	STACK_DIRECTION = 0 => direction of growth unknown */
