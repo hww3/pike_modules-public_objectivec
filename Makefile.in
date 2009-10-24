@@ -6,7 +6,6 @@ FFIOBJS=libffi/src/types.o libffi/src/prep_cif.o libffi/src/@OC_ARCH@/ffi_darwin
 OBJS=ObjC.o dynamic_class.o util.o proxy-registry.o OC_Array.o OC_Mapping.o Foundation.o AppKit.o PiObjCObject.o   mach_override.o method_dispatch.o $(FFIOBJS)  _mixins.o 
 MODDIR=Public.pmod/
 MODNAME=ObjectiveC
-MODULE_PMOD_IN=module.pmod.in
 MODULE_CLEAN_EXTRA=$(FFIOBJS)
 AUTODOC_SRC_IN=objectivec.cmod
 MODULE_LDFLAGS=@LDFLAGS@ @LIBS@ -framework AddressBook -framework AppKit
