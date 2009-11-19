@@ -392,8 +392,9 @@ INIT
 {
   static ptrdiff_t dclass_storage_offset;
 
-printf("STARTING OBJECTIVE C BRIDGE 0.1\n");
-
+#ifdef DEBUG
+  printf("STARTING OBJECTIVE C BRIDGE 0.1\n");
+#endif
   THIS->pool = [[OC_NSAutoreleasePoolCollector alloc] init];
   [THIS->pool newAutoreleasePool];
 
@@ -433,7 +434,10 @@ EXIT
   free_mapping(global_class_cache);
   free_mapping(global_classname_cache);
   free_mapping(global_mixin_dict);
+
+#ifdef DEBUG
 printf("SHUTTING DOWN OBJECTIVE C BRIDGE\n");
+#endif
 
 }
 
@@ -454,11 +458,15 @@ void override_objc_getClass()
 
 return;
 
+#ifdef DEBUG
   printf("override_objc_getClass()\n");
- 
+#endif
+
   if(old_objc_getClass)
   {
+#ifdef DEBUG
 	printf("* not overriding, as we already have.\n");
+#endif
 	return;
   }
 
@@ -484,11 +492,15 @@ void override_object_setInstanceVariable()
 
   kern_return_t err;
 
+#ifdef DEBUG
   printf("override_object_setInstanceVariable()\n");
+#endif
  
   if(old_object_setInstanceVariable)
   {
+#ifdef DEBUG
 	printf("* not overriding, as we already have.\n");
+#endif
 	return;
   }
 
@@ -507,11 +519,16 @@ void override_object_getInstanceVariable()
 
   kern_return_t err;
  
+#ifdef DEBUG
   printf("override_object_getInstanceVariable()\n");
+#endif
 
   if(old_object_getInstanceVariable)
   {
+#ifdef DEBUG
 	printf("* not overriding, as we already have.\n");
+#endif
+
 	return;
   }
 
@@ -531,12 +548,16 @@ int piobjc_classhandler_callback(const char* className)
   INT32 lineno;
 iq++;
 //if(iq!=1) return 0;
+#ifdef DEBUG
   printf("piobjc_classhandler_callback(%s)\n", className);
+#endif
   push_text(className);
 
   if(Pike_fp && Pike_fp->pc &&
       (file = low_get_line(Pike_fp->pc, Pike_fp->context->prog, &lineno))) {
+#ifdef DEBUG
 printf("file: %s\n", file->str);
+#endif
      push_string(file);
    }else{
      push_int(0);
@@ -546,14 +567,18 @@ printf("file: %s\n", file->str);
 
   if(Pike_sp[-1].type == T_PROGRAM)
   {
+#ifdef DEBUG
     printf("got the program\n");
+#endif
     add_piobjcclass((char *)className, Pike_sp[-1].u.program);
     pop_stack();
     return 1;
   }
   else
   {
+#ifdef DEBUG
     printf("got nothing\n");
+#endif
     pop_stack();
     return 0;
   }
@@ -561,7 +586,9 @@ printf("file: %s\n", file->str);
 
 id new_objc_getClass(const char *name)
 {
+#ifdef DEBUG
 printf("new_objc_getClass(%s)\n", name);
+#endif
    return (old_objc_getClass(name));
 }
 
@@ -587,7 +614,9 @@ Ivar new_object_setInstanceVariable(id object, const char *name, void *value)
   // here's where we'd handle setting native c types.
   if(!x) 
   { 
+#ifdef DEBUG
 	printf("no variable!\n");
+#endif
 	return NULL;
   }
 
@@ -611,7 +640,9 @@ Ivar new_object_setInstanceVariable(id object, const char *name, void *value)
 
       if(!pobj)
       {
+#ifdef DEBUG
         printf("AAAHHH! no pike object!\n");
+#endif
         return NULL;
       }
 
@@ -662,7 +693,10 @@ Ivar new_object_setInstanceVariable(id object, const char *name, void *value)
   else
   {
 	id desc;
+
+#ifdef DEBUG
 	printf("setting a ptr in a pike object.\n");
+#endif
     pobj = [object getPikeObject];
 
     pset = ptr_to_svalue(value, x->ivar_type);
@@ -782,8 +816,10 @@ BOOL CreateClassDefinition( const char * name,
     struct objc_class * root_class;
 	struct objc_method_list ** emptyMethodLists;
 	struct svalue * ptr;
- 
+
+#ifdef DEBUG 
 printf("CreateClassDefinition(%s, %s)\n", name, superclassName);
+#endif
     // Ensure that the superclass exists and that someone
     // hasn't already implemented a class with the same name
     //
@@ -792,13 +828,17 @@ printf("CreateClassDefinition(%s, %s)\n", name, superclassName);
 
     if (super_class == nil)
     {
+#ifdef DEBUG
         printf("no superclass <%s>!\n", superclassName);
+#endif
         return NO;
     }
 
     if (objc_lookUpClass (name) != nil) 
     {
+#ifdef DEBUG
         printf("already have class <%s>!\n", name);
+#endif
         return NO;
     }
 
@@ -954,7 +994,9 @@ BOOL RegisterInstanceVariables(Class cls, struct program * prog)
        v->ivar_offset = offset;
        offset += sizeof(id);
        l->ivar_count++;
+#ifdef DEBUG
        printf("added ivar: %s!\n", ivn);
+#endif
      }      
    }
 

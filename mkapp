@@ -57,13 +57,6 @@ pop_stack();
  push_text("$APPNAME.pike");
  f_aggregate(2);
 apply(m, "_main", 1); 
-printf("!!!!!??????\n");
-id y = NSClassFromString(@"CasterController");
-if(!y) printf("aieee!\n");
-id x = [[y alloc] init];
-printf("!!!! running foo() !!!\n");
-object_setInstanceVariable(x, "q", (@"TEST"));
-[x foo];
 // finally, we clean up. 
 [i stopInterpreter]; 
 [innerPool release]; 
@@ -77,8 +70,6 @@ echo "building stub..."
 
 gcc -arch i386 -F. -c "${APPNAME}.m" -o "${APPNAME}.o"
 gcc -arch i386 "${APPNAME}.o" -o "${APPNAME}" -F.  -framework AppKit -framework Pike -framework System -framework Foundation
-#gcc -arch i386 -arch ppc -F. -c "${APPNAME}.m" -o "${APPNAME}.o"
-#gcc -arch i386 -arch ppc "${APPNAME}.o" -o "${APPNAME}" -F. -lc -framework Pike -framework System
 
 if [ ! -d "./${APPNAME}.app" ] ;
 then
@@ -143,4 +134,4 @@ fi
 
 mv "${APPNAME}" "${APPNAME}.app/Contents/MacOS"
 
-#rm "${APPNAME}.m" "${APPNAME}.o"
+rm "${APPNAME}.m" "${APPNAME}.o"
