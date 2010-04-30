@@ -1,0 +1,22 @@
+MIXIN NSPathStore
+{
+
+  PIKEFUN mixed cast(string t)
+	optflags OPT_SIDE_EFFECT;
+  {
+    pop_stack();
+    push_text([THIS->obj UTF8String]);
+    f_utf8_to_string(1);
+  }
+
+  PIKEFUN int _sizeof()
+  {
+    push_int([THIS->obj length]);
+  }
+
+  EXTRA
+  {
+//    printf("whee!!!\n");
+  }
+}
+

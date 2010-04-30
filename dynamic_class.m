@@ -720,9 +720,9 @@ void f_objc_dynamic_getter(char * vn, INT32 args)
   Ivar vardef;
   struct svalue * sv = NULL;
 
-  pop_n_elems(args);
   vardef = old_object_getInstanceVariable(THIS->obj, vn, var);
   
+  pop_n_elems(args);
   sv = ptr_to_svalue(var, vardef->ivar_type);
 
   push_svalue(sv);

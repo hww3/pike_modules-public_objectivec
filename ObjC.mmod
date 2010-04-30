@@ -726,7 +726,7 @@ Ivar new_object_setInstanceVariable(id object, const char *name, void *value)
 
 Ivar new_object_getInstanceVariable(id object, const char *name, void **value)
 {
-//  printf("new_object_getInstanceVariable(%s, %s, %s)\n", object->isa->name, [[object description] UTF8String], name);
+  printf("new_object_getInstanceVariable(%s, %s, %s)\n", object->isa->name, [[object description] UTF8String], name);
 
   // if we're a wrapped pike object, the instance variables will be in the pike object itself.
   if(![object respondsToSelector: SELUID("getPikeObject")] == YES)
